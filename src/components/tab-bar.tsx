@@ -75,6 +75,7 @@ export function TabNavigator() {
             hidden rather than omitted.
           */}
           <TabTrigger name="thresholds" href="/thresholds" style={styles.hidden} />
+          <TabTrigger name="about" href="/about" style={styles.hidden} />
         </View>
       </TabList>
     </Tabs>
