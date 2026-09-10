@@ -15,7 +15,7 @@ decide when to train outdoors. Solo hobby project. iOS first.
 
 - React Native primitives only: View, Text, Pressable, ScrollView, FlatList.
   Never div, span, button, or any HTML element.
-- No CSS files, no CSS grid, no position:sticky, no hover states.
+- No CSS files, no CSS grid, no position:sticky, no hover states in app code.
 - If a design calls for something with no React Native equivalent, say so
   and stop. Do not approximate it silently.
 - Shadows: iOS shadow props and Android elevation are different APIs.
