@@ -1,0 +1,13 @@
+# Line endings: LF in the repository and in the working tree.
+#
+# core.autocrlf is true on this machine, which would rewrite text files to
+# CRLF on checkout. Everything on disk is already LF, so pinning eol=lf keeps
+# the working tree exactly as it is instead of churning every file.
+* text=auto eol=lf
+
+# Binary assets — never normalize.
+*.png binary
+*.jpg binary
+*.ico binary
+*.ttf binary
+*.otf binary
