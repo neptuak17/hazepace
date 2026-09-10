@@ -1,15 +1,19 @@
 /**
- * The header shared by Today, Map and Forecast.
+ * The header shared by every screen.
  *
  * In the design this sits above the tab content rather than inside any one
  * screen, so it keeps the place and the clock in the same position as the tabs
- * change underneath it.
+ * change underneath it. It owns the saved-places sheet, because the place row
+ * is what opens it and that row lives here.
  */
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/icon';
+import { Sheet } from '@/components/sheet';
+import { PlacesSheetBody } from '@/components/sheets';
 import { Accent, Accent2, Neutral, Palette, Space, Type } from '@/constants/design-tokens';
 import { NOW, PLACE_LABEL } from '@/lib/fixtures';
 import { formatHour } from '@/lib/rating';
@@ -18,11 +22,16 @@ import { useSettings } from '@/lib/settings';
 export function AppHeader() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { settings } = useSettings();
+  const { settings, prefs, update } = useSettings();
+  const [placesOpen, setPlacesOpen] = useState(false);
 
   return (
     <View style={[styles.header, { paddingTop: insets.top + Space.two }]}>
-      <View style={styles.place}>
+      <Pressable
+        style={styles.place}
+        accessibilityRole="button"
+        accessibilityLabel={`Place: ${settings.place}. Change place.`}
+        onPress={() => setPlacesOpen(true)}>
         <View style={styles.pinBadge}>
           <Icon name="mapPin" size={17} color={Palette.bg} />
         </View>
@@ -35,7 +44,7 @@ export function AppHeader() {
           </Text>
         </View>
         <Icon name="chevronDown" size={15} color={Neutral[600]} />
-      </View>
+      </Pressable>
 
       <Pressable
         style={styles.iconButton}
@@ -58,6 +67,16 @@ export function AppHeader() {
         onPress={() => router.navigate('/how-it-works')}>
         <Icon name="help" size={20} color={Accent.base} />
       </Pressable>
+
+      <Sheet visible={placesOpen} title="Near you, right now" onClose={() => setPlacesOpen(false)}>
+        <PlacesSheetBody
+          prefs={prefs}
+          onPick={(place) => {
+            update({ place });
+            setPlacesOpen(false);
+          }}
+        />
+      </Sheet>
     </View>
   );
 }

@@ -143,3 +143,17 @@ export function daySlots(d: DayFixture): Reading[] {
 export function dayRainTotal(d: DayFixture): number {
   return d.rainMmH.reduce((sum, r) => sum + r * 2, 0);
 }
+
+/** Saved places, from the design prototype. Fixtures, not observations. */
+export interface PlaceFixture {
+  name: string;
+  note: string;
+  aqhi: number;
+}
+
+export const PLACES: PlaceFixture[] = [
+  { name: 'East Hill', note: 'The bench, 480 m', aqhi: 7 },
+  { name: 'Kal Lake Road', note: 'Lakeshore, 350 m', aqhi: 8 },
+  { name: 'Silver Star', note: 'Summit road, 1,610 m', aqhi: 3 },
+  { name: 'Predator Ridge', note: 'Rolling, 600 m', aqhi: 6 },
+];

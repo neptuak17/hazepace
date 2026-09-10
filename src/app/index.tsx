@@ -10,6 +10,8 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/app-header';
+import { Sheet } from '@/components/sheet';
+import { ActivitySheetBody, AirSheetBody } from '@/components/sheets';
 import { Icon } from '@/components/icon';
 import {
   Accent,
@@ -71,6 +73,8 @@ const BAR_SCALE = 1.16;
 export default function TodayScreen() {
   const { settings, activity, setActivity, prefs } = useSettings();
   const [selectedHour, setSelectedHour] = useState(11);
+  const [airOpen, setAirOpen] = useState(false);
+  const [actsOpen, setActsOpen] = useState(false);
 
   const nowHour = hourAt(NOW);
   const now = judge(nowHour, prefs);
@@ -220,15 +224,51 @@ export default function TodayScreen() {
               ))}
             </View>
 
-            <Text style={styles.airLink}>What&apos;s in the air →</Text>
+            <Pressable
+              onPress={() => setAirOpen(true)}
+              accessibilityRole="button"
+              hitSlop={8}>
+              <Text style={styles.airLink}>What&apos;s in the air →</Text>
+            </Pressable>
           </View>
         </View>
+
+        {/*
+          The prototype defines this sheet but never wires a trigger to it. The
+          handoff describes a comparison row on Today that opens it, so that is
+          what this is; its treatment follows the best-window pill.
+        */}
+        <Pressable
+          onPress={() => setActsOpen(true)}
+          accessibilityRole="button"
+          style={styles.comparisonRow}>
+          <Icon name="bars" size={18} color={Neutral[700]} />
+          <Text style={styles.comparisonText}>Same air, three verdicts</Text>
+          <Icon name="chevronRight" size={17} color={Neutral[600]} />
+        </Pressable>
 
         <Text style={styles.attribution}>
           Air data follows the Canadian AQHI. Sources: Environment and Climate Change Canada,
           FireSmoke.ca — BlueSky Canada, BC Ministry of Environment, PurpleAir, BC Wildfire Service.
         </Text>
       </ScrollView>
+
+      <Sheet visible={airOpen} title="What's in the air" onClose={() => setAirOpen(false)}>
+        <AirSheetBody timeFmt={settings.timeFmt} />
+      </Sheet>
+
+      <Sheet
+        visible={actsOpen}
+        title="Same air, three verdicts"
+        onClose={() => setActsOpen(false)}>
+        <ActivitySheetBody
+          prefs={prefs}
+          onPick={(a) => {
+            setActivity(a);
+            setActsOpen(false);
+          }}
+        />
+      </Sheet>
     </View>
   );
 }
@@ -375,6 +415,18 @@ const styles = StyleSheet.create({
     fontFamily: Type.rowLabel.fontFamily,
     color: Accent[700],
   },
+
+  comparisonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: Neutral[200],
+    borderRadius: Radius.pill,
+    paddingVertical: 12,
+    paddingHorizontal: Space.four,
+    minHeight: 44,
+  },
+  comparisonText: { ...Type.pillLabel, flex: 1, color: Neutral[800] },
 
   attribution: { ...Type.caption, color: Neutral[600], lineHeight: 12 * 1.4 },
 });
