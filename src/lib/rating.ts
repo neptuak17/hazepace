@@ -91,16 +91,36 @@ export interface Judgement {
   driver: Driver;
 }
 
+/** Each factor rated on its own, before the worst one is picked. */
+export interface FactorLevels {
+  air: Level;
+  rain: Level;
+  heat: Level;
+  wind: Level;
+}
+
+/**
+ * The four factors, each against its own threshold.
+ *
+ * Exposed separately because "How this works" shows all four side by side;
+ * `judge` is the same numbers reduced to their worst.
+ */
+export function factorLevels(r: Reading, prefs: Prefs): FactorLevels {
+  const rainAt = RAIN_TOL[prefs.rainTol].mm;
+  return {
+    air: band(r.aqhi, prefs),
+    rain: r.rainMmH >= rainAt * 2.6 ? 2 : r.rainMmH >= rainAt ? 1 : 0,
+    heat: r.tempC >= 34 ? 2 : r.tempC >= 30 ? 1 : 0,
+    wind: r.windKmh >= prefs.windTol + 14 ? 2 : r.windKmh >= prefs.windTol ? 1 : 0,
+  };
+}
+
 /**
  * The worst factor wins. Order matters: when two factors tie at the same
  * level, air is named first, then rain, then heat, then wind.
  */
 export function judge(r: Reading, prefs: Prefs): Judgement {
-  const air = band(r.aqhi, prefs);
-  const rainAt = RAIN_TOL[prefs.rainTol].mm;
-  const rain: Level = r.rainMmH >= rainAt * 2.6 ? 2 : r.rainMmH >= rainAt ? 1 : 0;
-  const heat: Level = r.tempC >= 34 ? 2 : r.tempC >= 30 ? 1 : 0;
-  const wind: Level = r.windKmh >= prefs.windTol + 14 ? 2 : r.windKmh >= prefs.windTol ? 1 : 0;
+  const { air, rain, heat, wind } = factorLevels(r, prefs);
 
   const level = Math.max(air, rain, heat, wind) as Level;
   if (level === 0) return { level, driver: null };

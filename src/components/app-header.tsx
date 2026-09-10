@@ -51,7 +51,11 @@ export function AppHeader() {
         onPress={() => router.navigate('/about')}>
         <Icon name="person" size={20} color={Accent.base} />
       </Pressable>
-      <Pressable style={styles.iconButton} accessibilityLabel="How this works">
+      <Pressable
+        style={styles.iconButton}
+        accessibilityRole="button"
+        accessibilityLabel="How this works"
+        onPress={() => router.navigate('/how-it-works')}>
         <Icon name="help" size={20} color={Accent.base} />
       </Pressable>
     </View>
