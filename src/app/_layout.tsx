@@ -1,12 +1,11 @@
 import { useFonts } from 'expo-font';
-import { Tabs, TabSlot } from 'expo-router/ui';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { TabBar } from '@/components/tab-bar';
+import { TabNavigator } from '@/components/tab-bar';
 import { Palette } from '@/constants/design-tokens';
 import { SettingsProvider } from '@/lib/settings';
 
@@ -34,10 +33,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <SettingsProvider>
         <View style={styles.root}>
-          <Tabs>
-            <TabSlot />
-            <TabBar />
-          </Tabs>
+          <TabNavigator />
         </View>
         {/* The design is a single warm light palette, so the status bar is
             always dark-on-light. */}

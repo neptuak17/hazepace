@@ -1,12 +1,18 @@
 /**
- * The bottom tab bar.
+ * The bottom tab bar, and the tab navigator it belongs to.
  *
  * The design's bar is a rounded, tinted control that a native UITabBar cannot
  * produce, so this uses expo-router's headless tabs (`expo-router/ui`) instead
  * of the native tab layout: `TabList` and `TabTrigger` handle routing while
  * every pixel here is ours. Routing is still file-based.
+ *
+ * The navigator and the bar live in one component on purpose. `Tabs` discovers
+ * its screens by walking its own children for `TabList` — it sees through
+ * fragments and through the extra layer `asChild` adds, but not through a
+ * custom component. Extracting the bar into its own element would leave the
+ * navigator with no screens at all.
  */
-import { TabList, TabTrigger, type TabTriggerSlotProps } from 'expo-router/ui';
+import { TabList, TabSlot, TabTrigger, Tabs, type TabTriggerSlotProps } from 'expo-router/ui';
 import { forwardRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,8 +32,10 @@ const TabButton = forwardRef<View, TabButtonProps>(({ icon, label, isFocused, ..
       ref={ref}
       accessibilityRole="tab"
       accessibilityState={{ selected: !!isFocused }}
-      style={[styles.item, isFocused && styles.itemSelected]}
-      {...props}>
+      {...props}
+      // After the spread: the trigger slot passes its own props through, and a
+      // style arriving from it (even undefined) would otherwise replace ours.
+      style={StyleSheet.flatten([styles.item, isFocused && styles.itemSelected])}>
       <Icon name={icon} size={21} color={color} />
       <Text style={[styles.label, { color }]}>{label}</Text>
     </Pressable>
@@ -35,29 +43,32 @@ const TabButton = forwardRef<View, TabButtonProps>(({ icon, label, isFocused, ..
 });
 TabButton.displayName = 'TabButton';
 
-export function TabBar() {
+export function TabNavigator() {
   const insets = useSafeAreaInsets();
 
   return (
-    <TabList asChild>
-      {/*
-        The design pads the bar 30px at the bottom to clear the home
-        indicator. On a real device that measurement comes from the safe area,
-        so the inset wins where it is larger and the design value is the floor
-        on devices without an indicator.
-      */}
-      <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, Space.two) }]}>
-        <TabTrigger name="today" href="/" asChild>
-          <TabButton icon="tabToday" label="Today" />
-        </TabTrigger>
-        <TabTrigger name="map" href="/map" asChild>
-          <TabButton icon="tabMap" label="Map" />
-        </TabTrigger>
-        <TabTrigger name="forecast" href="/forecast" asChild>
-          <TabButton icon="tabForecast" label="Forecast" />
-        </TabTrigger>
-      </View>
-    </TabList>
+    <Tabs>
+      <TabSlot />
+      <TabList asChild>
+        {/*
+          The design pads the bar 30px at the bottom to clear the home
+          indicator. On a real device that measurement comes from the safe
+          area, so the inset wins where it is larger and the design value is
+          the floor on devices without an indicator.
+        */}
+        <View style={StyleSheet.flatten([styles.bar, { paddingBottom: Math.max(insets.bottom, Space.two) }])}>
+          <TabTrigger name="today" href="/" asChild>
+            <TabButton icon="tabToday" label="Today" />
+          </TabTrigger>
+          <TabTrigger name="map" href="/map" asChild>
+            <TabButton icon="tabMap" label="Map" />
+          </TabTrigger>
+          <TabTrigger name="forecast" href="/forecast" asChild>
+            <TabButton icon="tabForecast" label="Forecast" />
+          </TabTrigger>
+        </View>
+      </TabList>
+    </Tabs>
   );
 }
 
