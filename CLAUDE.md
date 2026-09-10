@@ -23,6 +23,10 @@ decide when to train outdoors. Solo hobby project. iOS first.
 - No analytics SDKs, no ad SDKs, no tracking libraries. Ever.
 - Keep the dependency list minimal — every third-party SDK adds App Store
   privacy-manifest obligations.
+- iOS is the target platform. Write React Native components, not HTML.
+  Do not delete the Expo template's React Native Web support — the .web.tsx
+  platform variants are inert on iOS and the web target may be used later
+  for the marketing site.
 
 ## Data
 
