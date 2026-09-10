@@ -193,3 +193,38 @@ export function windowLabel(run: Run | null, fmt: TimeFormat): string | null {
   if (!run) return null;
   return `${formatHour(SLOTS[run.start], fmt)} – ${formatHour(SLOTS[run.end] + 2, fmt)}`;
 }
+
+/** An hour that can be rated, carrying the hour of day alongside its readings. */
+export interface HourReading extends Reading {
+  hour: number;
+}
+
+/**
+ * The longest run of level-0 hours still ahead of `now`.
+ *
+ * An hour counts as past once it has finished, so the run that is currently
+ * underway still offers whatever is left of it.
+ */
+export function bestWindow(
+  hours: HourReading[],
+  now: number,
+  prefs: Prefs,
+): { start: number; end: number } | null {
+  let best: { start: number; end: number } | null = null;
+  let cur: { start: number; end: number } | null = null;
+
+  for (const hr of hours) {
+    if (hr.hour + 1 <= now) {
+      cur = null;
+      continue;
+    }
+    if (judge(hr, prefs).level === 0) {
+      cur = cur ? { start: cur.start, end: hr.hour + 1 } : { start: hr.hour, end: hr.hour + 1 };
+      if (!best || cur.end - cur.start > best.end - best.start) best = { ...cur };
+    } else {
+      cur = null;
+    }
+  }
+
+  return best;
+}
