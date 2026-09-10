@@ -5,16 +5,18 @@
  * screen, so it keeps the place and the clock in the same position as the tabs
  * change underneath it.
  */
+import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/icon';
-import { Accent2, Neutral, Palette, Space, Type } from '@/constants/design-tokens';
+import { Accent, Accent2, Neutral, Palette, Space, Type } from '@/constants/design-tokens';
 import { NOW, PLACE_LABEL } from '@/lib/fixtures';
 import { formatHour } from '@/lib/rating';
 import { useSettings } from '@/lib/settings';
 
 export function AppHeader() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { settings } = useSettings();
 
@@ -35,14 +37,18 @@ export function AppHeader() {
         <Icon name="chevronDown" size={15} color={Neutral[600]} />
       </View>
 
-      <Pressable style={styles.iconButton} accessibilityLabel="Your thresholds">
-        <Icon name="settings" size={20} color={Palette.text} />
+      <Pressable
+        style={styles.iconButton}
+        accessibilityRole="button"
+        accessibilityLabel="Your thresholds"
+        onPress={() => router.navigate('/thresholds')}>
+        <Icon name="settings" size={20} color={Accent.base} />
       </Pressable>
       <Pressable style={styles.iconButton} accessibilityLabel="About yourself">
-        <Icon name="person" size={20} color={Palette.text} />
+        <Icon name="person" size={20} color={Accent.base} />
       </Pressable>
       <Pressable style={styles.iconButton} accessibilityLabel="How this works">
-        <Icon name="help" size={20} color={Palette.text} />
+        <Icon name="help" size={20} color={Accent.base} />
       </Pressable>
     </View>
   );

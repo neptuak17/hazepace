@@ -126,11 +126,20 @@ export const Font = {
  */
 export const tracking = (fontSize: number, em = 0.1): number => fontSize * em;
 
+/**
+ * The `.card` surface.
+ *
+ * Taken from the design system's own stylesheet, not the handoff README — the
+ * README describes this as neutral-100 with radius 28 and shadow-sm, but
+ * `.card` in styles.css is `--color-surface` with no shadow, and the sheet's
+ * rounded-frame rule overrides the radius to `--radius-lg * 1.15`. The
+ * screenshots agree with the stylesheet: cards read darker than the page and
+ * sit flat on it.
+ */
 export const Card = {
-  backgroundColor: Neutral[100],
-  borderRadius: Radius.lg,
+  backgroundColor: Palette.surface,
+  borderRadius: Radius.lg * 1.15,
   padding: Space.four,
-  ...Shadow.sm,
 } satisfies ViewStyle;
 
 /** The design's type ramp, in the sizes it actually uses. */

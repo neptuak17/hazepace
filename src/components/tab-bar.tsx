@@ -66,6 +66,15 @@ export function TabNavigator() {
           <TabTrigger name="forecast" href="/forecast" asChild>
             <TabButton icon="tabForecast" label="Forecast" />
           </TabTrigger>
+
+          {/*
+            Not shown in the bar. The design keeps the tab bar visible on the
+            settings screens with no tab selected, so these routes belong to
+            the tab navigator rather than to a stack pushed over it. A trigger
+            has to be a direct child of TabList to register its route, so it is
+            hidden rather than omitted.
+          */}
+          <TabTrigger name="thresholds" href="/thresholds" style={styles.hidden} />
         </View>
       </TabList>
     </Tabs>
@@ -89,6 +98,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 3,
+  },
+  hidden: {
+    display: 'none',
   },
   itemSelected: {
     backgroundColor: Accent[200],
