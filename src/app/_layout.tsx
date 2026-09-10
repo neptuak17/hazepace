@@ -1,10 +1,11 @@
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { LaunchOverlay } from '@/components/launch-overlay';
 import { TabNavigator } from '@/components/tab-bar';
 import { Palette } from '@/constants/design-tokens';
 import { SettingsProvider } from '@/lib/settings';
@@ -12,6 +13,7 @@ import { SettingsProvider } from '@/lib/settings';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const [launching, setLaunching] = useState(true);
   // Caprasimo is the only display voice; Figtree carries four body weights.
   // RN cannot synthesise weights from a single face, so each is a real file.
   const [fontsLoaded, fontError] = useFonts({
@@ -34,6 +36,7 @@ export default function RootLayout() {
       <SettingsProvider>
         <View style={styles.root}>
           <TabNavigator />
+          {launching && <LaunchOverlay onDone={() => setLaunching(false)} />}
         </View>
         {/* The design is a single warm light palette, so the status bar is
             always dark-on-light. */}
