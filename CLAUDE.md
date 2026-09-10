@@ -6,7 +6,7 @@ decide when to train outdoors. Solo hobby project. iOS first.
 ## Stack
 
 - Expo (managed workflow), expo-router for navigation
-- React Native — **no web output**
+- React Native — iOS is the shipping target; no web output from app code
 - StyleSheet.create for styling
 - TypeScript
 - Built on Windows; iOS builds run via EAS Build, never locally
