@@ -25,6 +25,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/icon';
 import { Accent, Neutral, Palette, Radius, Shadow, Space, Type } from '@/constants/design-tokens';
+import { Common } from '@/constants/strings';
 
 const DURATION = 220;
 
@@ -67,7 +68,7 @@ export function Sheet({ visible, title, onClose, children }: SheetProps) {
             style={styles.scrim}
             onPress={onClose}
             accessibilityRole="button"
-            accessibilityLabel="Close"
+            accessibilityLabel={Common.close}
           />
         </Animated.View>
 
@@ -81,7 +82,7 @@ export function Sheet({ visible, title, onClose, children }: SheetProps) {
             <Pressable
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel="Close"
+              accessibilityLabel={Common.close}
               style={styles.close}>
               <Icon name="close" size={19} color={Accent.base} />
             </Pressable>

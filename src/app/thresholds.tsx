@@ -21,34 +21,11 @@ import {
   Type,
   tracking,
 } from '@/constants/design-tokens';
+import { Common, ThresholdsStrings } from '@/constants/strings';
 import { RAIN_TOL, type Sensitivity } from '@/lib/rating';
 import { useSettings } from '@/lib/settings';
 
 const SENSITIVITIES: Sensitivity[] = ['Low', 'Normal', 'Reactive'];
-
-/**
- * How permissive the chosen ceiling is.
- *
- * The design labelled the top of the range "not recommended", which is advice
- * about a limit rather than a description of it. These describe where the
- * setting sits and leave the judgement to the user.
- */
-function ceilingWord(ceiling: number): string {
-  if (ceiling <= 3) return 'cautious';
-  if (ceiling <= 5) return 'typical';
-  if (ceiling <= 7) return 'permissive';
-  return 'very permissive';
-}
-
-function windLabel(windTol: number): string {
-  return windTol >= 40 ? 'any wind' : `${windTol} km/h`;
-}
-
-function windNote(windTol: number): string {
-  if (windTol <= 16) return 'a breeze turns it amber';
-  if (windTol >= 36) return 'only a gale stops you';
-  return 'typical tolerance';
-}
 
 export default function ThresholdsScreen() {
   const router = useRouter();
@@ -59,18 +36,17 @@ export default function ThresholdsScreen() {
       <AppHeader />
 
       <ScrollView style={styles.pane} contentContainerStyle={styles.paneContent}>
-        <Text style={styles.title}>Your thresholds</Text>
+        <Text style={styles.title}>{ThresholdsStrings.title}</Text>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Air quality limits</Text>
-          <Text style={styles.caption}>
-            Your tolerance for air quality. Always follow local government recommendations and
-            advisories.
-          </Text>
+          <Text style={styles.cardTitle}>{ThresholdsStrings.airCardTitle}</Text>
+          <Text style={styles.caption}>{ThresholdsStrings.airCardCaption}</Text>
 
           <View style={styles.valueRow}>
             <Text style={styles.bigValue}>{settings.ceiling}</Text>
-            <Text style={styles.valueMeta}>AQHI · {ceilingWord(settings.ceiling)}</Text>
+            <Text style={styles.valueMeta}>
+              {ThresholdsStrings.ceilingMeta(ThresholdsStrings.ceilingWord(settings.ceiling))}
+            </Text>
           </View>
 
           <Slider
@@ -79,12 +55,12 @@ export default function ThresholdsScreen() {
             max={9}
             step={1}
             onChange={(ceiling) => update({ ceiling })}
-            label="Air quality ceiling"
-            valueLabel={`AQHI ${settings.ceiling}, ${ceilingWord(settings.ceiling)}`}
+            label={ThresholdsStrings.ceilingSliderLabel}
+            valueLabel={ThresholdsStrings.ceilingSliderValue(settings.ceiling, ThresholdsStrings.ceilingWord(settings.ceiling))}
             style={styles.sliderTop}
           />
 
-          <Text style={styles.subLabel}>Air quality sensitivity</Text>
+          <Text style={styles.subLabel}>{ThresholdsStrings.sensitivityLabel}</Text>
           <View style={styles.chipRow}>
             {SENSITIVITIES.map((s) => {
               const on = s === settings.sensitivity;
@@ -105,11 +81,11 @@ export default function ThresholdsScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Weather limits</Text>
-          <Text style={styles.caption}>How much rain and wind you will train in.</Text>
+          <Text style={styles.cardTitle}>{ThresholdsStrings.weatherCardTitle}</Text>
+          <Text style={styles.caption}>{ThresholdsStrings.weatherCardCaption}</Text>
 
           <View style={styles.limitRow}>
-            <Text style={styles.limitLabel}>Rain</Text>
+            <Text style={styles.limitLabel}>{ThresholdsStrings.rainLabel}</Text>
             <Text style={styles.limitValue}>{RAIN_TOL[settings.rainTol].name}</Text>
           </View>
           <Slider
@@ -118,15 +94,15 @@ export default function ThresholdsScreen() {
             max={3}
             step={1}
             onChange={(rainTol) => update({ rainTol })}
-            label="Rain tolerance"
+            label={ThresholdsStrings.rainSliderLabel}
             valueLabel={RAIN_TOL[settings.rainTol].name}
             style={styles.sliderTight}
           />
           <Text style={styles.note}>{RAIN_TOL[settings.rainTol].note}</Text>
 
           <View style={styles.limitRow}>
-            <Text style={styles.limitLabel}>Wind</Text>
-            <Text style={styles.limitValue}>{windLabel(settings.windTol)}</Text>
+            <Text style={styles.limitLabel}>{ThresholdsStrings.windLabel}</Text>
+            <Text style={styles.limitValue}>{ThresholdsStrings.windValue(settings.windTol)}</Text>
           </View>
           <Slider
             value={settings.windTol}
@@ -134,18 +110,18 @@ export default function ThresholdsScreen() {
             max={40}
             step={4}
             onChange={(windTol) => update({ windTol })}
-            label="Wind tolerance"
-            valueLabel={windLabel(settings.windTol)}
+            label={ThresholdsStrings.windSliderLabel}
+            valueLabel={ThresholdsStrings.windValue(settings.windTol)}
             style={styles.sliderTight}
           />
-          <Text style={styles.note}>{windNote(settings.windTol)}</Text>
+          <Text style={styles.note}>{ThresholdsStrings.windNote(settings.windTol)}</Text>
         </View>
 
         <Pressable
           onPress={() => router.navigate('/')}
           accessibilityRole="button"
           style={({ pressed }) => [styles.done, pressed && styles.donePressed]}>
-          <Text style={styles.doneText}>Done</Text>
+          <Text style={styles.doneText}>{Common.done}</Text>
         </Pressable>
       </ScrollView>
     </View>

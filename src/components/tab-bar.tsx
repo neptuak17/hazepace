@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, type IconName } from '@/components/icon';
 import { Accent, Neutral, Palette, Radius, Space, Type } from '@/constants/design-tokens';
+import { TabStrings } from '@/constants/strings';
 
 type TabButtonProps = TabTriggerSlotProps & {
   icon: IconName;
@@ -58,13 +59,13 @@ export function TabNavigator() {
         */}
         <View style={StyleSheet.flatten([styles.bar, { paddingBottom: Math.max(insets.bottom, Space.two) }])}>
           <TabTrigger name="today" href="/" asChild>
-            <TabButton icon="tabToday" label="Today" />
+            <TabButton icon="tabToday" label={TabStrings.today} />
           </TabTrigger>
           <TabTrigger name="map" href="/map" asChild>
-            <TabButton icon="tabMap" label="Map" />
+            <TabButton icon="tabMap" label={TabStrings.map} />
           </TabTrigger>
           <TabTrigger name="forecast" href="/forecast" asChild>
-            <TabButton icon="tabForecast" label="Forecast" />
+            <TabButton icon="tabForecast" label={TabStrings.forecast} />
           </TabTrigger>
 
           {/*

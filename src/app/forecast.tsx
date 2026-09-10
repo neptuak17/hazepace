@@ -23,6 +23,7 @@ import {
   Verdict,
   tracking,
 } from '@/constants/design-tokens';
+import { Attribution, ForecastStrings } from '@/constants/strings';
 import { DAYS, dayRainTotal, daySlots } from '@/lib/fixtures';
 import { judgeDay, windowLabel } from '@/lib/rating';
 import { useSettings } from '@/lib/settings';
@@ -36,14 +37,14 @@ export default function ForecastScreen() {
       <AppHeader />
 
       <ScrollView style={styles.pane} contentContainerStyle={styles.paneContent}>
-        <Text style={styles.title}>Next five days</Text>
+        <Text style={styles.title}>{ForecastStrings.title}</Text>
 
         <View style={styles.card}>
           {DAYS.map((day, i) => {
             const verdict = judgeDay(daySlots(day), prefs);
             const open = i === openDay;
             const rainTotal = dayRainTotal(day);
-            const window = windowLabel(verdict.run, settings.timeFmt) ?? 'No usable window';
+            const window = windowLabel(verdict.run, settings.timeFmt) ?? ForecastStrings.noWindow;
 
             return (
               <Pressable
@@ -68,10 +69,8 @@ export default function ForecastScreen() {
                   </View>
 
                   <View style={styles.tempCol}>
-                    <Text style={styles.temp}>
-                      {day.hi}° / {day.lo}°
-                    </Text>
-                    <Text style={styles.rain}>{Math.round(rainTotal)} mm</Text>
+                    <Text style={styles.temp}>{ForecastStrings.temp(day.hi, day.lo)}</Text>
+                    <Text style={styles.rain}>{ForecastStrings.rainTotal(Math.round(rainTotal))}</Text>
                   </View>
                 </View>
 
@@ -85,11 +84,13 @@ export default function ForecastScreen() {
                       <Text style={styles.window}>{window}</Text>
                     </View>
                     <Text style={styles.meta}>
-                      AQHI {day.aqhi[0]} → {day.aqhi[day.aqhi.length - 1]}
-                      {/* The rain clause is dropped entirely on a dry day rather
-                          than reading "0 mm", and never states timing. */}
-                      {rainTotal >= 0.5 ? ` · rain ${Math.round(rainTotal)} mm` : ''} · wind{' '}
-                      {day.dir} {Math.max(...day.windKmh)} km/h
+                      {ForecastStrings.meta(
+                        day.aqhi[0],
+                        day.aqhi[day.aqhi.length - 1],
+                        rainTotal >= 0.5 ? Math.round(rainTotal) : null,
+                        day.dir,
+                        Math.max(...day.windKmh),
+                      )}
                     </Text>
                   </View>
                 )}
@@ -98,10 +99,7 @@ export default function ForecastScreen() {
           })}
         </View>
 
-        <Text style={styles.attribution}>
-          Forecasts: Environment and Climate Change Canada. Smoke plume model: FireSmoke.ca —
-          BlueSky Canada.
-        </Text>
+        <Text style={styles.attribution}>{Attribution.forecast}</Text>
       </ScrollView>
     </View>
   );

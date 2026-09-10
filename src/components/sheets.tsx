@@ -19,6 +19,7 @@ import {
   Verdict,
   tracking,
 } from '@/constants/design-tokens';
+import { Common, SheetStrings } from '@/constants/strings';
 import { NOW, PLACES, hourAt } from '@/lib/fixtures';
 import { band, formatHour, type Activity, type Prefs, type TimeFormat } from '@/lib/rating';
 
@@ -43,7 +44,7 @@ export function PlacesSheetBody({
             style={styles.placeRow}>
             <View style={[styles.circle, { backgroundColor: Verdict.tint[level] }]}>
               <Text style={[styles.circleNumber, { color: Verdict.ink[level] }]}>{p.aqhi}</Text>
-              <Text style={[styles.circleCaps, { color: Verdict.deepInk[level] }]}>AQHI</Text>
+              <Text style={[styles.circleCaps, { color: Verdict.deepInk[level] }]}>{Common.aqhi}</Text>
             </View>
             <View style={styles.grow}>
               <Text style={styles.rowName}>{p.name}</Text>
@@ -61,37 +62,31 @@ export function PlacesSheetBody({
 
 /* ── What's in the air ───────────────────────────────────────────────────── */
 
-/**
- * The AQHI band name.
- *
- * The design called these "risk bands". That is health framing, so the band is
- * named without it — the number and its band, not a claim about what it does
- * to you.
- */
-function aqhiBandName(aqhi: number): string {
-  if (aqhi <= 3) return 'low band';
-  if (aqhi <= 6) return 'moderate band';
-  if (aqhi <= 10) return 'high band';
-  return 'very high band';
-}
-
-/** Composition of the index. Fixtures from the prototype. */
-const AIR_BARS = [
-  { k: 'PM2.5 (wildfire smoke)', v: '86% of the index', pct: 86, color: Accent[600] },
-  { k: 'Ozone', v: '9%', pct: 9, color: Accent2[500] },
-  { k: 'NO₂ (traffic)', v: '5%', pct: 5, color: Neutral[500] },
-];
+/** Bar colours, paired by position with SheetStrings.airBars. */
+const AIR_BAR_COLORS = [Accent[600], Accent2[500], Neutral[500]];
 
 export function AirSheetBody({ timeFmt }: { timeFmt: TimeFormat }) {
   const nowHour = hourAt(NOW);
   const pm = Math.round(nowHour.aqhi * 8.6);
 
   const stats = [
-    { k: 'PM2.5', v: String(pm), u: 'µg/m³, 1 h mean' },
-    { k: 'AQHI', v: String(nowHour.aqhi), u: aqhiBandName(nowHour.aqhi) },
+    { k: SheetStrings.airStatKeys.pm25, v: String(pm), u: SheetStrings.airStatUnits.pm25 },
+    {
+      k: SheetStrings.airStatKeys.aqhi,
+      v: String(nowHour.aqhi),
+      u: SheetStrings.aqhiBandName(nowHour.aqhi),
+    },
     nowHour.rainMmH >= 0.1
-      ? { k: 'Rain', v: nowHour.rainMmH.toFixed(1), u: 'mm/h, washing out' }
-      : { k: 'Visibility', v: '4.5', u: 'km, hazy' },
+      ? {
+          k: SheetStrings.airStatKeys.rain,
+          v: nowHour.rainMmH.toFixed(1),
+          u: SheetStrings.airStatUnits.rain,
+        }
+      : {
+          k: SheetStrings.airStatKeys.visibility,
+          v: '4.5',
+          u: SheetStrings.airStatUnits.visibility,
+        },
   ];
 
   return (
@@ -107,23 +102,20 @@ export function AirSheetBody({ timeFmt }: { timeFmt: TimeFormat }) {
       </View>
 
       <View style={styles.barList}>
-        {AIR_BARS.map((b) => (
+        {SheetStrings.airBars.map((b, i) => (
           <View key={b.k}>
             <View style={styles.barHead}>
               <Text style={styles.barKey}>{b.k}</Text>
               <Text style={styles.barKey}>{b.v}</Text>
             </View>
             <View style={styles.barTrack}>
-              <View style={[styles.barFill, { width: `${b.pct}%`, backgroundColor: b.color }]} />
+              <View style={[styles.barFill, { width: `${b.pct}%`, backgroundColor: AIR_BAR_COLORS[i] }]} />
             </View>
           </View>
         ))}
       </View>
 
-      <Text style={styles.sourceLine}>
-        FireSmoke.ca (BlueSky) plume model · Environment Canada AQHI &amp; hourly weather ·
-        PurpleAir #4412, Vernon Bench. Updated {formatHour(NOW, timeFmt)}.
-      </Text>
+      <Text style={styles.sourceLine}>{SheetStrings.airSource(formatHour(NOW, timeFmt))}</Text>
     </View>
   );
 }
@@ -131,18 +123,6 @@ export function AirSheetBody({ timeFmt }: { timeFmt: TimeFormat }) {
 /* ── Same air, three verdicts ────────────────────────────────────────────── */
 
 const ACTIVITIES: Activity[] = ['Running', 'Cycling', 'Hiking / Walking'];
-
-/**
- * Why the same air rates differently per sport.
- *
- * The design's cycling note ended "the biggest total dose". Exposure framing
- * is a health claim, so it names the time spent instead.
- */
-const ACT_NOTE: Record<Activity, string> = {
-  Running: 'Highest intake per minute — the strictest ceiling, and not before the inversion lifts.',
-  Cycling: 'Sustained intake for hours at a time — a long ride spends the most time in it.',
-  'Hiking / Walking': 'Low ventilation. An hour on the bench is defensible.',
-};
 
 export function ActivitySheetBody({
   prefs,
@@ -172,7 +152,7 @@ export function ActivitySheetBody({
                   {Verdict.word[level]}
                 </Text>
               </View>
-              <Text style={styles.actNote}>{ACT_NOTE[a]}</Text>
+              <Text style={styles.actNote}>{SheetStrings.activityNote[a]}</Text>
             </View>
           </Pressable>
         );

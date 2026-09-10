@@ -21,6 +21,7 @@ import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/icon';
 import { Accent, Accent2, Neutral, Palette, Radius, Shadow, Type } from '@/constants/design-tokens';
+import { LaunchStrings } from '@/constants/strings';
 
 /** Prototype timings. */
 const RUN_MS = 2400;
@@ -31,8 +32,6 @@ const CORE_MS = 2600;
 const DRIFT_MS = 3400;
 const STEP_MS = 500;
 const STEP_DELAYS = [100, 450, 800];
-
-const STEPS = ['Air quality stations', 'Wildfire smoke plume', 'Hourly weather'];
 
 const STACK = 168;
 const CORE = 92;
@@ -178,10 +177,10 @@ export function LaunchOverlay({ onDone }: LaunchOverlayProps) {
         </Animated.View>
       </View>
 
-      <Text style={styles.title}>Updating your forecast</Text>
+      <Text style={styles.title}>{LaunchStrings.title}</Text>
 
       <View style={styles.steps}>
-        {STEPS.map((s, i) => (
+        {LaunchStrings.steps.map((s, i) => (
           <Animated.View
             key={s}
             style={[

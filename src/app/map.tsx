@@ -25,6 +25,7 @@ import {
   Verdict,
   tracking,
 } from '@/constants/design-tokens';
+import { Attribution, Common, MapStrings } from '@/constants/strings';
 import { band, formatHour } from '@/lib/rating';
 import { useSettings } from '@/lib/settings';
 
@@ -50,7 +51,7 @@ export default function MapScreen() {
       <AppHeader />
 
       <ScrollView style={styles.pane} contentContainerStyle={styles.paneContent}>
-        <Text style={styles.title}>Local conditions</Text>
+        <Text style={styles.title}>{MapStrings.title}</Text>
 
         <View style={styles.chipRow}>
           {PLUME_HOURS.map((h, i) => {
@@ -71,22 +72,18 @@ export default function MapScreen() {
         </View>
 
         <View style={styles.plate}>
-          <Text style={styles.plateTitle}>Map unavailable</Text>
-          <Text style={styles.plateNote}>
-            The plume view needs a tile layer and the BlueSky Canada smoke raster. Neither is wired
-            up yet, so nothing is drawn here.
-          </Text>
+          <Text style={styles.plateTitle}>{MapStrings.plateTitle}</Text>
+          <Text style={styles.plateNote}>{MapStrings.plateNote}</Text>
         </View>
 
         <View style={styles.legendRow}>
           <Text style={styles.legend}>
-            Okanagan Lake · Vernon · {formatHour(PLUME_HOURS[plume], settings.timeFmt)} · pins show
-            AQHI
+            {MapStrings.legend(formatHour(PLUME_HOURS[plume], settings.timeFmt))}
           </Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardKicker}>Rating by zone</Text>
+          <Text style={styles.cardKicker}>{MapStrings.zonesKicker}</Text>
           <View style={styles.zoneList}>
             {ZONES.map((zone) => {
               const aqhi = zone.aqhi[plume];
@@ -95,7 +92,7 @@ export default function MapScreen() {
                 <View key={zone.key} style={styles.zoneRow}>
                   <View style={[styles.zoneCircle, { backgroundColor: Verdict.tint[level] }]}>
                     <Text style={[styles.zoneNumber, { color: Verdict.ink[level] }]}>{aqhi}</Text>
-                    <Text style={[styles.zoneCaps, { color: Verdict.deepInk[level] }]}>AQHI</Text>
+                    <Text style={[styles.zoneCaps, { color: Verdict.deepInk[level] }]}>{Common.aqhi}</Text>
                   </View>
                   <View style={styles.zoneNameWrap}>
                     <Text style={styles.zoneName}>{zone.name}</Text>
@@ -109,11 +106,7 @@ export default function MapScreen() {
           </View>
         </View>
 
-        <Text style={styles.attribution}>
-          Smoke plume model: FireSmoke.ca — BlueSky Canada. Air quality: Environment and Climate
-          Change Canada, BC Ministry of Environment, PurpleAir. Fire perimeters: BC Wildfire
-          Service.
-        </Text>
+        <Text style={styles.attribution}>{Attribution.map}</Text>
       </ScrollView>
     </View>
   );

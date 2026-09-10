@@ -25,6 +25,7 @@ import {
   Verdict,
   tracking,
 } from '@/constants/design-tokens';
+import { Attribution, Common, SheetStrings, TodayStrings } from '@/constants/strings';
 import { HOURS, NOW, hourAt } from '@/lib/fixtures';
 import {
   bestWindow,
@@ -40,30 +41,6 @@ import {
 import { useSettings } from '@/lib/settings';
 
 const ACTIVITIES: Activity[] = ['Running', 'Cycling', 'Hiking / Walking'];
-
-/**
- * The line under the verdict, naming what is limiting the session.
- *
- * These describe conditions against the user's own thresholds. They do not
- * make a claim about the user's health, and must not start doing so.
- */
-const SENTENCES: Partial<Record<Exclude<Driver, null>, Partial<Record<Level, string>>>> = {
-  smoke: {
-    2: 'Smoke is pooled on the valley floor. Well past your ceiling for hard efforts.',
-    1: 'Thin smoke. Steady work is fine; save the intervals.',
-  },
-  rainfall: {
-    2: 'Thunderstorm over the valley — heavy rain and gusts.',
-    1: 'Steady rain, but the air behind it is the cleanest today.',
-  },
-  heat: {
-    2: 'Heat is the limit now, not the air.',
-    1: 'Hot enough to cost you. Shorten it or move it later.',
-  },
-  wind: {
-    1: 'Gusty. The air is fine; the handling is not.',
-  },
-};
 
 /** Chart geometry, from the design. */
 const CHART_HEIGHT = 140;
@@ -83,24 +60,28 @@ export default function TodayScreen() {
 
   const sentence =
     now.level === 0
-      ? 'Clear enough for a full session at your usual intensity.'
-      : ((now.driver && SENTENCES[now.driver]?.[now.level]) ??
-        'Conditions are against you right now.');
+      ? TodayStrings.clearSentence
+      : ((now.driver && TodayStrings.sentences[now.driver]?.[now.level]) ??
+        TodayStrings.fallbackSentence);
 
   const selected = hourAt(selectedHour);
   const selectedJudgement = judge(selected, prefs);
   const window = bestWindow(HOURS, NOW, prefs);
   const windowText = window
-    ? `${formatHour(window.start, settings.timeFmt)} – ${formatHour(window.end, settings.timeFmt)} · ${window.end - window.start} h`
-    : 'nothing clean today';
+    ? TodayStrings.windowSpan(
+        formatHour(window.start, settings.timeFmt),
+        formatHour(window.end, settings.timeFmt),
+        window.end - window.start,
+      )
+    : TodayStrings.noWindow;
 
   const stats = [
-    { k: 'AQHI', v: String(selected.aqhi) },
-    { k: 'Temp', v: `${Math.round(selected.tempC)}°C` },
-    { k: 'Wind', v: `${selected.dir} ${Math.round(selected.windKmh)}` },
-    { k: 'Rain', v: `${selected.rainMmH.toFixed(1)} mm` },
-    { k: 'Humidity', v: `${selected.humidity}%` },
-    { k: 'Effective', v: effectiveAqhi(selected.aqhi, prefs).toFixed(1) },
+    { k: TodayStrings.statKeys.aqhi, v: String(selected.aqhi) },
+    { k: TodayStrings.statKeys.temp, v: `${Math.round(selected.tempC)}°C` },
+    { k: TodayStrings.statKeys.wind, v: `${selected.dir} ${Math.round(selected.windKmh)}` },
+    { k: TodayStrings.statKeys.rain, v: `${selected.rainMmH.toFixed(1)} mm` },
+    { k: TodayStrings.statKeys.humidity, v: `${selected.humidity}%` },
+    { k: TodayStrings.statKeys.effective, v: effectiveAqhi(selected.aqhi, prefs).toFixed(1) },
   ];
 
   return (
@@ -112,13 +93,13 @@ export default function TodayScreen() {
           <View style={styles.verdictTop}>
             <View style={styles.verdictLeft}>
               <Text style={[styles.kicker, { color: ink }]}>
-                Conditions at {formatHour(NOW, settings.timeFmt)} · {activity}
+                {TodayStrings.kicker(formatHour(NOW, settings.timeFmt), activity)}
               </Text>
               <View style={styles.heroRow}>
                 <Text style={[styles.hero, { color: ink }]}>{nowHour.aqhi}</Text>
                 <View style={styles.heroCaption}>
-                  <Text style={[styles.heroCapsLabel, { color: ink }]}>AQHI</Text>
-                  <Text style={[styles.heroOf, { color: ink }]}>of 10+</Text>
+                  <Text style={[styles.heroCapsLabel, { color: ink }]}>{Common.aqhi}</Text>
+                  <Text style={[styles.heroOf, { color: ink }]}>{TodayStrings.ofTen}</Text>
                 </View>
               </View>
             </View>
@@ -149,13 +130,13 @@ export default function TodayScreen() {
 
         <View style={styles.windowPill}>
           <Icon name="bars" size={18} color={Accent2[800]} />
-          <Text style={styles.windowText}>Best window today · {windowText}</Text>
+          <Text style={styles.windowText}>{TodayStrings.bestWindow(windowText)}</Text>
         </View>
 
         <View style={styles.card}>
           <View style={styles.cardHead}>
-            <Text style={styles.cardTitle}>Hour by hour</Text>
-            <Text style={styles.cardHint}>taller is better</Text>
+            <Text style={styles.cardTitle}>{TodayStrings.chartTitle}</Text>
+            <Text style={styles.cardHint}>{TodayStrings.chartHint}</Text>
           </View>
 
           <View style={styles.chart}>
@@ -170,7 +151,7 @@ export default function TodayScreen() {
                   style={styles.barColumn}
                   onPress={() => setSelectedHour(hr.hour)}
                   accessibilityRole="button"
-                  accessibilityLabel={`${formatHour(hr.hour, settings.timeFmt)}, AQHI ${hr.aqhi}`}>
+                  accessibilityLabel={TodayStrings.barLabel(formatHour(hr.hour, settings.timeFmt), hr.aqhi)}>
                   <View
                     style={[
                       styles.bar,
@@ -204,7 +185,7 @@ export default function TodayScreen() {
             <View style={styles.readoutHead}>
               <Text style={styles.readoutHour}>
                 {formatHour(selected.hour, settings.timeFmt)}
-                {Math.floor(NOW) === selected.hour ? ' · now' : ''}
+                {Math.floor(NOW) === selected.hour ? TodayStrings.now : ''}
               </Text>
               <View
                 style={[
@@ -228,7 +209,7 @@ export default function TodayScreen() {
               onPress={() => setAirOpen(true)}
               accessibilityRole="button"
               hitSlop={8}>
-              <Text style={styles.airLink}>What&apos;s in the air →</Text>
+              <Text style={styles.airLink}>{TodayStrings.airLink}</Text>
             </Pressable>
           </View>
         </View>
@@ -243,23 +224,20 @@ export default function TodayScreen() {
           accessibilityRole="button"
           style={styles.comparisonRow}>
           <Icon name="bars" size={18} color={Neutral[700]} />
-          <Text style={styles.comparisonText}>Same air, three verdicts</Text>
+          <Text style={styles.comparisonText}>{TodayStrings.comparisonRow}</Text>
           <Icon name="chevronRight" size={17} color={Neutral[600]} />
         </Pressable>
 
-        <Text style={styles.attribution}>
-          Air data follows the Canadian AQHI. Sources: Environment and Climate Change Canada,
-          FireSmoke.ca — BlueSky Canada, BC Ministry of Environment, PurpleAir, BC Wildfire Service.
-        </Text>
+        <Text style={styles.attribution}>{Attribution.today}</Text>
       </ScrollView>
 
-      <Sheet visible={airOpen} title="What's in the air" onClose={() => setAirOpen(false)}>
+      <Sheet visible={airOpen} title={SheetStrings.airTitle} onClose={() => setAirOpen(false)}>
         <AirSheetBody timeFmt={settings.timeFmt} />
       </Sheet>
 
       <Sheet
         visible={actsOpen}
-        title="Same air, three verdicts"
+        title={SheetStrings.activityTitle}
         onClose={() => setActsOpen(false)}>
         <ActivitySheetBody
           prefs={prefs}

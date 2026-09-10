@@ -1,0 +1,360 @@
+/**
+ * Every user-facing string in the app.
+ *
+ * Centralised so that copy can be reviewed in one pass. That matters here more
+ * than in most apps: this project must never make a health or safety claim,
+ * and keeping the words in one file turns that audit into reading a single
+ * module rather than grepping nine.
+ *
+ * Rules for anything added here:
+ *   - No health or safety claim. Not "safe", "healthy", "risk", "unhealthy",
+ *     "harmful", or symptoms. Describe conditions, thresholds and timing, and
+ *     let the reader decide.
+ *   - Say what a setting *is*, not what the reader should do about it.
+ *   - Naming an external authority ("follow local government advisories") is
+ *     fine. Speaking as one is not.
+ *
+ * Strings that interpolate live values are functions, so the sentence stays
+ * here in one piece rather than being assembled at the call site.
+ */
+import type { Activity, Driver, Level, Sensitivity } from '@/lib/rating';
+
+/* ── Shared ──────────────────────────────────────────────────────────────── */
+
+export const Common = {
+  done: 'Done',
+  close: 'Close',
+  aqhi: 'AQHI',
+} as const;
+
+/* ── Tab bar ────────────────────────────────────────────────────────────── */
+
+export const TabStrings = {
+  today: 'Today',
+  map: 'Map',
+  forecast: 'Forecast',
+} as const;
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+
+export const HeaderStrings = {
+  /** Also the Thresholds screen title, so the two cannot drift apart. */
+  thresholds: 'Your thresholds',
+  about: 'About yourself',
+  howItWorks: 'How this works',
+  changePlace: (place: string) => `Place: ${place}. Change place.`,
+} as const;
+
+/* ── Today ───────────────────────────────────────────────────────────────── */
+
+export const TodayStrings = {
+  kicker: (time: string, activity: Activity) => `Conditions at ${time} · ${activity}`,
+  ofTen: 'of 10+',
+
+  /**
+   * The line under the verdict, naming what is limiting the session.
+   *
+   * These describe conditions against the reader's own thresholds. They do not
+   * make a claim about anyone's health, and must not start doing so.
+   */
+  sentences: {
+    smoke: {
+      2: 'Smoke is pooled on the valley floor. Well past your ceiling for hard efforts.',
+      1: 'Thin smoke. Steady work is fine; save the intervals.',
+    },
+    rainfall: {
+      2: 'Thunderstorm over the valley — heavy rain and gusts.',
+      1: 'Steady rain, but the air behind it is the cleanest today.',
+    },
+    heat: {
+      2: 'Heat is the limit now, not the air.',
+      1: 'Hot enough to cost you. Shorten it or move it later.',
+    },
+    wind: {
+      1: 'Gusty. The air is fine; the handling is not.',
+    },
+  } as Partial<Record<Exclude<Driver, null>, Partial<Record<Level, string>>>>,
+  clearSentence: 'Clear enough for a full session at your usual intensity.',
+  fallbackSentence: 'Conditions are against you right now.',
+
+  bestWindow: (window: string) => `Best window today · ${window}`,
+  noWindow: 'nothing clean today',
+  windowSpan: (from: string, to: string, hours: number) => `${from} – ${to} · ${hours} h`,
+
+  chartTitle: 'Hour by hour',
+  chartHint: 'taller is better',
+  barLabel: (time: string, aqhi: number) => `${time}, AQHI ${aqhi}`,
+  now: ' · now',
+
+  statKeys: {
+    aqhi: 'AQHI',
+    temp: 'Temp',
+    wind: 'Wind',
+    rain: 'Rain',
+    humidity: 'Humidity',
+    effective: 'Effective',
+  },
+
+  airLink: "What's in the air →",
+  comparisonRow: 'Same air, three verdicts',
+} as const;
+
+/* ── Map ─────────────────────────────────────────────────────────────────── */
+
+export const MapStrings = {
+  title: 'Local conditions',
+  zonesKicker: 'Rating by zone',
+  legend: (time: string) => `Okanagan Lake · Vernon · ${time} · pins show AQHI`,
+
+  /** Shown in place of the plate. States why, rather than drawing nothing. */
+  plateTitle: 'Map unavailable',
+  plateNote:
+    'The plume view needs a tile layer and the BlueSky Canada smoke raster. Neither is wired up yet, so nothing is drawn here.',
+} as const;
+
+/* ── Forecast ────────────────────────────────────────────────────────────── */
+
+export const ForecastStrings = {
+  title: 'Next five days',
+  noWindow: 'No usable window',
+  temp: (hi: number, lo: number) => `${hi}° / ${lo}°`,
+  rainTotal: (mm: number) => `${mm} mm`,
+  /**
+   * The rain clause is dropped entirely on a dry day rather than reading
+   * "0 mm", and never states timing.
+   */
+  meta: (from: number, to: number, rainMm: number | null, dir: string, windKmh: number) =>
+    `AQHI ${from} → ${to}${rainMm === null ? '' : ` · rain ${rainMm} mm`} · wind ${dir} ${windKmh} km/h`,
+} as const;
+
+/* ── Thresholds ──────────────────────────────────────────────────────────── */
+
+export const ThresholdsStrings = {
+  title: HeaderStrings.thresholds,
+
+  airCardTitle: 'Air quality limits',
+  airCardCaption:
+    'Your tolerance for air quality. Always follow local government recommendations and advisories.',
+  ceilingMeta: (word: string) => `AQHI · ${word}`,
+  ceilingSliderLabel: 'Air quality ceiling',
+  ceilingSliderValue: (ceiling: number, word: string) => `AQHI ${ceiling}, ${word}`,
+
+  /**
+   * How permissive the chosen ceiling is.
+   *
+   * The design labelled the top of the range "not recommended", which is
+   * advice about a limit rather than a description of it. These say where the
+   * setting sits and leave the judgement to the reader.
+   */
+  ceilingWord: (ceiling: number): string => {
+    if (ceiling <= 3) return 'cautious';
+    if (ceiling <= 5) return 'typical';
+    if (ceiling <= 7) return 'permissive';
+    return 'very permissive';
+  },
+
+  sensitivityLabel: 'Air quality sensitivity',
+
+  weatherCardTitle: 'Weather limits',
+  weatherCardCaption: 'How much rain and wind you will train in.',
+  rainLabel: 'Rain',
+  rainSliderLabel: 'Rain tolerance',
+  windLabel: 'Wind',
+  windSliderLabel: 'Wind tolerance',
+  windValue: (windTol: number) => (windTol >= 40 ? 'any wind' : `${windTol} km/h`),
+  windNote: (windTol: number): string => {
+    if (windTol <= 16) return 'a breeze turns it amber';
+    if (windTol >= 36) return 'only a gale stops you';
+    return 'typical tolerance';
+  },
+} as const;
+
+/* ── About yourself ──────────────────────────────────────────────────────── */
+
+export const AboutStrings = {
+  title: HeaderStrings.about,
+  sportsLabel: 'What you do',
+  sensitivityLabel: 'How smoke affects you',
+  advisory: 'Always follow local government advisories.',
+  timeFormatLabel: 'Preferred time format',
+  thresholdsLink: 'Activity thresholds',
+
+  /**
+   * What each sensitivity means, as a description of the setting.
+   *
+   * The design's Reactive note listed symptoms, which is medical framing. This
+   * says what the setting does to the thresholds instead.
+   */
+  sensitivityNote: {
+    Low: 'Smoke rarely bothers you.',
+    Normal: 'Standard thresholds.',
+    Reactive: 'Smoke affects you at lower levels than most.',
+  } as Record<Sensitivity, string>,
+
+  tileLabels: {
+    ceiling: 'AQHI max',
+    rain: 'Rain',
+    wind: 'Wind',
+  },
+} as const;
+
+/* ── How this works ──────────────────────────────────────────────────────── */
+
+export const HowItWorksStrings = {
+  title: HeaderStrings.howItWorks,
+
+  pages: [
+    {
+      name: 'Today',
+      what: 'Can I go out right now? Current conditions plus a per hour view of the day so you can plan your activity in the best window.',
+    },
+    {
+      name: 'Map',
+      what: 'Where the smoke in your area is right now so you can plan where to ride today.',
+    },
+    {
+      name: 'Forecast',
+      what: 'The next five days, so you can plan when conditions are suitable for your outdoor activity.',
+    },
+  ],
+
+  verdictTitle: 'The verdict',
+  bands: {
+    0: 'Train as planned.',
+    1: 'Go easy, or go shorter.',
+    2: 'Take it indoors.',
+  } as Record<Level, string>,
+
+  factorsTitle: 'Worst factor wins',
+  factorsCaption:
+    'Four factors are checked with the worst factor setting the verdict (based on your preferences.)',
+  factorNames: {
+    smoke: 'Smoke',
+    rain: 'Rain',
+    heat: 'Heat',
+    wind: 'Wind',
+  },
+  driverWord: {
+    smoke: 'smoke',
+    rainfall: 'rain',
+    heat: 'heat',
+    wind: 'wind',
+  } as Record<Exclude<Driver, null>, string>,
+  winner: (driver: string) => `Right now, the ${driver} is setting the verdict`,
+  noWinner: 'Right now, nothing is holding you back',
+
+  ventTitle: 'Why your verdict differs',
+  /**
+   * The design said "move far more air through your lungs". Anatomical framing
+   * is a health claim, so this states the same mechanism as a rate.
+   */
+  ventCaption:
+    'Hard efforts move far more air per minute, so the same reading meets you differently on a bike than on a walk. Your sport, your sensitivity and your limits all shift the thresholds — set them in Thresholds.',
+  ventTiles: [
+    { name: 'Walking', mult: '1.0×' },
+    { name: 'Cycling', mult: '1.5×' },
+    { name: 'Running', mult: '1.7×' },
+  ],
+
+  sourcesTitle: 'Where the data comes from',
+  closing:
+    'Air data follows the Canadian AQHI. HazePace is guidance for training decisions — always follow local advisories.',
+} as const;
+
+/* ── Sheets ──────────────────────────────────────────────────────────────── */
+
+export const SheetStrings = {
+  placesTitle: 'Near you, right now',
+  airTitle: "What's in the air",
+  activityTitle: 'Same air, three verdicts',
+
+  airStatKeys: {
+    pm25: 'PM2.5',
+    aqhi: 'AQHI',
+    rain: 'Rain',
+    visibility: 'Visibility',
+  },
+  airStatUnits: {
+    pm25: 'µg/m³, 1 h mean',
+    rain: 'mm/h, washing out',
+    visibility: 'km, hazy',
+  },
+
+  /**
+   * The AQHI band name.
+   *
+   * The design called these "risk bands". That is health framing, so the band
+   * is named without it — the number and its band, not a claim about what it
+   * does to the reader.
+   */
+  aqhiBandName: (aqhi: number): string => {
+    if (aqhi <= 3) return 'low band';
+    if (aqhi <= 6) return 'moderate band';
+    if (aqhi <= 10) return 'high band';
+    return 'very high band';
+  },
+
+  airBars: [
+    { k: 'PM2.5 (wildfire smoke)', v: '86% of the index', pct: 86 },
+    { k: 'Ozone', v: '9%', pct: 9 },
+    { k: 'NO₂ (traffic)', v: '5%', pct: 5 },
+  ],
+  airSource: (time: string) =>
+    `FireSmoke.ca (BlueSky) plume model · Environment Canada AQHI & hourly weather · PurpleAir #4412, Vernon Bench. Updated ${time}.`,
+
+  /**
+   * Why the same air rates differently per sport.
+   *
+   * The design's cycling note ended "the biggest total dose". Exposure framing
+   * is a health claim, so it names the time spent instead.
+   */
+  activityNote: {
+    Running:
+      'Highest intake per minute — the strictest ceiling, and not before the inversion lifts.',
+    Cycling: 'Sustained intake for hours at a time — a long ride spends the most time in it.',
+    'Hiking / Walking': 'Low ventilation. An hour on the bench is defensible.',
+  } as Record<Activity, string>,
+} as const;
+
+/* ── Launch ──────────────────────────────────────────────────────────────── */
+
+export const LaunchStrings = {
+  title: 'Updating your forecast',
+  steps: ['Air quality stations', 'Wildfire smoke plume', 'Hourly weather'],
+} as const;
+
+/* ── Attribution ─────────────────────────────────────────────────────────── */
+
+/**
+ * Source attribution, which the project requires to stay visible in the UI.
+ * All of it is public government data plus one community sensor network.
+ */
+export const Attribution = {
+  today:
+    'Air data follows the Canadian AQHI. Sources: Environment and Climate Change Canada, FireSmoke.ca — BlueSky Canada, BC Ministry of Environment, PurpleAir, BC Wildfire Service.',
+  map: 'Smoke plume model: FireSmoke.ca — BlueSky Canada. Air quality: Environment and Climate Change Canada, BC Ministry of Environment, PurpleAir. Fire perimeters: BC Wildfire Service.',
+  forecast:
+    'Forecasts: Environment and Climate Change Canada. Smoke plume model: FireSmoke.ca — BlueSky Canada.',
+  sources: [
+    {
+      name: 'Environment and Climate Change Canada',
+      what: 'AQHI observations and forecasts, plus hourly temperature, wind and precipitation.',
+    },
+    {
+      name: 'FireSmoke.ca — BlueSky Canada',
+      what: 'The wildfire smoke plume model behind the map and the forward scrub.',
+    },
+    {
+      name: 'BC Ministry of Environment air monitoring',
+      what: 'The reference PM2.5 stations that anchor the valley readings.',
+    },
+    {
+      name: 'PurpleAir community sensors',
+      what: 'Fills the gaps between stations so zones a few kilometres apart read separately.',
+    },
+    {
+      name: 'BC Wildfire Service',
+      what: 'Active fire perimeters and advisories shown on the map.',
+    },
+  ],
+} as const;

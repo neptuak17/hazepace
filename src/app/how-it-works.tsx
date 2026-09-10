@@ -23,69 +23,15 @@ import {
   tracking,
   type Level,
 } from '@/constants/design-tokens';
+import { Attribution, Common, HowItWorksStrings } from '@/constants/strings';
 import { NOW, hourAt } from '@/lib/fixtures';
 import { factorLevels, judge, type Driver } from '@/lib/rating';
 import { useSettings } from '@/lib/settings';
 
-const PAGES: { name: string; icon: IconName; what: string }[] = [
-  {
-    name: 'Today',
-    icon: 'tabToday',
-    what: 'Can I go out right now? Current conditions plus a per hour view of the day so you can plan your activity in the best window.',
-  },
-  {
-    name: 'Map',
-    icon: 'tabMap',
-    what: 'Where the smoke in your area is right now so you can plan where to ride today.',
-  },
-  {
-    name: 'Forecast',
-    icon: 'tabForecast',
-    what: 'The next five days, so you can plan when conditions are suitable for your outdoor activity.',
-  },
-];
+/** Icons for HowItWorksStrings.pages, paired by position. */
+const PAGE_ICONS: IconName[] = ['tabToday', 'tabMap', 'tabForecast'];
 
-const BANDS: { level: Level; what: string }[] = [
-  { level: 0, what: 'Train as planned.' },
-  { level: 1, what: 'Go easy, or go shorter.' },
-  { level: 2, what: 'Take it indoors.' },
-];
-
-const VENT_TILES = [
-  { name: 'Walking', mult: '1.0×' },
-  { name: 'Cycling', mult: '1.5×' },
-  { name: 'Running', mult: '1.7×' },
-];
-
-const SOURCES = [
-  {
-    name: 'Environment and Climate Change Canada',
-    what: 'AQHI observations and forecasts, plus hourly temperature, wind and precipitation.',
-  },
-  {
-    name: 'FireSmoke.ca — BlueSky Canada',
-    what: 'The wildfire smoke plume model behind the map and the forward scrub.',
-  },
-  {
-    name: 'BC Ministry of Environment air monitoring',
-    what: 'The reference PM2.5 stations that anchor the valley readings.',
-  },
-  {
-    name: 'PurpleAir community sensors',
-    what: 'Fills the gaps between stations so zones a few kilometres apart read separately.',
-  },
-  {
-    name: 'BC Wildfire Service',
-    what: 'Active fire perimeters and advisories shown on the map.',
-  },
-];
-
-const DRIVER_WORD: Record<Exclude<Driver, null>, string> = {
-  smoke: 'smoke',
-  rainfall: 'rain',
-  heat: 'heat',
-  wind: 'wind',
-};
+const BAND_LEVELS: Level[] = [0, 1, 2];
 
 /** The design's factor bar: 14, 27 or 40px by level. */
 const factorBarHeight = (level: Level) => 14 + level * 13;
@@ -99,28 +45,28 @@ export default function HowItWorksScreen() {
   const factors = factorLevels(nowHour, prefs);
 
   const factorTiles: { name: string; level: Level }[] = [
-    { name: 'Smoke', level: factors.air },
-    { name: 'Rain', level: factors.rain },
-    { name: 'Heat', level: factors.heat },
-    { name: 'Wind', level: factors.wind },
+    { name: HowItWorksStrings.factorNames.smoke, level: factors.air },
+    { name: HowItWorksStrings.factorNames.rain, level: factors.rain },
+    { name: HowItWorksStrings.factorNames.heat, level: factors.heat },
+    { name: HowItWorksStrings.factorNames.wind, level: factors.wind },
   ];
 
   const winner = now.driver
-    ? `Right now, the ${DRIVER_WORD[now.driver]} is setting the verdict`
-    : 'Right now, nothing is holding you back';
+    ? HowItWorksStrings.winner(HowItWorksStrings.driverWord[now.driver])
+    : HowItWorksStrings.noWinner;
 
   return (
     <View style={styles.screen}>
       <AppHeader />
 
       <ScrollView style={styles.pane} contentContainerStyle={styles.paneContent}>
-        <Text style={styles.title}>How this works</Text>
+        <Text style={styles.title}>{HowItWorksStrings.title}</Text>
 
         <View style={[styles.card, styles.pagesCard]}>
-          {PAGES.map((p) => (
+          {HowItWorksStrings.pages.map((p, i) => (
             <View key={p.name} style={styles.pageRow}>
               <View style={styles.pageBadge}>
-                <Icon name={p.icon} size={19} color={Accent2[800]} />
+                <Icon name={PAGE_ICONS[i]} size={19} color={Accent2[800]} />
               </View>
               <View style={styles.pageText}>
                 <Text style={styles.cardTitle}>{p.name}</Text>
@@ -131,27 +77,26 @@ export default function HowItWorksScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>The verdict</Text>
+          <Text style={styles.cardTitle}>{HowItWorksStrings.verdictTitle}</Text>
           <View style={styles.bandList}>
-            {BANDS.map((b) => (
+            {BAND_LEVELS.map((level) => (
               <View
-                key={b.level}
-                style={[styles.bandRow, { backgroundColor: Verdict.tint[b.level] }]}>
-                <View style={[styles.bandPill, { backgroundColor: Verdict.ink[b.level] }]}>
-                  <Text style={styles.bandPillText}>{Verdict.word[b.level]}</Text>
+                key={level}
+                style={[styles.bandRow, { backgroundColor: Verdict.tint[level] }]}>
+                <View style={[styles.bandPill, { backgroundColor: Verdict.ink[level] }]}>
+                  <Text style={styles.bandPillText}>{Verdict.word[level]}</Text>
                 </View>
-                <Text style={[styles.bandWhat, { color: Verdict.ink[b.level] }]}>{b.what}</Text>
+                <Text style={[styles.bandWhat, { color: Verdict.ink[level] }]}>
+                  {HowItWorksStrings.bands[level]}
+                </Text>
               </View>
             ))}
           </View>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Worst factor wins</Text>
-          <Text style={styles.caption}>
-            Four factors are checked with the worst factor setting the verdict (based on your
-            preferences.)
-          </Text>
+          <Text style={styles.cardTitle}>{HowItWorksStrings.factorsTitle}</Text>
+          <Text style={styles.caption}>{HowItWorksStrings.factorsCaption}</Text>
           <View style={styles.factorRow}>
             {factorTiles.map((f) => (
               <View
@@ -173,19 +118,10 @@ export default function HowItWorksScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Why your verdict differs</Text>
-          {/*
-            The design said "move far more air through your lungs". Anatomical
-            framing is a health claim, so this states the same mechanism as a
-            rate of air moved.
-          */}
-          <Text style={styles.caption}>
-            Hard efforts move far more air per minute, so the same reading meets you differently on
-            a bike than on a walk. Your sport, your sensitivity and your limits all shift the
-            thresholds — set them in Thresholds.
-          </Text>
+          <Text style={styles.cardTitle}>{HowItWorksStrings.ventTitle}</Text>
+          <Text style={styles.caption}>{HowItWorksStrings.ventCaption}</Text>
           <View style={styles.ventRow}>
-            {VENT_TILES.map((v) => (
+            {HowItWorksStrings.ventTiles.map((v) => (
               <View key={v.name} style={styles.ventTile}>
                 <Text style={styles.ventMult}>{v.mult}</Text>
                 <Text style={styles.ventName}>{v.name}</Text>
@@ -195,9 +131,9 @@ export default function HowItWorksScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Where the data comes from</Text>
+          <Text style={styles.cardTitle}>{HowItWorksStrings.sourcesTitle}</Text>
           <View style={styles.sourceList}>
-            {SOURCES.map((s) => (
+            {Attribution.sources.map((s) => (
               <View key={s.name} style={styles.sourceRow}>
                 <View style={styles.sourceDot} />
                 <View style={styles.pageText}>
@@ -209,16 +145,13 @@ export default function HowItWorksScreen() {
           </View>
         </View>
 
-        <Text style={styles.closing}>
-          Air data follows the Canadian AQHI. HazePace is guidance for training decisions — always
-          follow local advisories.
-        </Text>
+        <Text style={styles.closing}>{HowItWorksStrings.closing}</Text>
 
         <Pressable
           onPress={() => router.navigate('/')}
           accessibilityRole="button"
           style={({ pressed }) => [styles.done, pressed && styles.donePressed]}>
-          <Text style={styles.doneText}>Done</Text>
+          <Text style={styles.doneText}>{Common.done}</Text>
         </Pressable>
       </ScrollView>
     </View>

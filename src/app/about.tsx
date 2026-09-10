@@ -21,6 +21,7 @@ import {
   Type,
   tracking,
 } from '@/constants/design-tokens';
+import { AboutStrings, Common, ThresholdsStrings } from '@/constants/strings';
 import { RAIN_TOL, type Activity, type Sensitivity, type TimeFormat } from '@/lib/rating';
 import { useSettings } from '@/lib/settings';
 
@@ -28,30 +29,17 @@ const ACTIVITIES: Activity[] = ['Running', 'Cycling', 'Hiking / Walking'];
 const SENSITIVITIES: Sensitivity[] = ['Low', 'Normal', 'Reactive'];
 const TIME_FORMATS: TimeFormat[] = ['24-hour', '12-hour'];
 
-/**
- * What each sensitivity means, as a description of the setting.
- *
- * The design's Reactive note listed symptoms — "Adverse reactions — tight
- * chest, cough or headaches" — which is medical framing. This says what the
- * setting does to the thresholds instead.
- */
-const SENS_NOTE: Record<Sensitivity, string> = {
-  Low: 'Smoke rarely bothers you.',
-  Normal: 'Standard thresholds.',
-  Reactive: 'Smoke affects you at lower levels than most.',
-};
-
 export default function AboutScreen() {
   const router = useRouter();
   const { settings, update, toggleSport } = useSettings();
 
   const tiles: { icon: IconName; value: string; label: string }[] = [
-    { icon: 'wind', value: String(settings.ceiling), label: 'AQHI max' },
-    { icon: 'droplet', value: RAIN_TOL[settings.rainTol].name, label: 'Rain' },
+    { icon: 'wind', value: String(settings.ceiling), label: AboutStrings.tileLabels.ceiling },
+    { icon: 'droplet', value: RAIN_TOL[settings.rainTol].name, label: AboutStrings.tileLabels.rain },
     {
       icon: 'windAlt',
-      value: settings.windTol >= 40 ? 'any wind' : `${settings.windTol} km/h`,
-      label: 'Wind',
+      value: ThresholdsStrings.windValue(settings.windTol),
+      label: AboutStrings.tileLabels.wind,
     },
   ];
 
@@ -60,10 +48,10 @@ export default function AboutScreen() {
       <AppHeader />
 
       <ScrollView style={styles.pane} contentContainerStyle={styles.paneContent}>
-        <Text style={styles.title}>About yourself</Text>
+        <Text style={styles.title}>{AboutStrings.title}</Text>
 
         <View style={styles.card}>
-          <Text style={styles.groupLabel}>What you do</Text>
+          <Text style={styles.groupLabel}>{AboutStrings.sportsLabel}</Text>
           <View style={styles.sportRow}>
             {ACTIVITIES.map((a) => {
               const on = settings.sports.includes(a);
@@ -82,8 +70,8 @@ export default function AboutScreen() {
             })}
           </View>
 
-          <Text style={styles.groupLabelSpaced}>How smoke affects you</Text>
-          <Text style={styles.advisory}>Always follow local government advisories.</Text>
+          <Text style={styles.groupLabelSpaced}>{AboutStrings.sensitivityLabel}</Text>
+          <Text style={styles.advisory}>{AboutStrings.advisory}</Text>
           <View style={styles.chipRow}>
             {SENSITIVITIES.map((s) => {
               const on = s === settings.sensitivity;
@@ -101,9 +89,9 @@ export default function AboutScreen() {
               );
             })}
           </View>
-          <Text style={styles.sensNote}>{SENS_NOTE[settings.sensitivity]}</Text>
+          <Text style={styles.sensNote}>{AboutStrings.sensitivityNote[settings.sensitivity]}</Text>
 
-          <Text style={styles.groupLabelSpaced}>Preferred time format</Text>
+          <Text style={styles.groupLabelSpaced}>{AboutStrings.timeFormatLabel}</Text>
           <View style={styles.chipRow}>
             {TIME_FORMATS.map((f) => {
               const on = f === settings.timeFmt;
@@ -126,10 +114,10 @@ export default function AboutScreen() {
         <Pressable
           onPress={() => router.navigate('/thresholds')}
           accessibilityRole="button"
-          accessibilityLabel="Activity thresholds"
+          accessibilityLabel={AboutStrings.thresholdsLink}
           style={styles.card}>
           <View style={styles.linkRow}>
-            <Text style={styles.linkLabel}>Activity thresholds</Text>
+            <Text style={styles.linkLabel}>{AboutStrings.thresholdsLink}</Text>
             <Icon name="chevronRight" size={17} color={Neutral[600]} />
           </View>
           <View style={styles.tileRow}>
@@ -147,7 +135,7 @@ export default function AboutScreen() {
           onPress={() => router.navigate('/')}
           accessibilityRole="button"
           style={({ pressed }) => [styles.done, pressed && styles.donePressed]}>
-          <Text style={styles.doneText}>Done</Text>
+          <Text style={styles.doneText}>{Common.done}</Text>
         </Pressable>
       </ScrollView>
     </View>

@@ -15,6 +15,7 @@ import { Icon } from '@/components/icon';
 import { Sheet } from '@/components/sheet';
 import { PlacesSheetBody } from '@/components/sheets';
 import { Accent, Accent2, Neutral, Palette, Space, Type } from '@/constants/design-tokens';
+import { HeaderStrings, SheetStrings } from '@/constants/strings';
 import { NOW, PLACE_LABEL } from '@/lib/fixtures';
 import { formatHour } from '@/lib/rating';
 import { useSettings } from '@/lib/settings';
@@ -30,7 +31,7 @@ export function AppHeader() {
       <Pressable
         style={styles.place}
         accessibilityRole="button"
-        accessibilityLabel={`Place: ${settings.place}. Change place.`}
+        accessibilityLabel={HeaderStrings.changePlace(settings.place)}
         onPress={() => setPlacesOpen(true)}>
         <View style={styles.pinBadge}>
           <Icon name="mapPin" size={17} color={Palette.bg} />
@@ -49,26 +50,26 @@ export function AppHeader() {
       <Pressable
         style={styles.iconButton}
         accessibilityRole="button"
-        accessibilityLabel="Your thresholds"
+        accessibilityLabel={HeaderStrings.thresholds}
         onPress={() => router.navigate('/thresholds')}>
         <Icon name="settings" size={20} color={Accent.base} />
       </Pressable>
       <Pressable
         style={styles.iconButton}
         accessibilityRole="button"
-        accessibilityLabel="About yourself"
+        accessibilityLabel={HeaderStrings.about}
         onPress={() => router.navigate('/about')}>
         <Icon name="person" size={20} color={Accent.base} />
       </Pressable>
       <Pressable
         style={styles.iconButton}
         accessibilityRole="button"
-        accessibilityLabel="How this works"
+        accessibilityLabel={HeaderStrings.howItWorks}
         onPress={() => router.navigate('/how-it-works')}>
         <Icon name="help" size={20} color={Accent.base} />
       </Pressable>
 
-      <Sheet visible={placesOpen} title="Near you, right now" onClose={() => setPlacesOpen(false)}>
+      <Sheet visible={placesOpen} title={SheetStrings.placesTitle} onClose={() => setPlacesOpen(false)}>
         <PlacesSheetBody
           prefs={prefs}
           onPick={(place) => {
