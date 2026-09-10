@@ -8,8 +8,8 @@
  */
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppHeader } from '@/components/app-header';
 import { Icon } from '@/components/icon';
 import {
   Accent,
@@ -23,7 +23,7 @@ import {
   Verdict,
   tracking,
 } from '@/constants/design-tokens';
-import { HOURS, NOW, PLACE_LABEL, hourAt } from '@/lib/fixtures';
+import { HOURS, NOW, hourAt } from '@/lib/fixtures';
 import {
   bestWindow,
   effectiveAqhi,
@@ -69,7 +69,6 @@ const BAR_BASE = 16;
 const BAR_SCALE = 1.16;
 
 export default function TodayScreen() {
-  const insets = useSafeAreaInsets();
   const { settings, activity, setActivity, prefs } = useSettings();
   const [selectedHour, setSelectedHour] = useState(11);
 
@@ -102,32 +101,7 @@ export default function TodayScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={[styles.header, { paddingTop: insets.top + Space.two }]}>
-        <View style={styles.place}>
-          <View style={styles.pinBadge}>
-            <Icon name="mapPin" size={17} color={Palette.bg} />
-          </View>
-          <View style={styles.placeText}>
-            <Text style={styles.placeName} numberOfLines={1}>
-              {settings.place}
-            </Text>
-            <Text style={styles.placeMeta} numberOfLines={1}>
-              {PLACE_LABEL} · {formatHour(NOW, settings.timeFmt)}
-            </Text>
-          </View>
-          <Icon name="chevronDown" size={15} color={Neutral[600]} />
-        </View>
-
-        <Pressable style={styles.iconButton} accessibilityLabel="Your thresholds">
-          <Icon name="settings" size={20} color={Palette.text} />
-        </Pressable>
-        <Pressable style={styles.iconButton} accessibilityLabel="About yourself">
-          <Icon name="person" size={20} color={Palette.text} />
-        </Pressable>
-        <Pressable style={styles.iconButton} accessibilityLabel="How this works">
-          <Icon name="help" size={20} color={Palette.text} />
-        </Pressable>
-      </View>
+      <AppHeader />
 
       <ScrollView style={styles.pane} contentContainerStyle={styles.paneContent}>
         <View style={[styles.verdictCard, { backgroundColor: tint }]}>
@@ -285,10 +259,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  placeText: { flex: 1, minWidth: 0 },
-  placeName: { ...Type.rowLabel, fontSize: 17, color: Palette.text },
-  placeMeta: { ...Type.caption, color: Neutral[600] },
-  iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
 
   pane: { flex: 1 },
   paneContent: {
