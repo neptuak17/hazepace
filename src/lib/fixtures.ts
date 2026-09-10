@@ -50,3 +50,96 @@ export const HOURS: HourFixture[] = [
 export function hourAt(h: number): HourFixture {
   return HOURS.find((x) => x.hour === Math.floor(h)) ?? HOURS[0];
 }
+
+/**
+ * Five forecast days, each sampled at the eight 2-hour slots in SLOTS.
+ * Fixtures, exactly as above — not real forecasts.
+ *
+ * Verdicts are never authored here: every slot runs through the model and the
+ * day's verdict is derived from the runs it produces.
+ */
+export interface DayFixture {
+  day: string;
+  date: string;
+  /** Prevailing wind direction. */
+  dir: string;
+  hi: number;
+  lo: number;
+  aqhi: number[];
+  rainMmH: number[];
+  tempC: number[];
+  windKmh: number[];
+}
+
+export const DAYS: DayFixture[] = [
+  {
+    day: 'Today',
+    date: 'Tue 2',
+    dir: 'NW',
+    hi: 29,
+    lo: 12,
+    aqhi: [9, 8, 6, 3, 2, 3, 4, 2],
+    rainMmH: [0, 0, 0, 0, 0, 5.5, 1.2, 0],
+    tempC: [12, 17, 22, 26, 29, 27, 22, 17],
+    windKmh: [6, 8, 12, 14, 18, 26, 14, 8],
+  },
+  {
+    day: 'Wed',
+    date: '3 Sep',
+    dir: 'S',
+    hi: 24,
+    lo: 11,
+    aqhi: [4, 4, 3, 3, 4, 5, 6, 5],
+    rainMmH: [0, 0, 0, 0, 0, 0, 0, 0],
+    tempC: [11, 15, 19, 22, 24, 23, 19, 15],
+    windKmh: [8, 10, 12, 12, 12, 10, 8, 6],
+  },
+  {
+    day: 'Thu',
+    date: '4 Sep',
+    dir: 'SW',
+    hi: 29,
+    lo: 14,
+    aqhi: [5, 5, 6, 6, 7, 8, 8, 7],
+    rainMmH: [0, 0, 0, 0, 0, 0, 0, 0],
+    tempC: [14, 18, 23, 27, 29, 28, 24, 19],
+    windKmh: [6, 8, 9, 9, 9, 8, 6, 5],
+  },
+  {
+    day: 'Fri',
+    date: '5 Sep',
+    dir: 'NE',
+    hi: 31,
+    lo: 17,
+    aqhi: [8, 8, 9, 9, 9, 9, 9, 8],
+    rainMmH: [0, 0, 0, 0, 0, 0, 0, 0],
+    tempC: [17, 21, 26, 30, 31, 30, 26, 21],
+    windKmh: [4, 5, 6, 6, 6, 5, 4, 4],
+  },
+  {
+    day: 'Sat',
+    date: '6 Sep',
+    dir: 'W',
+    hi: 26,
+    lo: 15,
+    aqhi: [6, 7, 7, 6, 5, 3, 3, 2],
+    rainMmH: [0, 0, 0, 2.5, 4.2, 1, 0, 0],
+    tempC: [15, 18, 22, 25, 26, 23, 19, 16],
+    windKmh: [12, 16, 18, 20, 20, 18, 14, 10],
+  },
+];
+
+/** Turns a day fixture into the per-slot readings the model rates. */
+export function daySlots(d: DayFixture): Reading[] {
+  return d.aqhi.map((aqhi, i) => ({
+    aqhi,
+    rainMmH: d.rainMmH[i],
+    tempC: d.tempC[i],
+    windKmh: d.windKmh[i],
+  }));
+}
+
+/** Total rainfall across a day, in mm. Each slot covers two hours. */
+export function dayRainTotal(d: DayFixture): number {
+  return d.rainMmH.reduce((sum, r) => sum + r * 2, 0);
+}
