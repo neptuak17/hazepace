@@ -40,7 +40,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"src/**/*.test.ts\""
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"src/**/*.test.ts\"",
+    "check:conditions": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/check-conditions.mjs"
   },
   "private": true
 }
