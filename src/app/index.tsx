@@ -66,7 +66,7 @@ const BAR_SCALE = 1.16;
 
 export default function TodayScreen() {
   const { settings, activity, setActivity, prefs } = useSettings();
-  const { live, aqhi, aqhiCoverage, aqhiNearest, fetchedAt, refreshing, refresh, now: nowMs } =
+  const { live, aqhi, aqhiCoverage, aqhiNearest, fetchedAt, refreshing, refresh, now: nowMs, place } =
     useConditions();
   const [airOpen, setAirOpen] = useState(false);
   const [actsOpen, setActsOpen] = useState(false);
@@ -173,6 +173,17 @@ export default function TodayScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Accent.base} />
         }>
+        {place?.source === 'fallback' && place.label && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{DataStrings.fallbackTitle(place.label)}</Text>
+            <Text style={styles.cardNote}>
+              {place.fallbackReason === 'denied'
+                ? DataStrings.fallbackDenied
+                : DataStrings.fallbackUnavailable}
+            </Text>
+          </View>
+        )}
+
         {aqhiCoverage === 'none' && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{DataStrings.noCoverageTitle}</Text>

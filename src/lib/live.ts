@@ -35,24 +35,29 @@ import {
 /* ── Location ────────────────────────────────────────────────────────────── */
 
 /**
- * Hardcoded for this pass. Device location comes later.
- *
- * EXPO_PUBLIC_LAT / EXPO_PUBLIC_LON override it at bundle time, which is how
- * the no-coverage and error paths are exercised without editing code:
- * a remote coordinate for no coverage, an impossible one (999) for an HTTP
- * error from both sources. Metro inlines these, so change them by restarting
- * it with --clear.
+ * Where the app looks when it cannot use the device's location — permission
+ * denied, services off, no fix. Always labelled as a fixed place on screen,
+ * never presented as "your location".
  */
+export const FALLBACK_PLACE = { latitude: 50.27, longitude: -119.27, name: 'Vernon' } as const;
+
 const envNumber = (raw: string | undefined): number | null => {
   const n = Number(raw);
   return raw !== undefined && raw !== '' && Number.isFinite(n) ? n : null;
 };
 
-export const VERNON = {
-  latitude: envNumber(process.env.EXPO_PUBLIC_LAT) ?? 50.27,
-  longitude: envNumber(process.env.EXPO_PUBLIC_LON) ?? -119.27,
-  name: 'Vernon',
-} as const;
+/**
+ * EXPO_PUBLIC_LAT / EXPO_PUBLIC_LON, when set, replace device location
+ * entirely. That is how the no-coverage and error paths are exercised without
+ * editing code: a remote coordinate for no coverage, an impossible one (999)
+ * for an HTTP error from both sources. Metro inlines these, so change them by
+ * restarting it with --clear. Null when unset.
+ */
+export const COORDINATE_OVERRIDE: { latitude: number; longitude: number } | null = (() => {
+  const latitude = envNumber(process.env.EXPO_PUBLIC_LAT);
+  const longitude = envNumber(process.env.EXPO_PUBLIC_LON);
+  return latitude !== null && longitude !== null ? { latitude, longitude } : null;
+})();
 
 /* ── Time ────────────────────────────────────────────────────────────────── */
 

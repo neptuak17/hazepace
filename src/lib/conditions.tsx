@@ -26,7 +26,8 @@ import {
 } from 'react';
 
 import { clearAqhiCache, fetchAqhi, type AqhiSnapshot } from '@/lib/aqhi';
-import { VERNON, joinLive, type LiveHour } from '@/lib/live';
+import { COORDINATE_OVERRIDE, FALLBACK_PLACE, joinLive, type LiveHour } from '@/lib/live';
+import { locate, type Coordinate } from '@/lib/location';
 import {
   clearConditionsCache,
   fetchConditions,
@@ -42,8 +43,25 @@ export interface ConditionsFailure {
   detail: string;
 }
 
+/** The coordinate the current snapshots describe, and how it was chosen. */
+export interface PlaceResolution {
+  coordinate: Coordinate;
+  /**
+   * device   — the phone's own position, rounded to a kilometre
+   * fallback — the fixed place, because location was denied or unavailable
+   * override — EXPO_PUBLIC_LAT/LON, for testing
+   */
+  source: 'device' | 'fallback' | 'override';
+  /** Name to show for a fallback or override; null when it is the device. */
+  label: string | null;
+  /** Why the fallback was used. Null otherwise. */
+  fallbackReason: 'denied' | 'unavailable' | null;
+}
+
 export interface ConditionsValue {
   status: ConditionsStatus;
+  /** Null until the first load has resolved where to look. */
+  place: PlaceResolution | null;
   weather: ConditionsSnapshot | null;
   aqhi: AqhiSnapshot | null;
   /**
@@ -78,6 +96,29 @@ export interface ConditionsValue {
 
 const ConditionsContext = createContext<ConditionsValue | null>(null);
 
+async function resolvePlace(prompt: boolean): Promise<PlaceResolution> {
+  if (COORDINATE_OVERRIDE) {
+    return {
+      coordinate: COORDINATE_OVERRIDE,
+      source: 'override',
+      label: `${COORDINATE_OVERRIDE.latitude}, ${COORDINATE_OVERRIDE.longitude}`,
+      fallbackReason: null,
+    };
+  }
+
+  const result = await locate({ prompt });
+  if (result.status === 'granted') {
+    return { coordinate: result.coordinate, source: 'device', label: null, fallbackReason: null };
+  }
+
+  return {
+    coordinate: { latitude: FALLBACK_PLACE.latitude, longitude: FALLBACK_PLACE.longitude },
+    source: 'fallback',
+    label: FALLBACK_PLACE.name,
+    fallbackReason: result.status === 'denied' ? 'denied' : 'unavailable',
+  };
+}
+
 /**
  * Below this, a refresh completes before the overlay has finished fading in
  * and the screen appears to flash. Applies to the initial load only.
@@ -94,6 +135,7 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
   const [fetchedAt, setFetchedAt] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const [place, setPlace] = useState<PlaceResolution | null>(null);
 
   // A later request must not be overwritten by an earlier one that finished
   // late, so each load carries a sequence number and only the newest lands.
@@ -103,9 +145,17 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
     const seq = ++sequence.current;
     const started = Date.now();
 
+    // Where to look. The system permission dialog is shown on the initial
+    // load only; a refresh reuses whatever the user already decided, so a
+    // denial is never nagged.
+    const resolved = await resolvePlace(initial);
+    if (seq !== sequence.current) return;
+    setPlace(resolved);
+
+    const { latitude, longitude } = resolved.coordinate;
     const [w, a] = await Promise.all([
-      fetchConditions(VERNON.latitude, VERNON.longitude),
-      fetchAqhi(VERNON.latitude, VERNON.longitude),
+      fetchConditions(latitude, longitude),
+      fetchAqhi(latitude, longitude),
     ]);
 
     if (initial) {
@@ -177,6 +227,7 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
   const value = useMemo<ConditionsValue>(
     () => ({
       status,
+      place,
       weather,
       aqhi,
       aqhiCoverage,
@@ -188,7 +239,7 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
       now,
       refresh,
     }),
-    [status, weather, aqhi, aqhiCoverage, aqhiNearest, failure, live, fetchedAt, refreshing, now, refresh],
+    [status, place, weather, aqhi, aqhiCoverage, aqhiNearest, failure, live, fetchedAt, refreshing, now, refresh],
   );
 
   return <ConditionsContext.Provider value={value}>{children}</ConditionsContext.Provider>;

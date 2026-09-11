@@ -47,6 +47,16 @@ export const DataStrings = {
   forecastFor: (time: string) => `forecast for ${time}`,
   fetchedAge: (age: string) => `updated ${age}`,
 
+  /** The header's meta line when the app is not using the device's location. */
+  fixedPlace: (name: string) => `${name} · fixed location`,
+  overridePlace: (label: string) => `${label} · test coordinate`,
+
+  /** A card on Today explaining why the fixed place is showing. */
+  fallbackTitle: (name: string) => `Showing ${name}`,
+  fallbackDenied:
+    'Location access is off for this app. Allow it in Settings to see conditions where you are.',
+  fallbackUnavailable: 'Your location could not be determined right now.',
+
   noCoverageTitle: 'No AQHI community in range',
   noCoverageNote: (name: string | null, km: number | null) =>
     name && km !== null
