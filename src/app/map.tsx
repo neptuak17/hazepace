@@ -41,10 +41,9 @@ const PLUME_HOURS = [8, 11, 14, 17];
 
 export default function MapScreen() {
   const { settings, prefs } = useSettings();
-  const { aqhi, aqhiCoverage, aqhiNearest } = useConditions();
+  const { aqhi, aqhiCoverage, aqhiNearest, now: nowMs } = useConditions();
   const [plume, setPlume] = useState(0);
 
-  const nowMs = Date.now();
   const observation = aqhi?.observation ?? null;
   const level = observation?.value === null || observation === null ? null : band(observation.value, prefs);
   const far = aqhi !== null && aqhi.distanceKm > FAR_COMMUNITY_KM;

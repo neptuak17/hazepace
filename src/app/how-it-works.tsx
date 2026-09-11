@@ -42,11 +42,11 @@ const factorBarHeight = (level: Level | null) => 14 + (level ?? 0) * 13;
 export default function HowItWorksScreen() {
   const router = useRouter();
   const { prefs } = useSettings();
-  const { live } = useConditions();
+  const { live, now: nowMs } = useConditions();
 
   // The tiles read the current hour. If the sources did not cover it fully
   // they show as unavailable rather than judging what is missing.
-  const nowHour = currentHour(live, Date.now());
+  const nowHour = currentHour(live, nowMs);
   const reading = nowHour ? readingOf(nowHour) : null;
   const now = reading ? judge(reading, prefs) : null;
   const factors = reading ? factorLevels(reading, prefs) : null;

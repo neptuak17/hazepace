@@ -37,10 +37,9 @@ import { useSettings } from '@/lib/settings';
 
 export default function ForecastScreen() {
   const { settings, prefs } = useSettings();
-  const { live } = useConditions();
+  const { live, now: nowMs } = useConditions();
   const [openDay, setOpenDay] = useState(0);
 
-  const nowMs = Date.now();
   const days = liveDays(live, nowMs, prefs);
 
   return (

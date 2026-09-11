@@ -61,6 +61,17 @@ export interface ConditionsValue {
   fetchedAt: number | null;
   /** True during a manual refresh; the previous data stays on screen. */
   refreshing: boolean;
+  /**
+   * The current time, as React state.
+   *
+   * Screens must use this rather than call Date.now() in render. The React
+   * Compiler treats render as pure, so a Date.now() with no reactive inputs
+   * is computed once per mount and cached — which froze every "observed N
+   * min ago" and the header clock at whatever the first render saw. State
+   * is something the compiler knows can change. Ticks every 30 s and resets
+   * after each fetch.
+   */
+  now: number;
   /** Drops both caches and fetches again. */
   refresh: () => Promise<void>;
 }
@@ -82,6 +93,7 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
   const [failure, setFailure] = useState<ConditionsFailure | null>(null);
   const [fetchedAt, setFetchedAt] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
   // A later request must not be overwritten by an earlier one that finished
   // late, so each load carries a sequence number and only the newest lands.
@@ -134,8 +146,15 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
       setAqhiNearest({ name: a.nearestName, km: a.nearestKm });
     }
     setFailure(null);
-    setFetchedAt(Date.now());
+    const done = Date.now();
+    setFetchedAt(done);
+    setNow(done);
     setStatus('ready');
+  }, []);
+
+  useEffect(() => {
+    const tick = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(tick);
   }, []);
 
   useEffect(() => {
@@ -166,9 +185,10 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
       live,
       fetchedAt,
       refreshing,
+      now,
       refresh,
     }),
-    [status, weather, aqhi, aqhiCoverage, aqhiNearest, failure, live, fetchedAt, refreshing, refresh],
+    [status, weather, aqhi, aqhiCoverage, aqhiNearest, failure, live, fetchedAt, refreshing, now, refresh],
   );
 
   return <ConditionsContext.Provider value={value}>{children}</ConditionsContext.Provider>;

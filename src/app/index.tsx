@@ -66,12 +66,11 @@ const BAR_SCALE = 1.16;
 
 export default function TodayScreen() {
   const { settings, activity, setActivity, prefs } = useSettings();
-  const { live, aqhi, aqhiCoverage, aqhiNearest, fetchedAt, refreshing, refresh } =
+  const { live, aqhi, aqhiCoverage, aqhiNearest, fetchedAt, refreshing, refresh, now: nowMs } =
     useConditions();
   const [airOpen, setAirOpen] = useState(false);
   const [actsOpen, setActsOpen] = useState(false);
 
-  const nowMs = Date.now();
   const now = fractionalHour(nowMs);
   const hours = todayHours(live, nowMs);
   const nowHour = currentHour(live, nowMs);

@@ -24,13 +24,12 @@ export function AppHeader() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { settings, prefs, update } = useSettings();
-  const { aqhi, aqhiCoverage } = useConditions();
+  const { aqhi, aqhiCoverage, now } = useConditions();
   const [placesOpen, setPlacesOpen] = useState(false);
 
   // The place row names where the AQHI reading is from. Beyond the cutoff the
   // distance moves up into the headline rather than staying in the grey meta
   // line, because "this number is from 40 km away" is the headline.
-  const now = Date.now();
   const community = aqhi?.community.name ?? null;
   const km = aqhi?.distanceKm ?? null;
   const far = km !== null && km > FAR_COMMUNITY_KM;
