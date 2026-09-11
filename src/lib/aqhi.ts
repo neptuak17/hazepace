@@ -196,14 +196,25 @@ export function distanceKm(
 
 type Fetched<T> = { status: 'ok'; value: T } | { status: 'error'; error: AqhiError };
 
+/**
+ * Unlike open-meteo.ts, this cannot append a throwaway query value: an OGC
+ * API treats every unknown parameter as a property filter, so `&_=123`
+ * matches nothing and comes back 200 with zero features. The request asks
+ * the OS cache to stand aside through the fetch options instead.
+ */
+function bustCache(url: string): string {
+  return url;
+}
+
 async function getJson(url: string): Promise<Fetched<unknown>> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
-    const response = await fetch(url, {
+    const response = await fetch(bustCache(url), {
       signal: controller.signal,
-      headers: { accept: 'application/json' },
+      cache: 'no-store',
+      headers: { accept: 'application/json', 'cache-control': 'no-cache' },
     });
     if (!response.ok) {
       return {

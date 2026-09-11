@@ -115,7 +115,10 @@ export default function TodayScreen() {
   const heroCaption = observation
     ? TodayStrings.heroCaption(
         observation.community,
-        DataStrings.observedAge(formatAge(Date.parse(observation.timestamp), nowMs)),
+        DataStrings.observedAt(
+          formatClock(Date.parse(observation.timestamp), settings.timeFmt),
+          formatAge(Date.parse(observation.timestamp), nowMs),
+        ),
       )
     : nowHour?.aqhi
       ? TodayStrings.heroCaption(

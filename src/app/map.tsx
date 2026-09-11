@@ -137,7 +137,10 @@ export default function MapScreen() {
                   </Text>
                   <Text style={styles.zoneMeta}>
                     {observation
-                      ? DataStrings.observedAge(formatAge(Date.parse(observation.timestamp), nowMs))
+                      ? DataStrings.observedAt(
+                          formatClock(Date.parse(observation.timestamp), settings.timeFmt),
+                          formatAge(Date.parse(observation.timestamp), nowMs),
+                        )
                       : DataStrings.unavailable}
                   </Text>
                 </View>

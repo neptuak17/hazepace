@@ -42,6 +42,8 @@ export const DataStrings = {
   /** The far-away form, for the reading's headline rather than its footnote. */
   communityFar: (name: string, km: number) => `${name}, ${Math.round(km)} km away`,
   observedAge: (age: string) => `observed ${age}`,
+  /** Both the clock time and the age: "observed 06:00 · 37 min ago". */
+  observedAt: (clock: string, age: string) => `observed ${clock} · ${age}`,
   forecastFor: (time: string) => `forecast for ${time}`,
   fetchedAge: (age: string) => `updated ${age}`,
 

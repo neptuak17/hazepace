@@ -99,7 +99,7 @@ export function AirSheetBody({
   ];
 
   const provenance = observation
-    ? `${DataStrings.communityLine(observation.community, observation.distanceKm)} · ${DataStrings.observedAge(formatAge(Date.parse(observation.timestamp), nowMs))}`
+    ? `${DataStrings.communityLine(observation.community, observation.distanceKm)} · ${DataStrings.observedAt(formatClock(Date.parse(observation.timestamp), timeFmt), formatAge(Date.parse(observation.timestamp), nowMs))}`
     : DataStrings.unavailable;
 
   return (

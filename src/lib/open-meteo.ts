@@ -187,6 +187,19 @@ export function clearConditionsCache(): void {
 /* ── HTTP ────────────────────────────────────────────────────────────────── */
 
 /**
+ * Defeats the operating system's URL cache.
+ *
+ * This module already caches on its own terms. iOS's NSURLCache sits beneath
+ * fetch, survives JavaScript reloads, and has been seen serving a stale body
+ * for an identical GET URL — so a refresh that cleared this module's cache
+ * could still come back with the old response. A per-request query value
+ * makes every URL unique, and cache: 'no-store' asks politely as well.
+ */
+function bustCache(url: string): string {
+  return `${url}&_=${Date.now()}`;
+}
+
+/**
  * Fetches JSON with a timeout.
  *
  * The timeout uses an AbortController rather than `AbortSignal.timeout`,
@@ -201,9 +214,10 @@ async function getJson(
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
-    const response = await fetch(url, {
+    const response = await fetch(bustCache(url), {
       signal: controller.signal,
-      headers: { accept: 'application/json' },
+      cache: 'no-store',
+      headers: { accept: 'application/json', 'cache-control': 'no-cache' },
     });
 
     if (!response.ok) {
