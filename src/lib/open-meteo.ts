@@ -72,6 +72,12 @@ export interface ConditionsSnapshot {
   longitude: number;
   /** IANA zone the timestamps are expressed in, when the API reported one. */
   timezone: string | null;
+  /**
+   * Offset of that zone from UTC at the time of the response, in seconds.
+   * This is what converts the naive local stamps to instants: the API states
+   * it outright, so nothing has to be derived from the zone name.
+   */
+  utcOffsetSeconds: number | null;
   /** Epoch milliseconds when this snapshot was fetched. */
   fetchedAt: number;
   /** Ascending by time. May contain hours where one source had nothing. */
@@ -284,6 +290,12 @@ function readTimezone(body: unknown): string | null {
   return typeof tz === 'string' ? tz : null;
 }
 
+function readUtcOffset(body: unknown): number | null {
+  if (typeof body !== 'object' || body === null) return null;
+  const raw = (body as { utc_offset_seconds?: unknown }).utc_offset_seconds;
+  return typeof raw === 'number' && Number.isFinite(raw) ? raw : null;
+}
+
 /* ── Endpoints ───────────────────────────────────────────────────────────── */
 
 function buildUrl(base: string, latitude: number, longitude: number, hourly: readonly string[]): string {
@@ -301,7 +313,13 @@ function buildUrl(base: string, latitude: number, longitude: number, hourly: rea
 export async function fetchWeather(
   latitude: number,
   longitude: number,
-): Promise<Result<{ timezone: string | null; byTime: Map<string, Partial<HourlyConditions>> }>> {
+): Promise<
+  Result<{
+    timezone: string | null;
+    utcOffsetSeconds: number | null;
+    byTime: Map<string, Partial<HourlyConditions>>;
+  }>
+> {
   const lat = roundCoordinate(latitude);
   const lon = roundCoordinate(longitude);
 
@@ -328,14 +346,24 @@ export async function fetchWeather(
     });
   });
 
-  return ok({ timezone: readTimezone(body.value), byTime });
+  return ok({
+    timezone: readTimezone(body.value),
+    utcOffsetSeconds: readUtcOffset(body.value),
+    byTime,
+  });
 }
 
 /** The air-quality half, keyed by timestamp. */
 export async function fetchAirQuality(
   latitude: number,
   longitude: number,
-): Promise<Result<{ timezone: string | null; byTime: Map<string, Partial<HourlyConditions>> }>> {
+): Promise<
+  Result<{
+    timezone: string | null;
+    utcOffsetSeconds: number | null;
+    byTime: Map<string, Partial<HourlyConditions>>;
+  }>
+> {
   const lat = roundCoordinate(latitude);
   const lon = roundCoordinate(longitude);
 
@@ -359,7 +387,11 @@ export async function fetchAirQuality(
     });
   });
 
-  return ok({ timezone: readTimezone(body.value), byTime });
+  return ok({
+    timezone: readTimezone(body.value),
+    utcOffsetSeconds: readUtcOffset(body.value),
+    byTime,
+  });
 }
 
 /* ── Join ────────────────────────────────────────────────────────────────── */
@@ -444,6 +476,7 @@ export async function fetchConditions(
     latitude: lat,
     longitude: lon,
     timezone: weather.value.timezone ?? airQuality.value.timezone,
+    utcOffsetSeconds: weather.value.utcOffsetSeconds ?? airQuality.value.utcOffsetSeconds,
     fetchedAt: Date.now(),
     hours: joinByTime(weather.value.byTime, airQuality.value.byTime),
   };

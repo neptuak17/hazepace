@@ -136,6 +136,7 @@ describe('hoursFrom', () => {
     latitude: 50.27,
     longitude: -119.27,
     timezone: 'America/Vancouver',
+    utcOffsetSeconds: -25200,
     fetchedAt: 0,
     hours: joinByTime(new Map(times.map((t) => [t, weatherAt(10)])), new Map()),
   });

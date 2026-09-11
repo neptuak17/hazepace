@@ -59,27 +59,24 @@ export const VERNON = {
 const HOUR_MS = 3_600_000;
 
 /**
- * Epoch milliseconds for a naive local ISO stamp in a named zone.
+ * Epoch milliseconds for a naive local ISO stamp, given its zone's UTC offset.
  *
- * There is no library for this and Date has no zone parameter, so the offset
- * is measured: format the same instant in the target zone and in UTC, and the
- * difference is the zone's offset at that instant. If Intl is unavailable the
- * stamp is read as device-local, which is right whenever the device is in the
- * same zone as the coordinate.
+ * Open-Meteo states the offset in every response, so this is arithmetic: read
+ * the stamp as if it were UTC, then subtract the offset. Nothing here depends
+ * on Intl or on parsing a locale string — an earlier version did, and Hermes
+ * does not round-trip `toLocaleString` through `Date`, which silently turned
+ * every hour into NaN on the device while passing under Node.
+ *
+ * With no offset the stamp is read as device-local, which is right whenever
+ * the device is in the same zone as the coordinate.
  */
-export function epochOfLocalIso(iso: string, timeZone: string | null): number {
+export function epochOfLocalIso(iso: string, utcOffsetSeconds: number | null): number {
   const asUtc = Date.parse(iso.length === 16 ? `${iso}:00Z` : `${iso}Z`);
   if (Number.isNaN(asUtc)) return NaN;
-  if (!timeZone) return asUtc + new Date(asUtc).getTimezoneOffset() * 60_000;
-
-  try {
-    const probe = new Date(asUtc);
-    const inZone = new Date(probe.toLocaleString('en-US', { timeZone }));
-    const inUtc = new Date(probe.toLocaleString('en-US', { timeZone: 'UTC' }));
-    return asUtc + (inUtc.getTime() - inZone.getTime());
-  } catch {
+  if (utcOffsetSeconds === null) {
     return asUtc + new Date(asUtc).getTimezoneOffset() * 60_000;
   }
+  return asUtc - utcOffsetSeconds * 1000;
 }
 
 /** Device-local hour of day as a fraction, e.g. 07:40 → 7.66. */
@@ -180,7 +177,7 @@ export function joinLive(weather: ConditionsSnapshot | null, aqhi: AqhiSnapshot 
   const byEpoch = new Map<number, LiveHour>();
 
   for (const h of weather?.hours ?? []) {
-    const epoch = epochOfLocalIso(h.time, weather?.timezone ?? null);
+    const epoch = epochOfLocalIso(h.time, weather?.utcOffsetSeconds ?? null);
     if (Number.isNaN(epoch)) continue;
     byEpoch.set(epoch, { epoch, hour: new Date(epoch).getHours(), weather: h, aqhi: null });
   }

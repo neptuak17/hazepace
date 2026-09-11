@@ -138,6 +138,7 @@ describe('joinLive', () => {
     latitude: 50.27,
     longitude: -119.27,
     timezone: 'UTC',
+    utcOffsetSeconds: 0,
     fetchedAt: 0,
     hours: times.map((time) => weather({ time })),
   });
@@ -170,15 +171,29 @@ describe('joinLive', () => {
 });
 
 describe('epochOfLocalIso', () => {
-  test('reads a naive stamp in the named zone', () => {
-    // 12:00 in Vancouver on this date is 19:00 UTC (PDT, UTC-7).
-    const epoch = epochOfLocalIso('2026-09-11T12:00', 'America/Vancouver');
+  test('applies the stated offset', () => {
+    // 12:00 in Vancouver on this date is 19:00 UTC (PDT, offset -25200 s).
+    const epoch = epochOfLocalIso('2026-09-11T12:00', -25200);
     assert.equal(new Date(epoch).toISOString(), '2026-09-11T19:00:00.000Z');
   });
 
-  test('treats UTC as UTC', () => {
-    const epoch = epochOfLocalIso('2026-09-11T12:00', 'UTC');
+  test('a zero offset is UTC', () => {
+    const epoch = epochOfLocalIso('2026-09-11T12:00', 0);
     assert.equal(new Date(epoch).toISOString(), '2026-09-11T12:00:00.000Z');
+  });
+
+  test('uses no Intl or locale parsing', () => {
+    // The device-side failure was toLocaleString not round-tripping through
+    // Date. Pin that this function never calls it.
+    const original = Date.prototype.toLocaleString;
+    Date.prototype.toLocaleString = () => {
+      throw new Error('toLocaleString must not be used for zone conversion');
+    };
+    try {
+      assert.ok(Number.isFinite(epochOfLocalIso('2026-09-11T12:00', -25200)));
+    } finally {
+      Date.prototype.toLocaleString = original;
+    }
   });
 });
 
