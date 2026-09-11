@@ -2,9 +2,9 @@
  * The header shared by every screen.
  *
  * In the design this sits above the tab content rather than inside any one
- * screen, so it keeps the place and the clock in the same position as the tabs
- * change underneath it. It owns the saved-places sheet, because the place row
- * is what opens it and that row lives here.
+ * screen, so it keeps the place and the clock in the same position as the
+ * screens change underneath it. It owns the saved-places sheet, because the
+ * place row is what opens it and that row lives here.
  */
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -15,33 +15,57 @@ import { Icon } from '@/components/icon';
 import { Sheet } from '@/components/sheet';
 import { PlacesSheetBody } from '@/components/sheets';
 import { Accent, Accent2, Neutral, Palette, Space, Type } from '@/constants/design-tokens';
-import { HeaderStrings, SheetStrings } from '@/constants/strings';
-import { NOW, PLACE_LABEL } from '@/lib/fixtures';
-import { formatHour } from '@/lib/rating';
+import { DataStrings, HeaderStrings, SheetStrings } from '@/constants/strings';
+import { useConditions } from '@/lib/conditions';
+import { FAR_COMMUNITY_KM, VERNON, formatClock, formatDate } from '@/lib/live';
 import { useSettings } from '@/lib/settings';
 
 export function AppHeader() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { settings, prefs, update } = useSettings();
+  const { aqhi, aqhiCoverage } = useConditions();
   const [placesOpen, setPlacesOpen] = useState(false);
+
+  // The place row names where the AQHI reading is from. Beyond the cutoff the
+  // distance moves up into the headline rather than staying in the grey meta
+  // line, because "this number is from 40 km away" is the headline.
+  const now = Date.now();
+  const community = aqhi?.community.name ?? null;
+  const km = aqhi?.distanceKm ?? null;
+  const far = km !== null && km > FAR_COMMUNITY_KM;
+
+  let headline: string;
+  if (community && km !== null) {
+    headline = far ? DataStrings.communityFar(community, km) : community;
+  } else if (aqhiCoverage === 'none') {
+    headline = VERNON.name;
+  } else {
+    headline = settings.place;
+  }
+
+  const clock = formatClock(now, settings.timeFmt);
+  const meta =
+    community && km !== null && !far
+      ? `${DataStrings.communityLine(community, km)} · ${clock}`
+      : `${formatDate(now)} · ${clock}`;
 
   return (
     <View style={[styles.header, { paddingTop: insets.top + Space.two }]}>
       <Pressable
         style={styles.place}
         accessibilityRole="button"
-        accessibilityLabel={HeaderStrings.changePlace(settings.place)}
+        accessibilityLabel={HeaderStrings.changePlace(headline)}
         onPress={() => setPlacesOpen(true)}>
         <View style={styles.pinBadge}>
           <Icon name="mapPin" size={17} color={Palette.bg} />
         </View>
         <View style={styles.placeText}>
           <Text style={styles.placeName} numberOfLines={1}>
-            {settings.place}
+            {headline}
           </Text>
           <Text style={styles.placeMeta} numberOfLines={1}>
-            {PLACE_LABEL} · {formatHour(NOW, settings.timeFmt)}
+            {meta}
           </Text>
         </View>
         <Icon name="chevronDown" size={15} color={Neutral[600]} />

@@ -6,9 +6,9 @@
  * until both exist the area is left as a labelled placeholder rather than
  * approximated, because a fake plume would be a fake reading.
  *
- * The scrub chips and the zone ratings are real: each zone's AQHI is banded
- * through the same model as every other screen, so a threshold change re-rates
- * these rows too.
+ * The design had three sub-community zones. AQHI is one value per community
+ * and no finer source exists, so the zone card holds one row: the community
+ * the reading is from, how far away it is, and how old it is.
  */
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -25,26 +25,31 @@ import {
   Verdict,
   tracking,
 } from '@/constants/design-tokens';
-import { Attribution, Common, MapStrings } from '@/constants/strings';
-import { band, formatHour } from '@/lib/rating';
+import { Attribution, Common, DataStrings, MapStrings } from '@/constants/strings';
+import { ECCC_ATTRIBUTION } from '@/lib/aqhi';
+import { useConditions } from '@/lib/conditions';
+import { FAR_COMMUNITY_KM, formatAge, formatAqhi, formatClock } from '@/lib/live';
+import { OPEN_METEO_ATTRIBUTION } from '@/lib/open-meteo';
+import { band } from '@/lib/rating';
 import { useSettings } from '@/lib/settings';
 
-/** The hours the plume model is sampled at. */
-const PLUME_HOURS = [8, 11, 14, 17];
-
 /**
- * Zone fixtures, from the design prototype. NOT REAL OBSERVATIONS — see
- * `lib/fixtures.ts`. Each zone holds one AQHI per plume hour.
+ * The plume scrub hours from the design. There is no plume data to scrub, so
+ * these chips select nothing yet; they stay so the layout matches.
  */
-const ZONES = [
-  { key: 'lake', name: 'Kal Lake Road · lakeshore', aqhi: [8, 5, 3, 4] },
-  { key: 'bench', name: 'The Bench · East Hill', aqhi: [7, 4, 3, 3] },
-  { key: 'star', name: 'Silver Star · 1,610 m', aqhi: [3, 2, 2, 2] },
-];
+const PLUME_HOURS = [8, 11, 14, 17];
 
 export default function MapScreen() {
   const { settings, prefs } = useSettings();
+  const { aqhi, aqhiCoverage, aqhiNearest } = useConditions();
   const [plume, setPlume] = useState(0);
+
+  const nowMs = Date.now();
+  const observation = aqhi?.observation ?? null;
+  const level = observation?.value === null || observation === null ? null : band(observation.value, prefs);
+  const far = aqhi !== null && aqhi.distanceKm > FAR_COMMUNITY_KM;
+
+  const legendTime = formatClock(nowMs, settings.timeFmt);
 
   return (
     <View style={styles.screen}>
@@ -56,6 +61,7 @@ export default function MapScreen() {
         <View style={styles.chipRow}>
           {PLUME_HOURS.map((h, i) => {
             const on = i === plume;
+            const label = formatClock(new Date(nowMs).setHours(h, 0, 0, 0), settings.timeFmt);
             return (
               <Pressable
                 key={h}
@@ -64,7 +70,7 @@ export default function MapScreen() {
                 accessibilityState={{ selected: on }}
                 style={[styles.chip, on ? styles.chipOn : styles.chipOff]}>
                 <Text style={[styles.chipText, { color: on ? Neutral[100] : Neutral[800] }]}>
-                  {formatHour(h, settings.timeFmt)}
+                  {label}
                 </Text>
               </Pressable>
             );
@@ -78,35 +84,81 @@ export default function MapScreen() {
 
         <View style={styles.legendRow}>
           <Text style={styles.legend}>
-            {MapStrings.legend(formatHour(PLUME_HOURS[plume], settings.timeFmt))}
+            {MapStrings.legend(aqhi?.community.name ?? DataStrings.unavailable, legendTime)}
           </Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardKicker}>{MapStrings.zonesKicker}</Text>
+          <Text style={styles.cardKicker}>{MapStrings.communityKicker}</Text>
           <View style={styles.zoneList}>
-            {ZONES.map((zone) => {
-              const aqhi = zone.aqhi[plume];
-              const level = band(aqhi, prefs);
-              return (
-                <View key={zone.key} style={styles.zoneRow}>
-                  <View style={[styles.zoneCircle, { backgroundColor: Verdict.tint[level] }]}>
-                    <Text style={[styles.zoneNumber, { color: Verdict.ink[level] }]}>{aqhi}</Text>
-                    <Text style={[styles.zoneCaps, { color: Verdict.deepInk[level] }]}>{Common.aqhi}</Text>
-                  </View>
-                  <View style={styles.zoneNameWrap}>
-                    <Text style={styles.zoneName}>{zone.name}</Text>
-                  </View>
-                  <Text style={[styles.zoneWord, { color: Verdict.ink[level] }]}>
-                    {Verdict.word[level]}
+            {aqhiCoverage === 'none' ? (
+              <View style={styles.zoneRow}>
+                <View style={[styles.zoneCircle, { backgroundColor: Neutral[200] }]}>
+                  <Text style={[styles.zoneNumber, { color: Neutral[600] }]}>
+                    {DataStrings.unavailable}
+                  </Text>
+                  <Text style={[styles.zoneCaps, { color: Neutral[600] }]}>{Common.aqhi}</Text>
+                </View>
+                <View style={styles.zoneNameWrap}>
+                  <Text style={styles.zoneName}>{DataStrings.noCoverageTitle}</Text>
+                  <Text style={styles.zoneMeta}>
+                    {DataStrings.noCoverageNote(aqhiNearest?.name ?? null, aqhiNearest?.km ?? null)}
                   </Text>
                 </View>
-              );
-            })}
+              </View>
+            ) : (
+              <View style={styles.zoneRow}>
+                <View
+                  style={[
+                    styles.zoneCircle,
+                    { backgroundColor: level === null ? Neutral[200] : Verdict.tint[level] },
+                  ]}>
+                  <Text
+                    style={[
+                      styles.zoneNumber,
+                      { color: level === null ? Neutral[600] : Verdict.ink[level] },
+                    ]}>
+                    {formatAqhi(observation)}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.zoneCaps,
+                      { color: level === null ? Neutral[600] : Verdict.deepInk[level] },
+                    ]}>
+                    {Common.aqhi}
+                  </Text>
+                </View>
+                <View style={styles.zoneNameWrap}>
+                  <Text style={styles.zoneName}>
+                    {aqhi
+                      ? far
+                        ? DataStrings.communityFar(aqhi.community.name, aqhi.distanceKm)
+                        : DataStrings.communityLine(aqhi.community.name, aqhi.distanceKm)
+                      : DataStrings.unavailable}
+                  </Text>
+                  <Text style={styles.zoneMeta}>
+                    {observation
+                      ? DataStrings.observedAge(formatAge(Date.parse(observation.timestamp), nowMs))
+                      : DataStrings.unavailable}
+                  </Text>
+                </View>
+                <Text
+                  style={[
+                    styles.zoneWord,
+                    { color: level === null ? Neutral[600] : Verdict.ink[level] },
+                  ]}>
+                  {level === null ? DataStrings.unavailable : Verdict.word[level]}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
-        <Text style={styles.attribution}>{Attribution.map}</Text>
+        <View style={styles.attributionBlock}>
+          <Text style={styles.attribution}>{Attribution.map}</Text>
+          <Text style={styles.attribution}>{OPEN_METEO_ATTRIBUTION}</Text>
+          <Text style={styles.attribution}>{ECCC_ATTRIBUTION}</Text>
+        </View>
       </ScrollView>
     </View>
   );
@@ -199,7 +251,9 @@ const styles = StyleSheet.create({
   zoneCaps: { ...Type.zoneCaps, letterSpacing: tracking(9.5, 0.04), lineHeight: 10 },
   zoneNameWrap: { flex: 1, minWidth: 0 },
   zoneName: { ...Type.rowLabel, color: Palette.text },
+  zoneMeta: { ...Type.caption, color: Neutral[600], marginTop: 2 },
   zoneWord: { ...Type.caption, fontFamily: Type.rowLabel.fontFamily, letterSpacing: tracking(12, 0.04) },
 
+  attributionBlock: { gap: 4 },
   attribution: { ...Type.caption, color: Neutral[600], lineHeight: 12 * 1.4 },
 });

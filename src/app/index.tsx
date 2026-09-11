@@ -5,14 +5,18 @@
  * so changing the activity chip (or any threshold, from another screen)
  * re-rates the card, the chart and the window together. There is no separate
  * "apply" step.
+ *
+ * The model runs only on hours it has every input for. An hour missing any of
+ * them shows "—" and takes no colour: the screen never invents a judgment to
+ * fill a gap, and a gap never reads as clean air.
  */
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/app-header';
+import { Icon } from '@/components/icon';
 import { Sheet } from '@/components/sheet';
 import { ActivitySheetBody, AirSheetBody } from '@/components/sheets';
-import { Icon } from '@/components/icon';
 import {
   Accent,
   Accent2,
@@ -25,8 +29,22 @@ import {
   Verdict,
   tracking,
 } from '@/constants/design-tokens';
-import { Attribution, Common, SheetStrings, TodayStrings } from '@/constants/strings';
-import { HOURS, NOW, hourAt } from '@/lib/fixtures';
+import { Attribution, Common, DataStrings, SheetStrings, TodayStrings } from '@/constants/strings';
+import { ECCC_ATTRIBUTION } from '@/lib/aqhi';
+import { useConditions } from '@/lib/conditions';
+import {
+  compass,
+  currentHour,
+  formatAge,
+  formatAqhi,
+  formatClock,
+  formatValue,
+  fractionalHour,
+  readingOf,
+  todayHours,
+  type LiveHour,
+} from '@/lib/live';
+import { OPEN_METEO_ATTRIBUTION } from '@/lib/open-meteo';
 import {
   bestWindow,
   effectiveAqhi,
@@ -35,8 +53,7 @@ import {
   judge,
   quality,
   type Activity,
-  type Driver,
-  type Level,
+  type HourReading,
 } from '@/lib/rating';
 import { useSettings } from '@/lib/settings';
 
@@ -49,24 +66,67 @@ const BAR_SCALE = 1.16;
 
 export default function TodayScreen() {
   const { settings, activity, setActivity, prefs } = useSettings();
-  const [selectedHour, setSelectedHour] = useState(11);
+  const { live, aqhi, aqhiCoverage, aqhiNearest, fetchedAt, refreshing, refresh } =
+    useConditions();
   const [airOpen, setAirOpen] = useState(false);
   const [actsOpen, setActsOpen] = useState(false);
 
-  const nowHour = hourAt(NOW);
-  const now = judge(nowHour, prefs);
-  const tint = Verdict.tint[now.level];
-  const ink = Verdict.deepInk[now.level];
+  const nowMs = Date.now();
+  const now = fractionalHour(nowMs);
+  const hours = todayHours(live, nowMs);
+  const nowHour = currentHour(live, nowMs);
 
-  const sentence =
-    now.level === 0
+  const [selectedHour, setSelectedHour] = useState(() => {
+    const h = Math.floor(now);
+    return h >= 5 && h <= 21 ? h : 11;
+  });
+
+  // The observation is the measured value; the hour's forecast is the fallback
+  // when ECCC has not published one. Both are real readings, neither is a
+  // substitute, and a reader can tell them apart from the caption.
+  const observation = aqhi?.observation ?? null;
+  const nowAqhi = observation?.value ?? nowHour?.aqhi?.value ?? null;
+  const nowWeather = nowHour?.weather ?? null;
+  const nowReading: HourReading | null =
+    nowAqhi !== null &&
+    nowWeather &&
+    nowWeather.temperatureC !== null &&
+    nowWeather.windSpeedKmh !== null &&
+    nowWeather.precipitationMm !== null
+      ? {
+          hour: Math.floor(now),
+          aqhi: nowAqhi,
+          tempC: nowWeather.temperatureC,
+          windKmh: nowWeather.windSpeedKmh,
+          rainMmH: nowWeather.precipitationMm,
+        }
+      : null;
+  const verdict = nowReading ? judge(nowReading, prefs) : null;
+
+  const tint = verdict ? Verdict.tint[verdict.level] : Palette.surface;
+  const ink = verdict ? Verdict.deepInk[verdict.level] : Palette.text;
+
+  const sentence = !verdict
+    ? DataStrings.hourIncomplete
+    : verdict.level === 0
       ? TodayStrings.clearSentence
-      : ((now.driver && TodayStrings.sentences[now.driver]?.[now.level]) ??
+      : ((verdict.driver && TodayStrings.sentences[verdict.driver]?.[verdict.level]) ??
         TodayStrings.fallbackSentence);
 
-  const selected = hourAt(selectedHour);
-  const selectedJudgement = judge(selected, prefs);
-  const window = bestWindow(HOURS, NOW, prefs);
+  const heroCaption = observation
+    ? TodayStrings.heroCaption(
+        observation.community,
+        DataStrings.observedAge(formatAge(Date.parse(observation.timestamp), nowMs)),
+      )
+    : nowHour?.aqhi
+      ? TodayStrings.heroCaption(
+          nowHour.aqhi.community,
+          DataStrings.forecastFor(formatClock(nowHour.epoch, settings.timeFmt)),
+        )
+      : null;
+
+  const complete = hours.map(readingOf).filter((r): r is HourReading => r !== null);
+  const window = bestWindow(complete, now, prefs);
   const windowText = window
     ? TodayStrings.windowSpan(
         formatHour(window.start, settings.timeFmt),
@@ -75,36 +135,76 @@ export default function TodayScreen() {
       )
     : TodayStrings.noWindow;
 
+  const selected: LiveHour =
+    hours.find((h) => h.hour === selectedHour) ?? hours[0];
+  const selectedReading = readingOf(selected);
+  const selectedVerdict = selectedReading ? judge(selectedReading, prefs) : null;
+  const w = selected.weather;
+
   const stats = [
-    { k: TodayStrings.statKeys.aqhi, v: String(selected.aqhi) },
-    { k: TodayStrings.statKeys.temp, v: `${Math.round(selected.tempC)}°C` },
-    { k: TodayStrings.statKeys.wind, v: `${selected.dir} ${Math.round(selected.windKmh)}` },
-    { k: TodayStrings.statKeys.rain, v: `${selected.rainMmH.toFixed(1)} mm` },
-    { k: TodayStrings.statKeys.humidity, v: `${selected.humidity}%` },
-    { k: TodayStrings.statKeys.effective, v: effectiveAqhi(selected.aqhi, prefs).toFixed(1) },
+    { k: TodayStrings.statKeys.aqhi, v: formatAqhi(selected.aqhi) },
+    { k: TodayStrings.statKeys.temp, v: formatValue(w?.temperatureC ?? null, 0, '°C') },
+    {
+      k: TodayStrings.statKeys.wind,
+      v:
+        w?.windSpeedKmh === null || w?.windSpeedKmh === undefined
+          ? DataStrings.unavailable
+          : `${compass(w.windDirectionDeg) ?? ''} ${Math.round(w.windSpeedKmh)}`.trim(),
+    },
+    { k: TodayStrings.statKeys.rain, v: formatValue(w?.precipitationMm ?? null, 1, ' mm') },
+    { k: TodayStrings.statKeys.humidity, v: formatValue(w?.relativeHumidityPct ?? null, 0, '%') },
+    {
+      k: TodayStrings.statKeys.effective,
+      v: selectedReading
+        ? effectiveAqhi(selectedReading.aqhi, prefs).toFixed(1)
+        : DataStrings.unavailable,
+    },
   ];
 
   return (
     <View style={styles.screen}>
       <AppHeader />
 
-      <ScrollView style={styles.pane} contentContainerStyle={styles.paneContent}>
+      <ScrollView
+        style={styles.pane}
+        contentContainerStyle={styles.paneContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Accent.base} />
+        }>
+        {aqhiCoverage === 'none' && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{DataStrings.noCoverageTitle}</Text>
+            <Text style={styles.cardNote}>
+              {DataStrings.noCoverageNote(aqhiNearest?.name ?? null, aqhiNearest?.km ?? null)}
+            </Text>
+          </View>
+        )}
+
         <View style={[styles.verdictCard, { backgroundColor: tint }]}>
           <View style={styles.verdictTop}>
             <View style={styles.verdictLeft}>
               <Text style={[styles.kicker, { color: ink }]}>
-                {TodayStrings.kicker(formatHour(NOW, settings.timeFmt), activity)}
+                {TodayStrings.kicker(formatClock(nowMs, settings.timeFmt), activity)}
               </Text>
               <View style={styles.heroRow}>
-                <Text style={[styles.hero, { color: ink }]}>{nowHour.aqhi}</Text>
+                <Text style={[styles.hero, { color: ink }]}>
+                  {observation ? formatAqhi(observation) : formatAqhi(nowHour?.aqhi ?? null)}
+                </Text>
                 <View style={styles.heroCaption}>
                   <Text style={[styles.heroCapsLabel, { color: ink }]}>{Common.aqhi}</Text>
                   <Text style={[styles.heroOf, { color: ink }]}>{TodayStrings.ofTen}</Text>
                 </View>
               </View>
+              {heroCaption && (
+                <Text style={[styles.heroProvenance, { color: ink }]} numberOfLines={2}>
+                  {heroCaption}
+                </Text>
+              )}
             </View>
             <View style={[styles.verdictPill, { backgroundColor: ink }]}>
-              <Text style={styles.verdictPillText}>{Verdict.word[now.level]}</Text>
+              <Text style={styles.verdictPillText}>
+                {verdict ? Verdict.word[verdict.level] : DataStrings.unavailable}
+              </Text>
             </View>
           </View>
           <Text style={[styles.verdictSentence, { color: ink }]}>{sentence}</Text>
@@ -140,22 +240,30 @@ export default function TodayScreen() {
           </View>
 
           <View style={styles.chart}>
-            {HOURS.map((hr) => {
-              const level = judge(hr, prefs).level;
-              const past = hr.hour + 1 <= NOW;
-              const height = BAR_BASE + quality(hr, prefs) * BAR_SCALE;
-              const isSelected = hr.hour === Math.floor(selectedHour);
+            {hours.map((hr) => {
+              const reading = readingOf(hr);
+              const level = reading ? judge(reading, prefs).level : null;
+              const past = hr.hour + 1 <= now;
+              // An hour the model could not judge is drawn at the minimum
+              // height in the neutral track colour — present, but plainly
+              // not a reading.
+              const height = reading ? BAR_BASE + quality(reading, prefs) * BAR_SCALE : BAR_BASE;
+              const colour = level === null ? Neutral[300] : Verdict.ink[level];
+              const isSelected = hr.hour === selectedHour;
               return (
                 <Pressable
                   key={hr.hour}
                   style={styles.barColumn}
                   onPress={() => setSelectedHour(hr.hour)}
                   accessibilityRole="button"
-                  accessibilityLabel={TodayStrings.barLabel(formatHour(hr.hour, settings.timeFmt), hr.aqhi)}>
+                  accessibilityLabel={TodayStrings.barLabel(
+                    formatHour(hr.hour, settings.timeFmt),
+                    hr.aqhi?.value ?? NaN,
+                  )}>
                   <View
                     style={[
                       styles.bar,
-                      { height, backgroundColor: Verdict.ink[level], opacity: past ? 0.28 : 1 },
+                      { height, backgroundColor: colour, opacity: past ? 0.28 : 1 },
                     ]}
                   />
                   {/* The design rings the selected bar with a box-shadow spread.
@@ -169,12 +277,12 @@ export default function TodayScreen() {
           </View>
 
           <View style={styles.tickRow}>
-            {HOURS.map((hr) => (
+            {hours.map((hr) => (
               <Text
                 key={hr.hour}
                 style={[
                   styles.tick,
-                  { color: hr.hour === Math.floor(selectedHour) ? Palette.text : Neutral[600] },
+                  { color: hr.hour === selectedHour ? Palette.text : Neutral[600] },
                 ]}>
                 {hr.hour % 3 === 2 ? formatTick(hr.hour, settings.timeFmt) : ''}
               </Text>
@@ -185,14 +293,20 @@ export default function TodayScreen() {
             <View style={styles.readoutHead}>
               <Text style={styles.readoutHour}>
                 {formatHour(selected.hour, settings.timeFmt)}
-                {Math.floor(NOW) === selected.hour ? TodayStrings.now : ''}
+                {Math.floor(now) === selected.hour ? TodayStrings.now : ''}
               </Text>
               <View
                 style={[
                   styles.readoutPill,
-                  { backgroundColor: Verdict.ink[selectedJudgement.level] },
+                  {
+                    backgroundColor: selectedVerdict
+                      ? Verdict.ink[selectedVerdict.level]
+                      : Neutral[400],
+                  },
                 ]}>
-                <Text style={styles.readoutPillText}>{Verdict.word[selectedJudgement.level]}</Text>
+                <Text style={styles.readoutPillText}>
+                  {selectedVerdict ? Verdict.word[selectedVerdict.level] : DataStrings.unavailable}
+                </Text>
               </View>
             </View>
 
@@ -205,10 +319,14 @@ export default function TodayScreen() {
               ))}
             </View>
 
-            <Pressable
-              onPress={() => setAirOpen(true)}
-              accessibilityRole="button"
-              hitSlop={8}>
+            {selected.aqhi && (
+              <Text style={styles.readoutProvenance}>
+                {DataStrings.communityLine(selected.aqhi.community, selected.aqhi.distanceKm)} ·{' '}
+                {DataStrings.forecastFor(formatClock(selected.epoch, settings.timeFmt))}
+              </Text>
+            )}
+
+            <Pressable onPress={() => setAirOpen(true)} accessibilityRole="button" hitSlop={8}>
               <Text style={styles.airLink}>{TodayStrings.airLink}</Text>
             </Pressable>
           </View>
@@ -228,11 +346,25 @@ export default function TodayScreen() {
           <Icon name="chevronRight" size={17} color={Neutral[600]} />
         </Pressable>
 
-        <Text style={styles.attribution}>{Attribution.today}</Text>
+        <View style={styles.attributionBlock}>
+          <Text style={styles.attribution}>{Attribution.today}</Text>
+          <Text style={styles.attribution}>{OPEN_METEO_ATTRIBUTION}</Text>
+          <Text style={styles.attribution}>{ECCC_ATTRIBUTION}</Text>
+          {fetchedAt !== null && (
+            <Text style={styles.attribution}>
+              {DataStrings.fetchedAge(formatAge(fetchedAt, nowMs))}
+            </Text>
+          )}
+        </View>
       </ScrollView>
 
       <Sheet visible={airOpen} title={SheetStrings.airTitle} onClose={() => setAirOpen(false)}>
-        <AirSheetBody timeFmt={settings.timeFmt} />
+        <AirSheetBody
+          observation={observation}
+          weather={nowWeather}
+          timeFmt={settings.timeFmt}
+          nowMs={nowMs}
+        />
       </Sheet>
 
       <Sheet
@@ -240,6 +372,7 @@ export default function TodayScreen() {
         title={SheetStrings.activityTitle}
         onClose={() => setActsOpen(false)}>
         <ActivitySheetBody
+          aqhi={nowAqhi}
           prefs={prefs}
           onPick={(a) => {
             setActivity(a);
@@ -253,31 +386,6 @@ export default function TodayScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Palette.bg },
-
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-  },
-  place: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-    minWidth: 0,
-    minHeight: 44,
-  },
-  pinBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: Accent2[600],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
   pane: { flex: 1 },
   paneContent: {
     paddingTop: 6,
@@ -295,6 +403,7 @@ const styles = StyleSheet.create({
   heroCaption: { gap: 1, paddingBottom: 10 },
   heroCapsLabel: { ...Type.capsLabel, textTransform: 'none' },
   heroOf: { ...Type.bodySmall, opacity: 0.75 },
+  heroProvenance: { ...Type.bodySmall, opacity: 0.85, marginTop: 2 },
   verdictPill: { borderRadius: Radius.pill, paddingHorizontal: 16, paddingVertical: 9 },
   verdictPillText: {
     ...Type.hourLabel,
@@ -343,6 +452,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: { ...Type.dayRow, color: Palette.text },
   cardHint: { ...Type.caption, color: Neutral[600] },
+  cardNote: { ...Type.bodySmall, color: Neutral[700], lineHeight: 13 * 1.4, marginTop: 3 },
 
   chart: {
     flexDirection: 'row',
@@ -381,6 +491,7 @@ const styles = StyleSheet.create({
     color: Neutral[100],
     letterSpacing: tracking(12, 0.04),
   },
+  readoutProvenance: { ...Type.caption, color: Neutral[600], marginTop: 10 },
 
   statGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10, columnGap: 18, marginTop: 10 },
   stat: { minWidth: 62 },
@@ -406,5 +517,6 @@ const styles = StyleSheet.create({
   },
   comparisonText: { ...Type.pillLabel, flex: 1, color: Neutral[800] },
 
+  attributionBlock: { gap: 4 },
   attribution: { ...Type.caption, color: Neutral[600], lineHeight: 12 * 1.4 },
 });

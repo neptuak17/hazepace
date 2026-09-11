@@ -11,10 +11,10 @@
  * on this screen in particular, because it plays while the rest of the app is
  * still mounting.
  *
- * There is no fetch to drive it yet: readings are fixtures, so the sequence
- * runs on the prototype's timings. When the real sources land, RUN_MS becomes
- * "however long the fetch took, but at least ~600ms so it cannot flash", and
- * the error state the design never specified has to be designed.
+ * Driven by the real fetch. The overlay shows while `finished` is false; the
+ * loops run for as long as that takes. When it flips true the progress fill
+ * completes, the whole thing fades, and onDone fires so it can be unmounted.
+ * The minimum display time lives in the conditions provider, not here.
  */
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
@@ -24,7 +24,10 @@ import { Accent, Accent2, Neutral, Palette, Radius, Shadow, Type } from '@/const
 import { LaunchStrings } from '@/constants/strings';
 
 /** Prototype timings. */
-const RUN_MS = 2400;
+/** How long the fill takes to reach its indeterminate resting point. */
+const FILL_MS = 2400;
+/** How long the fill takes to complete once the fetch has. */
+const FILL_DONE_MS = 300;
 const FADE_MS = 400;
 const RING_MS = 2600;
 const RING_STAGGER = [0, 850, 1700];
@@ -37,11 +40,13 @@ const STACK = 168;
 const CORE = 92;
 
 interface LaunchOverlayProps {
+  /** True once the data has arrived (or failed) and the overlay should leave. */
+  finished: boolean;
   /** Called once the fade-out has finished and the overlay can be unmounted. */
   onDone: () => void;
 }
 
-export function LaunchOverlay({ onDone }: LaunchOverlayProps) {
+export function LaunchOverlay({ finished, onDone }: LaunchOverlayProps) {
   // One driver per animation; refs so they survive re-renders.
   const rings = useRef(RING_STAGGER.map(() => new Animated.Value(0))).current;
   const core = useRef(new Animated.Value(0)).current;
@@ -113,10 +118,11 @@ export function LaunchOverlay({ onDone }: LaunchOverlayProps) {
       }),
     );
 
-    // Width cannot be native-driven.
+    // Width cannot be native-driven. Rests at the design's 62% waypoint until
+    // the fetch reports back; the remainder plays in the effect below.
     const fillIn = Animated.timing(fill, {
-      toValue: 1,
-      duration: RUN_MS,
+      toValue: 0.62,
+      duration: FILL_MS,
       easing: Easing.inOut(Easing.ease),
       useNativeDriver: false,
     });
@@ -124,20 +130,30 @@ export function LaunchOverlay({ onDone }: LaunchOverlayProps) {
     const all = [...loops, coreLoop, driftLoop, ...stepIns, fillIn];
     all.forEach((a) => a.start());
 
-    const timer = setTimeout(() => {
+    return () => {
+      all.forEach((a) => a.stop());
+    };
+  }, [rings, core, drift, steps, fill]);
+
+  useEffect(() => {
+    if (!finished) return;
+    Animated.sequence([
+      Animated.timing(fill, {
+        toValue: 1,
+        duration: FILL_DONE_MS,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: false,
+      }),
       Animated.timing(fade, {
         toValue: 0,
         duration: FADE_MS,
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
-      }).start(() => doneRef.current());
-    }, RUN_MS);
-
-    return () => {
-      clearTimeout(timer);
-      all.forEach((a) => a.stop());
-    };
-  }, [rings, core, drift, steps, fill, fade]);
+      }),
+    ]).start(({ finished: completed }) => {
+      if (completed) doneRef.current();
+    });
+  }, [finished, fill, fade]);
 
   return (
     <Animated.View style={[styles.root, { opacity: fade }]} pointerEvents="auto">
@@ -204,7 +220,7 @@ export function LaunchOverlay({ onDone }: LaunchOverlayProps) {
             styles.fill,
             {
               width: fill.interpolate({
-                inputRange: [0, 0.45, 1],
+                inputRange: [0, 0.62, 1],
                 outputRange: ['6%', '62%', '100%'],
               }),
             },

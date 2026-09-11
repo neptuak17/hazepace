@@ -27,6 +27,43 @@ export const Common = {
   aqhi: 'AQHI',
 } as const;
 
+/* ── Live data ───────────────────────────────────────────────────────────── */
+
+/**
+ * Anything the reader sees about where a number came from, how old it is,
+ * and what to do when it did not arrive. Nothing here interprets a value.
+ */
+export const DataStrings = {
+  /** The universal absent-value marker. Never a zero, never a blank. */
+  unavailable: '—',
+
+  communityLine: (name: string, km: number) =>
+    `${name} · ${km < 1 ? '<1' : Math.round(km)} km`,
+  /** The far-away form, for the reading's headline rather than its footnote. */
+  communityFar: (name: string, km: number) => `${name}, ${Math.round(km)} km away`,
+  observedAge: (age: string) => `observed ${age}`,
+  forecastFor: (time: string) => `forecast for ${time}`,
+  fetchedAge: (age: string) => `updated ${age}`,
+
+  noCoverageTitle: 'No AQHI community in range',
+  noCoverageNote: (name: string | null, km: number | null) =>
+    name && km !== null
+      ? `The nearest is ${name}, ${Math.round(km)} km away. AQHI is not shown for readings that far from you.`
+      : 'No AQHI community reports for this area.',
+
+  errorTitle: 'Conditions could not be loaded',
+  errorSource: {
+    weather: 'The weather service did not respond.',
+    aqhi: 'The AQHI service did not respond.',
+    both: 'Neither the weather nor the AQHI service responded.',
+  } as Record<'weather' | 'aqhi' | 'both', string>,
+  errorNote: 'Nothing is shown rather than something out of date.',
+  retry: 'Try again',
+  retrying: 'Trying…',
+
+  hourIncomplete: 'Not enough data for this hour',
+} as const;
+
 /* ── Tab bar ────────────────────────────────────────────────────────────── */
 
 export const TabStrings = {
@@ -50,6 +87,8 @@ export const HeaderStrings = {
 export const TodayStrings = {
   kicker: (time: string, activity: Activity) => `Conditions at ${time} · ${activity}`,
   ofTen: 'of 10+',
+  /** Under the hero number: where it came from and how old it is. */
+  heroCaption: (community: string, age: string) => `${community} · ${age}`,
 
   /**
    * The line under the verdict, naming what is limiting the session.
@@ -104,7 +143,8 @@ export const TodayStrings = {
 export const MapStrings = {
   title: 'Local conditions',
   zonesKicker: 'Rating by zone',
-  legend: (time: string) => `Okanagan Lake · Vernon · ${time} · pins show AQHI`,
+  legend: (community: string, time: string) => `${community} · ${time}`,
+  communityKicker: 'AQHI community',
 
   /** Shown in place of the plate. States why, rather than drawing nothing. */
   plateTitle: 'Map unavailable',
@@ -123,8 +163,19 @@ export const ForecastStrings = {
    * The rain clause is dropped entirely on a dry day rather than reading
    * "0 mm", and never states timing.
    */
-  meta: (from: number, to: number, rainMm: number | null, dir: string, windKmh: number) =>
-    `AQHI ${from} → ${to}${rainMm === null ? '' : ` · rain ${rainMm} mm`} · wind ${dir} ${windKmh} km/h`,
+  meta: (
+    from: number,
+    to: number,
+    rainMm: number | null,
+    dir: string | null,
+    windKmh: number | null,
+  ) => {
+    const aqhi = `AQHI ${from} → ${to}`;
+    const rain = rainMm === null ? '' : ` · rain ${rainMm} mm`;
+    const wind =
+      windKmh === null ? ' · wind —' : ` · wind ${dir ? dir + ' ' : ''}${windKmh} km/h`;
+    return `${aqhi}${rain}${wind}`;
+  },
 } as const;
 
 /* ── Thresholds ──────────────────────────────────────────────────────────── */

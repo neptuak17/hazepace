@@ -1,11 +1,15 @@
 /**
  * Forecast — the next five days.
  *
- * Nothing here is authored. Each day holds raw readings for eight 2-hour
- * slots; every slot runs through the model, and the day's verdict is the best
- * contiguous run it contains — an all-green run if there is one, otherwise an
- * all-amber one. That is deliberately not the worst slot: a day with one clear
- * stretch is a day you can train in.
+ * Nothing here is authored. Each day is sampled at eight 2-hour slots; every
+ * slot the sources covered runs through the model, and the day's verdict is
+ * the best contiguous run it contains — an all-green run if there is one,
+ * otherwise an all-amber one. A missing slot breaks a run but never sets the
+ * level on its own; a day with no complete slot has no verdict at all.
+ *
+ * AQHI forecasts reach 48 hours, weather reaches five days. From the third
+ * day on, expect the strip and the verdict to be mostly "—" while the
+ * temperature and rain still show. That is the data, not a fault.
  *
  * One row is open at a time.
  */
@@ -23,14 +27,21 @@ import {
   Verdict,
   tracking,
 } from '@/constants/design-tokens';
-import { Attribution, ForecastStrings } from '@/constants/strings';
-import { DAYS, dayRainTotal, daySlots } from '@/lib/fixtures';
-import { judgeDay, windowLabel } from '@/lib/rating';
+import { Attribution, DataStrings, ForecastStrings } from '@/constants/strings';
+import { ECCC_ATTRIBUTION } from '@/lib/aqhi';
+import { useConditions } from '@/lib/conditions';
+import { DAY_SLOTS, formatDayName, formatShortDate, liveDays } from '@/lib/live';
+import { OPEN_METEO_ATTRIBUTION } from '@/lib/open-meteo';
+import { formatHour } from '@/lib/rating';
 import { useSettings } from '@/lib/settings';
 
 export default function ForecastScreen() {
   const { settings, prefs } = useSettings();
+  const { live } = useConditions();
   const [openDay, setOpenDay] = useState(0);
+
+  const nowMs = Date.now();
+  const days = liveDays(live, nowMs, prefs);
 
   return (
     <View style={styles.screen}>
@@ -40,37 +51,53 @@ export default function ForecastScreen() {
         <Text style={styles.title}>{ForecastStrings.title}</Text>
 
         <View style={styles.card}>
-          {DAYS.map((day, i) => {
-            const verdict = judgeDay(daySlots(day), prefs);
+          {days.map((day, i) => {
             const open = i === openDay;
-            const rainTotal = dayRainTotal(day);
-            const window = windowLabel(verdict.run, settings.timeFmt) ?? ForecastStrings.noWindow;
+            const window =
+              day.run === null
+                ? ForecastStrings.noWindow
+                : `${formatHour(DAY_SLOTS[day.run.start], settings.timeFmt)} – ${formatHour(DAY_SLOTS[day.run.end] + 2, settings.timeFmt)}`;
 
             return (
               <Pressable
-                key={day.day}
+                key={day.epoch}
                 onPress={() => setOpenDay(open ? -1 : i)}
                 accessibilityRole="button"
                 accessibilityState={{ expanded: open }}
                 style={[styles.row, i === 0 ? styles.rowFirst : styles.rowRuled]}>
                 <View style={styles.rowHead}>
                   <View style={styles.dayCol}>
-                    <Text style={styles.dayName}>{day.day}</Text>
-                    <Text style={styles.dayDate}>{day.date}</Text>
+                    <Text style={styles.dayName}>
+                      {day.isToday ? 'Today' : formatDayName(day.epoch)}
+                    </Text>
+                    <Text style={styles.dayDate}>{formatShortDate(day.epoch)}</Text>
                   </View>
 
                   <View style={styles.strip}>
-                    {verdict.blocks.map((level, slot) => (
+                    {day.blocks.map((level, slot) => (
                       <View
                         key={slot}
-                        style={[styles.block, { backgroundColor: Verdict.ink[level] }]}
+                        style={[
+                          styles.block,
+                          // A slot the model could not judge takes the track
+                          // colour, so a gap in the forecast is visibly a gap.
+                          { backgroundColor: level === null ? Neutral[300] : Verdict.ink[level] },
+                        ]}
                       />
                     ))}
                   </View>
 
                   <View style={styles.tempCol}>
-                    <Text style={styles.temp}>{ForecastStrings.temp(day.hi, day.lo)}</Text>
-                    <Text style={styles.rain}>{ForecastStrings.rainTotal(Math.round(rainTotal))}</Text>
+                    <Text style={styles.temp}>
+                      {day.hiC === null || day.loC === null
+                        ? DataStrings.unavailable
+                        : ForecastStrings.temp(Math.round(day.hiC), Math.round(day.loC))}
+                    </Text>
+                    <Text style={styles.rain}>
+                      {day.rainMm === null
+                        ? DataStrings.unavailable
+                        : ForecastStrings.rainTotal(Math.round(day.rainMm))}
+                    </Text>
                   </View>
                 </View>
 
@@ -78,19 +105,29 @@ export default function ForecastScreen() {
                   <View style={styles.detail}>
                     <View style={styles.detailHead}>
                       <View
-                        style={[styles.wordPill, { backgroundColor: Verdict.ink[verdict.level] }]}>
-                        <Text style={styles.wordPillText}>{Verdict.word[verdict.level]}</Text>
+                        style={[
+                          styles.wordPill,
+                          {
+                            backgroundColor:
+                              day.level === null ? Neutral[400] : Verdict.ink[day.level],
+                          },
+                        ]}>
+                        <Text style={styles.wordPillText}>
+                          {day.level === null ? DataStrings.unavailable : Verdict.word[day.level]}
+                        </Text>
                       </View>
                       <Text style={styles.window}>{window}</Text>
                     </View>
                     <Text style={styles.meta}>
-                      {ForecastStrings.meta(
-                        day.aqhi[0],
-                        day.aqhi[day.aqhi.length - 1],
-                        rainTotal >= 0.5 ? Math.round(rainTotal) : null,
-                        day.dir,
-                        Math.max(...day.windKmh),
-                      )}
+                      {day.aqhiFirst === null || day.aqhiLast === null
+                        ? `AQHI ${DataStrings.unavailable}`
+                        : ForecastStrings.meta(
+                            Math.round(day.aqhiFirst),
+                            Math.round(day.aqhiLast),
+                            day.rainMm !== null && day.rainMm >= 0.5 ? Math.round(day.rainMm) : null,
+                            day.windDir,
+                            day.windMaxKmh === null ? null : Math.round(day.windMaxKmh),
+                          )}
                     </Text>
                   </View>
                 )}
@@ -99,7 +136,11 @@ export default function ForecastScreen() {
           })}
         </View>
 
-        <Text style={styles.attribution}>{Attribution.forecast}</Text>
+        <View style={styles.attributionBlock}>
+          <Text style={styles.attribution}>{Attribution.forecast}</Text>
+          <Text style={styles.attribution}>{OPEN_METEO_ATTRIBUTION}</Text>
+          <Text style={styles.attribution}>{ECCC_ATTRIBUTION}</Text>
+        </View>
       </ScrollView>
     </View>
   );
@@ -153,5 +194,6 @@ const styles = StyleSheet.create({
   window: { ...Type.pillLabel, color: Palette.text },
   meta: { ...Type.caption, color: Neutral[600] },
 
+  attributionBlock: { gap: 4 },
   attribution: { ...Type.caption, color: Neutral[600], lineHeight: 12 * 1.4 },
 });

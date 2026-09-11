@@ -23,9 +23,12 @@ import {
   tracking,
   type Level,
 } from '@/constants/design-tokens';
-import { Attribution, Common, HowItWorksStrings } from '@/constants/strings';
-import { NOW, hourAt } from '@/lib/fixtures';
-import { factorLevels, judge, type Driver } from '@/lib/rating';
+import { Attribution, Common, DataStrings, HowItWorksStrings } from '@/constants/strings';
+import { ECCC_ATTRIBUTION } from '@/lib/aqhi';
+import { useConditions } from '@/lib/conditions';
+import { currentHour, readingOf } from '@/lib/live';
+import { OPEN_METEO_ATTRIBUTION } from '@/lib/open-meteo';
+import { factorLevels, judge } from '@/lib/rating';
 import { useSettings } from '@/lib/settings';
 
 /** Icons for HowItWorksStrings.pages, paired by position. */
@@ -33,27 +36,33 @@ const PAGE_ICONS: IconName[] = ['tabToday', 'tabMap', 'tabForecast'];
 
 const BAND_LEVELS: Level[] = [0, 1, 2];
 
-/** The design's factor bar: 14, 27 or 40px by level. */
-const factorBarHeight = (level: Level) => 14 + level * 13;
+/** The design's factor bar: 14, 27 or 40px by level. Null draws the minimum. */
+const factorBarHeight = (level: Level | null) => 14 + (level ?? 0) * 13;
 
 export default function HowItWorksScreen() {
   const router = useRouter();
   const { prefs } = useSettings();
+  const { live } = useConditions();
 
-  const nowHour = hourAt(NOW);
-  const now = judge(nowHour, prefs);
-  const factors = factorLevels(nowHour, prefs);
+  // The tiles read the current hour. If the sources did not cover it fully
+  // they show as unavailable rather than judging what is missing.
+  const nowHour = currentHour(live, Date.now());
+  const reading = nowHour ? readingOf(nowHour) : null;
+  const now = reading ? judge(reading, prefs) : null;
+  const factors = reading ? factorLevels(reading, prefs) : null;
 
-  const factorTiles: { name: string; level: Level }[] = [
-    { name: HowItWorksStrings.factorNames.smoke, level: factors.air },
-    { name: HowItWorksStrings.factorNames.rain, level: factors.rain },
-    { name: HowItWorksStrings.factorNames.heat, level: factors.heat },
-    { name: HowItWorksStrings.factorNames.wind, level: factors.wind },
+  const factorTiles: { name: string; level: Level | null }[] = [
+    { name: HowItWorksStrings.factorNames.smoke, level: factors?.air ?? null },
+    { name: HowItWorksStrings.factorNames.rain, level: factors?.rain ?? null },
+    { name: HowItWorksStrings.factorNames.heat, level: factors?.heat ?? null },
+    { name: HowItWorksStrings.factorNames.wind, level: factors?.wind ?? null },
   ];
 
-  const winner = now.driver
-    ? HowItWorksStrings.winner(HowItWorksStrings.driverWord[now.driver])
-    : HowItWorksStrings.noWinner;
+  const winner = !now
+    ? DataStrings.hourIncomplete
+    : now.driver
+      ? HowItWorksStrings.winner(HowItWorksStrings.driverWord[now.driver])
+      : HowItWorksStrings.noWinner;
 
   return (
     <View style={styles.screen}>
@@ -98,22 +107,30 @@ export default function HowItWorksScreen() {
           <Text style={styles.cardTitle}>{HowItWorksStrings.factorsTitle}</Text>
           <Text style={styles.caption}>{HowItWorksStrings.factorsCaption}</Text>
           <View style={styles.factorRow}>
-            {factorTiles.map((f) => (
-              <View
-                key={f.name}
-                style={[styles.factorTile, { backgroundColor: Verdict.tint[f.level] }]}>
-                <View
-                  style={[
-                    styles.factorBar,
-                    { height: factorBarHeight(f.level), backgroundColor: Verdict.ink[f.level] },
-                  ]}
-                />
-                <Text style={[styles.factorName, { color: Verdict.ink[f.level] }]}>{f.name}</Text>
-              </View>
-            ))}
+            {factorTiles.map((f) => {
+              const tint = f.level === null ? Neutral[200] : Verdict.tint[f.level];
+              const ink = f.level === null ? Neutral[500] : Verdict.ink[f.level];
+              return (
+                <View key={f.name} style={[styles.factorTile, { backgroundColor: tint }]}>
+                  <View
+                    style={[
+                      styles.factorBar,
+                      { height: factorBarHeight(f.level), backgroundColor: ink },
+                    ]}
+                  />
+                  <Text style={[styles.factorName, { color: ink }]}>{f.name}</Text>
+                </View>
+              );
+            })}
           </View>
-          <View style={[styles.winnerPill, { backgroundColor: Verdict.tint[now.level] }]}>
-            <Text style={[styles.winnerText, { color: Verdict.ink[now.level] }]}>{winner}</Text>
+          <View
+            style={[
+              styles.winnerPill,
+              { backgroundColor: now ? Verdict.tint[now.level] : Neutral[200] },
+            ]}>
+            <Text style={[styles.winnerText, { color: now ? Verdict.ink[now.level] : Neutral[700] }]}>
+              {winner}
+            </Text>
           </View>
         </View>
 
@@ -146,6 +163,8 @@ export default function HowItWorksScreen() {
         </View>
 
         <Text style={styles.closing}>{HowItWorksStrings.closing}</Text>
+        <Text style={styles.attribution}>{OPEN_METEO_ATTRIBUTION}</Text>
+        <Text style={styles.attribution}>{ECCC_ATTRIBUTION}</Text>
 
         <Pressable
           onPress={() => router.navigate('/')}
@@ -250,6 +269,7 @@ const styles = StyleSheet.create({
   },
   sourceName: { ...Type.pillLabel, color: Palette.text },
 
+  attribution: { ...Type.caption, color: Neutral[600], lineHeight: 12 * 1.4 },
   closing: {
     ...Type.bodySmall,
     fontFamily: Type.rowLabel.fontFamily,

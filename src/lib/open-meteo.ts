@@ -131,7 +131,8 @@ const WEATHER_HOURLY = [
 
 const AIR_QUALITY_HOURLY = ['pm2_5', 'pm10', 'us_aqi'] as const;
 
-const FORECAST_DAYS = 3;
+/** Five, to match the Forecast screen. Open-Meteo allows up to 16. */
+const FORECAST_DAYS = 5;
 const REQUEST_TIMEOUT_MS = 10_000;
 const CACHE_TTL_MS = 30 * 60 * 1000;
 

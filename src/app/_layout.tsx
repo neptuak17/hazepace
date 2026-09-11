@@ -5,15 +5,47 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { ErrorPanel } from '@/components/error-panel';
 import { LaunchOverlay } from '@/components/launch-overlay';
 import { TabNavigator } from '@/components/tab-bar';
 import { Palette } from '@/constants/design-tokens';
+import { ConditionsProvider, useConditions } from '@/lib/conditions';
 import { SettingsProvider } from '@/lib/settings';
 
 SplashScreen.preventAutoHideAsync();
 
+/**
+ * Everything under the providers.
+ *
+ * Split out so it can call `useConditions`; the root component renders the
+ * provider and therefore cannot. Three states, three renders:
+ *
+ *   loading — the tab screens mount underneath the overlay so they are ready
+ *             the instant it lifts
+ *   ready   — the overlay fades and unmounts; the screens are already there
+ *   error   — the screens are replaced, not overlaid, so nothing partial shows
+ */
+function Shell() {
+  const { status, failure, refreshing, refresh } = useConditions();
+  const [overlayDone, setOverlayDone] = useState(false);
+
+  // A retry that fails again re-shows the panel; a retry that succeeds lands
+  // on the screens with no overlay, since they were never unmounted.
+  if (status === 'error' && failure) {
+    return <ErrorPanel failure={failure} retrying={refreshing} onRetry={refresh} />;
+  }
+
+  return (
+    <>
+      <TabNavigator />
+      {!overlayDone && (
+        <LaunchOverlay finished={status !== 'loading'} onDone={() => setOverlayDone(true)} />
+      )}
+    </>
+  );
+}
+
 export default function RootLayout() {
-  const [launching, setLaunching] = useState(true);
   // Caprasimo is the only display voice; Figtree carries four body weights.
   // RN cannot synthesise weights from a single face, so each is a real file.
   const [fontsLoaded, fontError] = useFonts({
@@ -34,13 +66,14 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <SettingsProvider>
-        <View style={styles.root}>
-          <TabNavigator />
-          {launching && <LaunchOverlay onDone={() => setLaunching(false)} />}
-        </View>
-        {/* The design is a single warm light palette, so the status bar is
-            always dark-on-light. */}
-        <StatusBar style="dark" />
+        <ConditionsProvider>
+          <View style={styles.root}>
+            <Shell />
+          </View>
+          {/* The design is a single warm light palette, so the status bar is
+              always dark-on-light. */}
+          <StatusBar style="dark" />
+        </ConditionsProvider>
       </SettingsProvider>
     </SafeAreaProvider>
   );

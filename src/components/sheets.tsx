@@ -2,14 +2,12 @@
  * The three sheet bodies: saved places, air detail, and the activity
  * comparison.
  *
- * All three rate their rows through the model rather than showing stored
- * verdicts, so they answer to the user's current thresholds like every other
- * surface.
+ * All three take their numbers from the caller. A sheet never fetches, and
+ * never fills a gap: a value the caller did not have renders as "—".
  */
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
-  Accent,
   Accent2,
   Neutral,
   Palette,
@@ -19,14 +17,27 @@ import {
   Verdict,
   tracking,
 } from '@/constants/design-tokens';
-import { Common, SheetStrings } from '@/constants/strings';
-import { NOW, PLACES, hourAt } from '@/lib/fixtures';
-import { band, formatHour, type Activity, type Prefs, type TimeFormat } from '@/lib/rating';
+import { Common, DataStrings, SheetStrings } from '@/constants/strings';
+import type { AqhiReading } from '@/lib/aqhi';
+import { formatAge, formatAqhi, formatClock, formatValue } from '@/lib/live';
+import type { HourlyConditions } from '@/lib/open-meteo';
+import { band, type Activity, type Prefs, type TimeFormat } from '@/lib/rating';
 
 /* ── Saved places ────────────────────────────────────────────────────────── */
 
+/**
+ * The prototype's saved places. They carry no coordinates, and AQHI is one
+ * value per community, so there is no reading to show for any of them yet.
+ * Kept as names only; the circles read "—" until places have locations.
+ */
+const PLACE_NAMES = [
+  { name: 'East Hill', note: 'The bench, 480 m' },
+  { name: 'Kal Lake Road', note: 'Lakeshore, 350 m' },
+  { name: 'Silver Star', note: 'Summit road, 1,610 m' },
+  { name: 'Predator Ridge', note: 'Rolling, 600 m' },
+];
+
 export function PlacesSheetBody({
-  prefs,
   onPick,
 }: {
   prefs: Prefs;
@@ -34,60 +45,62 @@ export function PlacesSheetBody({
 }) {
   return (
     <View style={styles.rows}>
-      {PLACES.map((p) => {
-        const level = band(p.aqhi, prefs);
-        return (
-          <Pressable
-            key={p.name}
-            onPress={() => onPick(p.name)}
-            accessibilityRole="button"
-            style={styles.placeRow}>
-            <View style={[styles.circle, { backgroundColor: Verdict.tint[level] }]}>
-              <Text style={[styles.circleNumber, { color: Verdict.ink[level] }]}>{p.aqhi}</Text>
-              <Text style={[styles.circleCaps, { color: Verdict.deepInk[level] }]}>{Common.aqhi}</Text>
-            </View>
-            <View style={styles.grow}>
-              <Text style={styles.rowName}>{p.name}</Text>
-              <Text style={styles.rowNote}>{p.note}</Text>
-            </View>
-            <Text style={[styles.rowWord, { color: Verdict.ink[level] }]}>
-              {Verdict.word[level]}
+      {PLACE_NAMES.map((p) => (
+        <Pressable
+          key={p.name}
+          onPress={() => onPick(p.name)}
+          accessibilityRole="button"
+          style={styles.placeRow}>
+          <View style={[styles.circle, { backgroundColor: Neutral[200] }]}>
+            <Text style={[styles.circleNumber, { color: Neutral[600] }]}>
+              {DataStrings.unavailable}
             </Text>
-          </Pressable>
-        );
-      })}
+            <Text style={[styles.circleCaps, { color: Neutral[600] }]}>{Common.aqhi}</Text>
+          </View>
+          <View style={styles.grow}>
+            <Text style={styles.rowName}>{p.name}</Text>
+            <Text style={styles.rowNote}>{p.note}</Text>
+          </View>
+        </Pressable>
+      ))}
     </View>
   );
 }
 
 /* ── What's in the air ───────────────────────────────────────────────────── */
 
-/** Bar colours, paired by position with SheetStrings.airBars. */
-const AIR_BAR_COLORS = [Accent[600], Accent2[500], Neutral[500]];
-
-export function AirSheetBody({ timeFmt }: { timeFmt: TimeFormat }) {
-  const nowHour = hourAt(NOW);
-  const pm = Math.round(nowHour.aqhi * 8.6);
-
+export function AirSheetBody({
+  observation,
+  weather,
+  timeFmt,
+  nowMs,
+}: {
+  observation: AqhiReading | null;
+  weather: HourlyConditions | null;
+  timeFmt: TimeFormat;
+  nowMs: number;
+}) {
   const stats = [
-    { k: SheetStrings.airStatKeys.pm25, v: String(pm), u: SheetStrings.airStatUnits.pm25 },
+    {
+      k: SheetStrings.airStatKeys.pm25,
+      v: formatValue(weather?.pm25 ?? null, 1),
+      u: SheetStrings.airStatUnits.pm25,
+    },
     {
       k: SheetStrings.airStatKeys.aqhi,
-      v: String(nowHour.aqhi),
-      u: SheetStrings.aqhiBandName(nowHour.aqhi),
+      v: formatAqhi(observation),
+      u: observation?.category ?? DataStrings.unavailable,
     },
-    nowHour.rainMmH >= 0.1
-      ? {
-          k: SheetStrings.airStatKeys.rain,
-          v: nowHour.rainMmH.toFixed(1),
-          u: SheetStrings.airStatUnits.rain,
-        }
-      : {
-          k: SheetStrings.airStatKeys.visibility,
-          v: '4.5',
-          u: SheetStrings.airStatUnits.visibility,
-        },
+    {
+      k: SheetStrings.airStatKeys.rain,
+      v: formatValue(weather?.precipitationMm ?? null, 1),
+      u: SheetStrings.airStatUnits.rain,
+    },
   ];
+
+  const provenance = observation
+    ? `${DataStrings.communityLine(observation.community, observation.distanceKm)} · ${DataStrings.observedAge(formatAge(Date.parse(observation.timestamp), nowMs))}`
+    : DataStrings.unavailable;
 
   return (
     <View style={styles.airBody}>
@@ -101,21 +114,16 @@ export function AirSheetBody({ timeFmt }: { timeFmt: TimeFormat }) {
         ))}
       </View>
 
-      <View style={styles.barList}>
-        {SheetStrings.airBars.map((b, i) => (
-          <View key={b.k}>
-            <View style={styles.barHead}>
-              <Text style={styles.barKey}>{b.k}</Text>
-              <Text style={styles.barKey}>{b.v}</Text>
-            </View>
-            <View style={styles.barTrack}>
-              <View style={[styles.barFill, { width: `${b.pct}%`, backgroundColor: AIR_BAR_COLORS[i] }]} />
-            </View>
-          </View>
-        ))}
-      </View>
+      {/*
+        The prototype drew composition bars here (PM2.5 / ozone / NO2 as a
+        share of the index). Neither source provides that breakdown, and a
+        share of an index is a derivation in any case, so they are not drawn.
+      */}
 
-      <Text style={styles.sourceLine}>{SheetStrings.airSource(formatHour(NOW, timeFmt))}</Text>
+      <Text style={styles.sourceLine}>{provenance}</Text>
+      <Text style={styles.sourceLine}>
+        {SheetStrings.airSource(formatClock(nowMs, timeFmt))}
+      </Text>
     </View>
   );
 }
@@ -125,31 +133,33 @@ export function AirSheetBody({ timeFmt }: { timeFmt: TimeFormat }) {
 const ACTIVITIES: Activity[] = ['Running', 'Cycling', 'Hiking / Walking'];
 
 export function ActivitySheetBody({
+  aqhi,
   prefs,
   onPick,
 }: {
+  /** The current AQHI, or null when there is none to compare against. */
+  aqhi: number | null;
   prefs: Prefs;
   onPick: (activity: Activity) => void;
 }) {
-  const nowHour = hourAt(NOW);
-
   return (
     <View style={styles.rows}>
       {ACTIVITIES.map((a) => {
         // Each row is rated as if that sport were the active one.
-        const level = band(nowHour.aqhi, { ...prefs, activity: a });
+        const level = aqhi === null ? null : band(aqhi, { ...prefs, activity: a });
+        const ink = level === null ? Neutral[500] : Verdict.ink[level];
         return (
           <Pressable
             key={a}
             onPress={() => onPick(a)}
             accessibilityRole="button"
             style={styles.actRow}>
-            <View style={[styles.actDot, { backgroundColor: Verdict.ink[level] }]} />
+            <View style={[styles.actDot, { backgroundColor: ink }]} />
             <View style={styles.grow}>
               <View style={styles.actHead}>
                 <Text style={styles.rowName}>{a}</Text>
-                <Text style={[styles.actWord, { color: Verdict.ink[level] }]}>
-                  {Verdict.word[level]}
+                <Text style={[styles.actWord, { color: ink }]}>
+                  {level === null ? DataStrings.unavailable : Verdict.word[level]}
                 </Text>
               </View>
               <Text style={styles.actNote}>{SheetStrings.activityNote[a]}</Text>
@@ -185,7 +195,6 @@ const styles = StyleSheet.create({
   circleCaps: { ...Type.zoneCaps, letterSpacing: tracking(9.5, 0.04), lineHeight: 10 },
   rowName: { ...Type.rowLabel, flex: 1, color: Palette.text },
   rowNote: { ...Type.bodySmall, color: Neutral[700] },
-  rowWord: { ...Type.caption, fontFamily: Type.rowLabel.fontFamily },
 
   airBody: { gap: Space.three },
   statRow: { flexDirection: 'row', gap: Space.three },
@@ -208,18 +217,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   statUnit: { ...Type.caption, color: Neutral[700] },
-
-  barList: { gap: 9 },
-  barHead: { flexDirection: 'row', justifyContent: 'space-between' },
-  barKey: { ...Type.bodySmall, fontFamily: Type.rowLabel.fontFamily, color: Neutral[800] },
-  barTrack: {
-    height: 9,
-    borderRadius: Radius.pill,
-    backgroundColor: Neutral[300],
-    marginTop: 5,
-    overflow: 'hidden',
-  },
-  barFill: { height: '100%', borderRadius: Radius.pill },
   sourceLine: { ...Type.caption, color: Neutral[600], lineHeight: 12 * 1.45 },
 
   actRow: {
