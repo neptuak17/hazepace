@@ -25,7 +25,7 @@ import {
   Verdict,
   tracking,
 } from '@/constants/design-tokens';
-import { Attribution, Common, DataStrings, MapStrings } from '@/constants/strings';
+import { Attribution, Common, DataStrings, HeaderStrings, MapStrings } from '@/constants/strings';
 import { ECCC_ATTRIBUTION } from '@/lib/aqhi';
 import { useConditions } from '@/lib/conditions';
 import { FAR_COMMUNITY_KM, currentHour, formatAge, formatAqhi, formatClock } from '@/lib/live';
@@ -41,7 +41,7 @@ const PLUME_HOURS = [8, 11, 14, 17];
 
 export default function MapScreen() {
   const { settings, prefs } = useSettings();
-  const { aqhi, aqhiCoverage, live, now: nowMs } = useConditions();
+  const { aqhi, aqhiCoverage, live, now: nowMs, place } = useConditions();
   const [plume, setPlume] = useState(0);
 
   const observation = aqhi?.observation ?? null;
@@ -55,6 +55,9 @@ export default function MapScreen() {
   const far = aqhi !== null && aqhi.distanceKm > FAR_COMMUNITY_KM;
 
   const legendTime = formatClock(nowMs, settings.timeFmt);
+  // The legend names where the air reading is for: the ECCC community when
+  // there is one, otherwise the place itself — the same rule as the header.
+  const legendPlace = aqhi?.community.name ?? place?.label ?? HeaderStrings.deviceHeadline;
 
   return (
     <View style={styles.screen}>
@@ -89,7 +92,7 @@ export default function MapScreen() {
 
         <View style={styles.legendRow}>
           <Text style={styles.legend}>
-            {MapStrings.legend(aqhi?.community.name ?? DataStrings.unavailable, legendTime)}
+            {MapStrings.legend(legendPlace, legendTime)}
           </Text>
         </View>
 
