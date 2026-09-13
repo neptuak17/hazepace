@@ -10,6 +10,14 @@
  * its unfilled track in the screenshots is a browser default rather than a
  * design decision. The track here uses neutral-300, which is what the design
  * system's own progress track (on the launch screen) uses.
+ *
+ * Touch position: `locationX` is relative to whichever view the finger is
+ * over, and the thumb is a child view that moves under the finger — so
+ * reading it on every move made the value jump between "relative to the
+ * track" and "relative to the thumb" and the thumb flickered. The children
+ * are therefore not touch targets, `locationX` is read once at the start of
+ * the gesture (when it is relative to this view), and every move is that
+ * start plus the gesture's `dx`.
  */
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
@@ -57,6 +65,10 @@ export function Slider({
   const widthRef = useRef(0);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  /** Where the gesture began, relative to this view. */
+  const startX = useRef(0);
+  /** The last value emitted, so a move within one step is silent. */
+  const lastEmitted = useRef<number | null>(null);
 
   const snap = useCallback(
     (raw: number) => {
@@ -73,7 +85,12 @@ export function Slider({
       const w = widthRef.current - THUMB_SIZE;
       if (w <= 0) return;
       const ratio = Math.max(0, Math.min(1, (x - THUMB_SIZE / 2) / w));
-      onChangeRef.current(snap(min + ratio * (max - min)));
+      const next = snap(min + ratio * (max - min));
+      // Every move event would otherwise re-render and re-persist the same
+      // value; the parent only hears about a change of step.
+      if (next === lastEmitted.current) return;
+      lastEmitted.current = next;
+      onChangeRef.current(next);
     },
     [min, max, snap],
   );
@@ -85,8 +102,12 @@ export function Slider({
         onMoveShouldSetPanResponder: () => true,
         // Claim the gesture so the enclosing ScrollView does not steal a drag.
         onPanResponderTerminationRequest: () => false,
-        onPanResponderGrant: (e) => emit(e.nativeEvent.locationX),
-        onPanResponderMove: (e) => emit(e.nativeEvent.locationX),
+        onPanResponderGrant: (e) => {
+          startX.current = e.nativeEvent.locationX;
+          lastEmitted.current = null;
+          emit(startX.current);
+        },
+        onPanResponderMove: (_e, gesture) => emit(startX.current + gesture.dx),
       }),
     [emit],
   );
@@ -120,10 +141,11 @@ export function Slider({
         else if (e.nativeEvent.actionName === 'decrement') onChange(snap(value - step));
       }}
       {...responder.panHandlers}>
-      <View style={styles.track}>
+      {/* Not touch targets: see the note on locationX above. */}
+      <View style={styles.track} pointerEvents="none">
         <View style={[styles.fill, { width: thumbLeft + THUMB_SIZE / 2 }]} />
       </View>
-      <View style={[styles.thumb, { left: thumbLeft }]} />
+      <View style={[styles.thumb, { left: thumbLeft }]} pointerEvents="none" />
     </View>
   );
 }
