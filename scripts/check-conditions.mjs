@@ -20,6 +20,7 @@ import {
   fetchAqhi,
   forecastFrom,
 } from '../src/lib/aqhi.ts';
+import { estimateAqhiSeries } from '../src/lib/aqhi-estimate.ts';
 
 const ROWS = 12;
 
@@ -115,6 +116,13 @@ async function report(site) {
   let rows = hoursFrom(snapshot, localNow, ROWS);
   if (rows.length === 0) rows = snapshot.hours.slice(0, ROWS);
 
+  // The estimate is computed over the whole series (it needs the trailing
+  // hours), then read off for the rows shown. "est." is the Open-Meteo
+  // pollutant model through ECCC's formula; "AQHI" is ECCC's own forecast.
+  const estimates = new Map(
+    estimateAqhiSeries(snapshot.hours).map((e, i) => [snapshot.hours[i].time, e]),
+  );
+
   console.log(`\nOpen-Meteo — ${snapshot.timezone ?? '(no timezone)'}, ${snapshot.hours.length} hours`);
 
   const header =
@@ -123,7 +131,9 @@ async function report(site) {
     pad('wind', 7) +
     pad('rain', 7) +
     pad('PM2.5', 8) +
-    pad('US AQI', 8) +
+    pad('O3', 6) +
+    pad('NO2', 6) +
+    pad('est.', 6) +
     pad('AQHI', 7) +
     pad('category', 12);
 
@@ -138,7 +148,9 @@ async function report(site) {
         pad(cell(h.windSpeedKmh, 0), 7) +
         pad(cell(h.precipitationMm, 1), 7) +
         pad(cell(h.pm25, 1), 8) +
-        pad(cell(h.usAqi, 0), 8) +
+        pad(cell(h.ozoneUgm3, 0), 6) +
+        pad(cell(h.nitrogenDioxideUgm3, 0), 6) +
+        pad(cell(estimates.get(h.time)?.value ?? null, 1), 6) +
         pad(match ? cell(match.value, 0) : '—', 7) +
         pad(match?.category ?? '—', 12),
     );

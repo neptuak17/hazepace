@@ -9,8 +9,10 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
+import type { AqhiEstimate } from './aqhi-estimate.ts';
 import type { AqhiReading, AqhiSnapshot } from './aqhi.ts';
 import {
+  aqhiOf,
   compass,
   epochOfLocalIso,
   formatAge,
@@ -45,6 +47,8 @@ const weather = (over: Partial<HourlyConditions> = {}): HourlyConditions => ({
   uvIndex: 3,
   pm25: 4,
   pm10: 8,
+  ozoneUgm3: 60,
+  nitrogenDioxideUgm3: 8,
   usAqi: 30,
   ...over,
 });
@@ -63,11 +67,24 @@ const aqhiReading = (value: number | null, over: Partial<AqhiReading> = {}): Aqh
   ...over,
 });
 
-const hour = (w: HourlyConditions | null, a: AqhiReading | null, h = 12): LiveHour => ({
+const hour = (
+  w: HourlyConditions | null,
+  a: AqhiReading | null,
+  h = 12,
+  estimate: AqhiEstimate | null = null,
+): LiveHour => ({
   epoch: 0,
   hour: h,
   weather: w,
   aqhi: a,
+  aqhiEstimate: estimate,
+});
+
+const estimate = (value: number): AqhiEstimate => ({
+  value,
+  isAboveTen: value > 10.5,
+  category: 'Low',
+  meanHours: 3,
 });
 
 describe('readingOf — the completeness rule', () => {
@@ -76,9 +93,21 @@ describe('readingOf — the completeness rule', () => {
     assert.deepEqual(r, { hour: 12, aqhi: 3, tempC: 20, windKmh: 10, rainMmH: 0 });
   });
 
-  test('is null with no AQHI, even with perfect weather', () => {
+  test('is null with no AQHI from either source, even with perfect weather', () => {
     assert.equal(readingOf(hour(weather(), null)), null);
     assert.equal(readingOf(hour(weather(), aqhiReading(null))), null);
+  });
+
+  test('uses the estimate when ECCC has nothing', () => {
+    const r = readingOf(hour(weather(), null, 12, estimate(4.2)));
+    assert.equal(r?.aqhi, 4.2);
+    const r2 = readingOf(hour(weather(), aqhiReading(null), 12, estimate(4.2)));
+    assert.equal(r2?.aqhi, 4.2);
+  });
+
+  test('prefers the ECCC reading over the estimate when both are present', () => {
+    const r = readingOf(hour(weather(), aqhiReading(3), 12, estimate(7)));
+    assert.equal(r?.aqhi, 3);
   });
 
   test('is null with no weather, even with an AQHI', () => {
@@ -167,6 +196,39 @@ describe('joinLive', () => {
 
   test('is empty with nothing from either side', () => {
     assert.deepEqual(joinLive(null, null), []);
+  });
+
+  test('estimates an AQHI for every weather hour with pollutants, and not for ECCC-only hours', () => {
+    const live = joinLive(snapshotW(['2026-09-11T12:00']), snapshotA(['2026-09-11T15:00:00Z']));
+    assert.notEqual(live[0].aqhiEstimate, null);
+    assert.equal(live[1].aqhiEstimate, null);
+  });
+
+  test('aqhiOf: ECCC wins where it has a value; the estimate fills where it does not', () => {
+    const live = joinLive(
+      snapshotW(['2026-09-11T12:00', '2026-09-11T13:00']),
+      snapshotA(['2026-09-11T12:00:00Z']),
+    );
+    assert.deepEqual(aqhiOf(live[0]), { value: 3, source: 'eccc' });
+    const filled = aqhiOf(live[1]);
+    assert.equal(filled?.source, 'estimate');
+    assert.equal(filled?.value, live[1].aqhiEstimate?.value);
+  });
+
+  test('aqhiOf: an ECCC reading with a null value does not block the estimate', () => {
+    const w = snapshotW(['2026-09-11T12:00']);
+    const a = snapshotA(['2026-09-11T12:00:00Z']);
+    a.forecast[0] = aqhiReading(null, { timestamp: '2026-09-11T12:00:00Z' });
+    const live = joinLive(w, a);
+    assert.equal(aqhiOf(live[0])?.source, 'estimate');
+  });
+
+  test('aqhiOf: no pollutants and no ECCC value is null', () => {
+    const w = snapshotW(['2026-09-11T12:00']);
+    w.hours[0] = weather({ time: '2026-09-11T12:00', pm25: null });
+    const live = joinLive(w, null);
+    assert.equal(live[0].aqhiEstimate, null);
+    assert.equal(aqhiOf(live[0]), null);
   });
 });
 

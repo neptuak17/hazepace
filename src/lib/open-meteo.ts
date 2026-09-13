@@ -61,6 +61,10 @@ export interface HourlyConditions {
   pm25: number | null;
   /** µg/m³ */
   pm10: number | null;
+  /** µg/m³. With NO₂ and PM2.5, an input to the AQHI estimate (aqhi-estimate.ts). */
+  ozoneUgm3: number | null;
+  /** µg/m³ */
+  nitrogenDioxideUgm3: number | null;
   /** The United States AQI scale. Not the Canadian AQHI — see the note below. */
   usAqi: number | null;
 }
@@ -135,7 +139,7 @@ const WEATHER_HOURLY = [
   'uv_index',
 ] as const;
 
-const AIR_QUALITY_HOURLY = ['pm2_5', 'pm10', 'us_aqi'] as const;
+const AIR_QUALITY_HOURLY = ['pm2_5', 'pm10', 'ozone', 'nitrogen_dioxide', 'us_aqi'] as const;
 
 /** Five, to match the Forecast screen. Open-Meteo allows up to 16. */
 const FORECAST_DAYS = 5;
@@ -397,6 +401,8 @@ export async function fetchAirQuality(
     byTime.set(time, {
       pm25: numberAt(hourly, 'pm2_5', i),
       pm10: numberAt(hourly, 'pm10', i),
+      ozoneUgm3: numberAt(hourly, 'ozone', i),
+      nitrogenDioxideUgm3: numberAt(hourly, 'nitrogen_dioxide', i),
       usAqi: numberAt(hourly, 'us_aqi', i),
     });
   });
@@ -425,6 +431,8 @@ function emptyHour(time: string): HourlyConditions {
     uvIndex: null,
     pm25: null,
     pm10: null,
+    ozoneUgm3: null,
+    nitrogenDioxideUgm3: null,
     usAqi: null,
   };
 }

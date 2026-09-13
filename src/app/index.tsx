@@ -34,6 +34,7 @@ import { Attribution, Common, DataStrings, SheetStrings, TodayStrings } from '@/
 import { ECCC_ATTRIBUTION } from '@/lib/aqhi';
 import { useConditions } from '@/lib/conditions';
 import {
+  aqhiOf,
   compass,
   currentHour,
   formatAge,
@@ -67,7 +68,7 @@ const BAR_SCALE = 1.16;
 
 export default function TodayScreen() {
   const { settings, activity, setActivity, prefs } = useSettings();
-  const { live, aqhi, aqhiCoverage, aqhiNearest, fetchedAt, refreshing, refresh, now: nowMs, place } =
+  const { live, aqhi, aqhiCoverage, fetchedAt, refreshing, refresh, now: nowMs, place } =
     useConditions();
   const placesSheet = usePlacesSheet();
   const [airOpen, setAirOpen] = useState(false);
@@ -82,11 +83,15 @@ export default function TodayScreen() {
     return h >= 5 && h <= 21 ? h : 11;
   });
 
-  // The observation is the measured value; the hour's forecast is the fallback
-  // when ECCC has not published one. Both are real readings, neither is a
-  // substitute, and a reader can tell them apart from the caption.
+  // The hero's AQHI, in order of preference: ECCC's observation (measured),
+  // ECCC's forecast for this hour, then the Open-Meteo estimate. None is a
+  // substitute for another — each carries its own caption, so a reader can
+  // always tell a measurement from a forecast from a model.
   const observation = aqhi?.observation ?? null;
-  const nowAqhi = observation?.value ?? nowHour?.aqhi?.value ?? null;
+  const nowEccc = nowHour?.aqhi && nowHour.aqhi.value !== null ? nowHour.aqhi : null;
+  const nowEstimate = nowHour?.aqhiEstimate ?? null;
+  const heroReading = observation?.value !== null && observation ? observation : (nowEccc ?? nowEstimate);
+  const nowAqhi = heroReading?.value ?? null;
   const nowWeather = nowHour?.weather ?? null;
   const nowReading: HourReading | null =
     nowAqhi !== null &&
@@ -114,20 +119,26 @@ export default function TodayScreen() {
       : ((verdict.driver && TodayStrings.sentences[verdict.driver]?.[verdict.level]) ??
         TodayStrings.fallbackSentence);
 
-  const heroCaption = observation
-    ? TodayStrings.heroCaption(
-        observation.community,
-        DataStrings.observedAt(
-          formatClock(Date.parse(observation.timestamp), settings.timeFmt),
-          formatAge(Date.parse(observation.timestamp), nowMs),
-        ),
-      )
-    : nowHour?.aqhi
-      ? TodayStrings.heroCaption(
-          nowHour.aqhi.community,
-          DataStrings.forecastFor(formatClock(nowHour.epoch, settings.timeFmt)),
-        )
-      : null;
+  let heroCaption: string | null = null;
+  if (heroReading === observation && observation) {
+    heroCaption = TodayStrings.heroCaption(
+      observation.community,
+      DataStrings.observedAt(
+        formatClock(Date.parse(observation.timestamp), settings.timeFmt),
+        formatAge(Date.parse(observation.timestamp), nowMs),
+      ),
+    );
+  } else if (heroReading === nowEccc && nowEccc && nowHour) {
+    heroCaption = TodayStrings.heroCaption(
+      nowEccc.community,
+      DataStrings.forecastFor(formatClock(nowHour.epoch, settings.timeFmt)),
+    );
+  } else if (heroReading === nowEstimate && nowEstimate && nowHour) {
+    heroCaption = TodayStrings.heroCaption(
+      DataStrings.modelSource,
+      DataStrings.forecastFor(formatClock(nowHour.epoch, settings.timeFmt)),
+    );
+  }
 
   const complete = hours.map(readingOf).filter((r): r is HourReading => r !== null);
   const window = bestWindow(complete, now, prefs);
@@ -144,9 +155,13 @@ export default function TodayScreen() {
   const selectedReading = readingOf(selected);
   const selectedVerdict = selectedReading ? judge(selectedReading, prefs) : null;
   const w = selected.weather;
+  const selectedAqhi = aqhiOf(selected);
 
   const stats = [
-    { k: TodayStrings.statKeys.aqhi, v: formatAqhi(selected.aqhi) },
+    {
+      k: TodayStrings.statKeys.aqhi,
+      v: formatAqhi(selectedAqhi?.source === 'estimate' ? selected.aqhiEstimate : selected.aqhi),
+    },
     { k: TodayStrings.statKeys.temp, v: formatValue(w?.temperatureC ?? null, 0, '°C') },
     {
       k: TodayStrings.statKeys.wind,
@@ -195,10 +210,8 @@ export default function TodayScreen() {
 
         {aqhiCoverage === 'none' && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>{DataStrings.noCoverageTitle}</Text>
-            <Text style={styles.cardNote}>
-              {DataStrings.noCoverageNote(aqhiNearest?.name ?? null, aqhiNearest?.km ?? null)}
-            </Text>
+            <Text style={styles.cardTitle}>{DataStrings.modelAqhiTitle}</Text>
+            <Text style={styles.cardNote}>{DataStrings.modelAqhiNote}</Text>
           </View>
         )}
 
@@ -210,7 +223,7 @@ export default function TodayScreen() {
               </Text>
               <View style={styles.heroRow}>
                 <Text style={[styles.hero, { color: ink }]}>
-                  {observation ? formatAqhi(observation) : formatAqhi(nowHour?.aqhi ?? null)}
+                  {formatAqhi(heroReading)}
                 </Text>
                 <View style={styles.heroCaption}>
                   <Text style={[styles.heroCapsLabel, { color: ink }]}>{Common.aqhi}</Text>
@@ -280,7 +293,7 @@ export default function TodayScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={TodayStrings.barLabel(
                     formatHour(hr.hour, settings.timeFmt),
-                    hr.aqhi?.value ?? NaN,
+                    aqhiOf(hr)?.value ?? NaN,
                   )}>
                   <View
                     style={[
@@ -341,9 +354,15 @@ export default function TodayScreen() {
               ))}
             </View>
 
-            {selected.aqhi && (
+            {selectedAqhi?.source === 'eccc' && selected.aqhi && (
               <Text style={styles.readoutProvenance}>
                 {DataStrings.communityLine(selected.aqhi.community, selected.aqhi.distanceKm)} ·{' '}
+                {DataStrings.forecastFor(formatClock(selected.epoch, settings.timeFmt))}
+              </Text>
+            )}
+            {selectedAqhi?.source === 'estimate' && (
+              <Text style={styles.readoutProvenance}>
+                {DataStrings.modelSource} ·{' '}
                 {DataStrings.forecastFor(formatClock(selected.epoch, settings.timeFmt))}
               </Text>
             )}
@@ -383,6 +402,8 @@ export default function TodayScreen() {
       <Sheet visible={airOpen} title={SheetStrings.airTitle} onClose={() => setAirOpen(false)}>
         <AirSheetBody
           observation={observation}
+          estimate={observation ? null : nowEstimate}
+          estimateEpoch={nowHour?.epoch ?? null}
           weather={nowWeather}
           timeFmt={settings.timeFmt}
           nowMs={nowMs}

@@ -110,6 +110,8 @@ describe('joinByTime', () => {
     // any field without a guard.
     assert.deepEqual(Object.keys(h).sort(), [
       'apparentTemperatureC',
+      'nitrogenDioxideUgm3',
+      'ozoneUgm3',
       'pm10',
       'pm25',
       'precipitationMm',

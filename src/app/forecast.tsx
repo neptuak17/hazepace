@@ -126,6 +126,7 @@ export default function ForecastScreen() {
                             day.rainMm !== null && day.rainMm >= 0.5 ? Math.round(day.rainMm) : null,
                             day.windDir,
                             day.windMaxKmh === null ? null : Math.round(day.windMaxKmh),
+                            day.aqhiEstimated,
                           )}
                     </Text>
                   </View>

@@ -23,6 +23,7 @@
  */
 import type { AqhiReading, AqhiSnapshot } from '@/lib/aqhi';
 import type { ConditionsSnapshot, HourlyConditions } from '@/lib/open-meteo';
+import { estimateAqhiSeries, type AqhiEstimate } from './aqhi-estimate.ts';
 import {
   judge,
   longestRun,
@@ -169,7 +170,30 @@ export interface LiveHour {
   /** Device-local hour of day, 0–23. */
   hour: number;
   weather: HourlyConditions | null;
+  /** ECCC's reading for the hour, or null if they had none. */
   aqhi: AqhiReading | null;
+  /**
+   * The AQHI estimated from Open-Meteo's pollutants for the hour. Kept apart
+   * from `aqhi` so the two can never be confused; read through aqhiOf().
+   */
+  aqhiEstimate: AqhiEstimate | null;
+}
+
+/** Where an hour's AQHI came from. */
+export type AqhiSource = 'eccc' | 'estimate';
+
+/**
+ * The AQHI the app uses for an hour, with its provenance.
+ *
+ * ECCC's reading wins whenever it has a value; the estimate fills the gaps —
+ * beyond ECCC's forecast horizon, and everywhere ECCC has no community in
+ * range. This is the one place that precedence lives. Null when neither
+ * source has anything.
+ */
+export function aqhiOf(h: LiveHour): { value: number; source: AqhiSource } | null {
+  if (h.aqhi && h.aqhi.value !== null) return { value: h.aqhi.value, source: 'eccc' };
+  if (h.aqhiEstimate) return { value: h.aqhiEstimate.value, source: 'estimate' };
+  return null;
 }
 
 /**
@@ -180,19 +204,35 @@ export interface LiveHour {
  */
 export function joinLive(weather: ConditionsSnapshot | null, aqhi: AqhiSnapshot | null): LiveHour[] {
   const byEpoch = new Map<number, LiveHour>();
+  const hours = weather?.hours ?? [];
+  const estimates = estimateAqhiSeries(hours);
 
-  for (const h of weather?.hours ?? []) {
+  hours.forEach((h, i) => {
     const epoch = epochOfLocalIso(h.time, weather?.utcOffsetSeconds ?? null);
-    if (Number.isNaN(epoch)) continue;
-    byEpoch.set(epoch, { epoch, hour: new Date(epoch).getHours(), weather: h, aqhi: null });
-  }
+    if (Number.isNaN(epoch)) return;
+    byEpoch.set(epoch, {
+      epoch,
+      hour: new Date(epoch).getHours(),
+      weather: h,
+      aqhi: null,
+      aqhiEstimate: estimates[i],
+    });
+  });
 
   for (const r of aqhi?.forecast ?? []) {
     const epoch = Date.parse(r.timestamp);
     if (Number.isNaN(epoch)) continue;
     const existing = byEpoch.get(epoch);
     if (existing) existing.aqhi = r;
-    else byEpoch.set(epoch, { epoch, hour: new Date(epoch).getHours(), weather: null, aqhi: r });
+    else {
+      byEpoch.set(epoch, {
+        epoch,
+        hour: new Date(epoch).getHours(),
+        weather: null,
+        aqhi: r,
+        aqhiEstimate: null,
+      });
+    }
   }
 
   return [...byEpoch.values()].sort((a, b) => a.epoch - b.epoch);
@@ -206,7 +246,7 @@ export function joinLive(weather: ConditionsSnapshot | null, aqhi: AqhiSnapshot 
  */
 export function readingOf(h: LiveHour): HourReading | null {
   const w = h.weather;
-  const aqhi = h.aqhi?.value ?? null;
+  const aqhi = aqhiOf(h)?.value ?? null;
   if (
     !w ||
     aqhi === null ||
@@ -249,7 +289,13 @@ export function todayHours(live: LiveHour[], nowMs: number): LiveHour[] {
   const out: LiveHour[] = [];
   for (let hour = CHART_FIRST_HOUR; hour <= CHART_LAST_HOUR; hour++) {
     out.push(
-      byHour.get(hour) ?? { epoch: start.getTime() + hour * HOUR_MS, hour, weather: null, aqhi: null },
+      byHour.get(hour) ?? {
+        epoch: start.getTime() + hour * HOUR_MS,
+        hour,
+        weather: null,
+        aqhi: null,
+        aqhiEstimate: null,
+      },
     );
   }
   return out;
@@ -284,9 +330,11 @@ export interface LiveDay {
   rainMm: number | null;
   windMaxKmh: number | null;
   windDir: string | null;
-  /** First and last AQHI the forecast covered, or null. */
+  /** First and last AQHI of the day, or null. */
   aqhiFirst: number | null;
   aqhiLast: number | null;
+  /** True if either end is an estimate rather than an ECCC reading. */
+  aqhiEstimated: boolean;
 }
 
 /**
@@ -325,7 +373,8 @@ const min = (xs: number[]) => (xs.length ? Math.min(...xs) : null);
  *
  * Aggregates are arithmetic over what the weather covered: a day with no
  * temperature at all gets null, not zero. AQHI first/last come from whichever
- * slots the 48-hour AQHI forecast reached.
+ * hours had a value from either source, and the day says if an estimate was
+ * involved.
  */
 export function liveDays(live: LiveHour[], nowMs: number, prefs: Prefs, count = 5): LiveDay[] {
   const todayKey = localDateKey(nowMs);
@@ -351,7 +400,7 @@ export function liveDays(live: LiveHour[], nowMs: number, prefs: Prefs, count = 
     const temps = hours.map((h) => h.weather?.temperatureC).filter((v): v is number => v !== null && v !== undefined);
     const rains = hours.map((h) => h.weather?.precipitationMm).filter((v): v is number => v !== null && v !== undefined);
     const winds = hours.map((h) => h.weather?.windSpeedKmh).filter((v): v is number => v !== null && v !== undefined);
-    const aqhis = hours.map((h) => h.aqhi?.value).filter((v): v is number => v !== null && v !== undefined);
+    const aqhis = hours.map(aqhiOf).filter((a): a is NonNullable<typeof a> => a !== null);
 
     // Direction at the hour of peak wind, since a daily "average" direction
     // is meaningless when it swings.
@@ -368,8 +417,11 @@ export function liveDays(live: LiveHour[], nowMs: number, prefs: Prefs, count = 
       rainMm: rains.length ? rains.reduce((a, b) => a + b, 0) : null,
       windMaxKmh: windMax,
       windDir: compass(peak?.weather?.windDirectionDeg ?? null),
-      aqhiFirst: aqhis.length ? aqhis[0] : null,
-      aqhiLast: aqhis.length ? aqhis[aqhis.length - 1] : null,
+      aqhiFirst: aqhis.length ? aqhis[0].value : null,
+      aqhiLast: aqhis.length ? aqhis[aqhis.length - 1].value : null,
+      aqhiEstimated: aqhis.length
+        ? aqhis[0].source === 'estimate' || aqhis[aqhis.length - 1].source === 'estimate'
+        : false,
     });
   }
   return days;
@@ -381,7 +433,7 @@ export function liveDays(live: LiveHour[], nowMs: number, prefs: Prefs, count = 
  * An AQHI value as it is published: whole number, "10+" above ten, "—" when
  * absent. The one place the display convention lives.
  */
-export function formatAqhi(reading: AqhiReading | null): string {
+export function formatAqhi(reading: AqhiReading | AqhiEstimate | null): string {
   if (!reading || reading.value === null) return '—';
   if (reading.isAboveTen) return '10+';
   return String(Math.round(reading.value));

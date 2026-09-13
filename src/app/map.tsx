@@ -28,7 +28,7 @@ import {
 import { Attribution, Common, DataStrings, MapStrings } from '@/constants/strings';
 import { ECCC_ATTRIBUTION } from '@/lib/aqhi';
 import { useConditions } from '@/lib/conditions';
-import { FAR_COMMUNITY_KM, formatAge, formatAqhi, formatClock } from '@/lib/live';
+import { FAR_COMMUNITY_KM, currentHour, formatAge, formatAqhi, formatClock } from '@/lib/live';
 import { OPEN_METEO_ATTRIBUTION } from '@/lib/open-meteo';
 import { band } from '@/lib/rating';
 import { useSettings } from '@/lib/settings';
@@ -41,11 +41,17 @@ const PLUME_HOURS = [8, 11, 14, 17];
 
 export default function MapScreen() {
   const { settings, prefs } = useSettings();
-  const { aqhi, aqhiCoverage, aqhiNearest, now: nowMs } = useConditions();
+  const { aqhi, aqhiCoverage, live, now: nowMs } = useConditions();
   const [plume, setPlume] = useState(0);
 
   const observation = aqhi?.observation ?? null;
   const level = observation?.value === null || observation === null ? null : band(observation.value, prefs);
+
+  // With no ECCC community in range, the row is the model's AQHI for this
+  // hour, named as such, and banded like any other.
+  const nowHour = currentHour(live, nowMs);
+  const estimate = nowHour?.aqhiEstimate ?? null;
+  const estimateLevel = estimate ? band(estimate.value, prefs) : null;
   const far = aqhi !== null && aqhi.distanceKm > FAR_COMMUNITY_KM;
 
   const legendTime = formatClock(nowMs, settings.timeFmt);
@@ -92,16 +98,32 @@ export default function MapScreen() {
           <View style={styles.zoneList}>
             {aqhiCoverage === 'none' ? (
               <View style={styles.zoneRow}>
-                <View style={[styles.zoneCircle, { backgroundColor: Neutral[200] }]}>
-                  <Text style={[styles.zoneNumber, { color: Neutral[600] }]}>
-                    {DataStrings.unavailable}
+                <View
+                  style={[
+                    styles.zoneCircle,
+                    { backgroundColor: estimateLevel === null ? Neutral[200] : Verdict.tint[estimateLevel] },
+                  ]}>
+                  <Text
+                    style={[
+                      styles.zoneNumber,
+                      { color: estimateLevel === null ? Neutral[600] : Verdict.ink[estimateLevel] },
+                    ]}>
+                    {formatAqhi(estimate)}
                   </Text>
-                  <Text style={[styles.zoneCaps, { color: Neutral[600] }]}>{Common.aqhi}</Text>
+                  <Text
+                    style={[
+                      styles.zoneCaps,
+                      { color: estimateLevel === null ? Neutral[600] : Verdict.deepInk[estimateLevel] },
+                    ]}>
+                    {Common.aqhi}
+                  </Text>
                 </View>
                 <View style={styles.zoneNameWrap}>
-                  <Text style={styles.zoneName}>{DataStrings.noCoverageTitle}</Text>
+                  <Text style={styles.zoneName}>{DataStrings.modelSource}</Text>
                   <Text style={styles.zoneMeta}>
-                    {DataStrings.noCoverageNote(aqhiNearest?.name ?? null, aqhiNearest?.km ?? null)}
+                    {estimate && nowHour
+                      ? DataStrings.forecastFor(formatClock(nowHour.epoch, settings.timeFmt))
+                      : DataStrings.unavailable}
                   </Text>
                 </View>
               </View>

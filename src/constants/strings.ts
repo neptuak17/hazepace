@@ -45,6 +45,15 @@ export const DataStrings = {
   /** Both the clock time and the age: "observed 06:00 · 37 min ago". */
   observedAt: (clock: string, age: string) => `observed ${clock} · ${age}`,
   forecastFor: (time: string) => `forecast for ${time}`,
+
+  /**
+   * The source named wherever an AQHI came from Open-Meteo's air quality
+   * model rather than from ECCC. It takes the place a community name has
+   * for an ECCC reading, so every AQHI on screen says where it is from.
+   */
+  modelSource: 'Open-Meteo air quality model',
+  /** Appended to a day's AQHI span when either end came from the model. */
+  estimateMark: 'est.',
   fetchedAge: (age: string) => `updated ${age}`,
 
   /** The header's meta line when the app is not using the device's location. */
@@ -60,11 +69,10 @@ export const DataStrings = {
   /** The action on that card; opens the places sheet. */
   choosePlace: 'Choose a place',
 
-  noCoverageTitle: 'No AQHI community in range',
-  noCoverageNote: (name: string | null, km: number | null) =>
-    name && km !== null
-      ? `The nearest is ${name}, ${Math.round(km)} km away. AQHI is not shown for readings that far from you.`
-      : 'No AQHI community reports for this area.',
+  /** A card on Today when the AQHI is the model's rather than ECCC's. */
+  modelAqhiTitle: 'AQHI from the Open-Meteo air quality model',
+  modelAqhiNote:
+    'Calculated with the Canadian AQHI formula from modelled PM2.5, ozone and NO₂ (Copernicus CAMS, via Open-Meteo).',
 
   errorTitle: 'Conditions could not be loaded',
   errorSource: {
@@ -186,8 +194,9 @@ export const ForecastStrings = {
     rainMm: number | null,
     dir: string | null,
     windKmh: number | null,
+    estimated = false,
   ) => {
-    const aqhi = `AQHI ${from} → ${to}`;
+    const aqhi = `AQHI ${from} → ${to}${estimated ? ` ${DataStrings.estimateMark}` : ''}`;
     const rain = rainMm === null ? '' : ` · rain ${rainMm} mm`;
     const wind =
       windKmh === null ? ' · wind —' : ` · wind ${dir ? dir + ' ' : ''}${windKmh} km/h`;

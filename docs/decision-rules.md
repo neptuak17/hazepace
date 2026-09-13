@@ -30,6 +30,8 @@ hour missing any of them gets no verdict. That gate lives outside the model
 | Rain | mm/h | ✅ | |
 | PM2.5 | µg/m³ | | ✅ |
 | PM10 | µg/m³ | | ✅ |
+| Ozone | µg/m³ | | ✅ |
+| NO₂ | µg/m³ | | ✅ |
 | Wind gusts | km/h | | ✅ |
 | Wind direction | degrees | | ✅ |
 | Apparent temperature | °C | | ✅ |
@@ -41,6 +43,15 @@ hour missing any of them gets no verdict. That gate lives outside the model
 Everything in the right-hand column is already fetched and sits on every
 hour. Using any of it means adding it to the model's `Reading` type and to the
 completeness gate — say so in this section if a rule below depends on it.
+
+**Where the AQHI comes from.** ECCC's reading is used for any hour it has a
+value. For the rest — beyond ECCC's ~36-hour forecast, and everywhere no
+community is within 100 km — the AQHI is *estimated* from Open-Meteo's
+modelled PM2.5, ozone and NO₂ using ECCC's published formula on three-hour
+means (`src/lib/aqhi-estimate.ts`). The model sees one number either way; the
+screens label an estimate as such. British Columbia's AQHI-Plus (a PM2.5-only
+override during smoke) is not applied to the estimate. If a rule below should
+treat an estimate differently from a measurement, say so here.
 
 ### 1.2 Settings — per user
 

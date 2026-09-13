@@ -21,6 +21,7 @@ import {
   tracking,
 } from '@/constants/design-tokens';
 import { Common, DataStrings, SheetStrings } from '@/constants/strings';
+import type { AqhiEstimate } from '@/lib/aqhi-estimate';
 import type { AqhiReading } from '@/lib/aqhi';
 import { formatAge, formatAqhi, formatClock, formatValue } from '@/lib/live';
 import type { HourlyConditions } from '@/lib/open-meteo';
@@ -198,15 +199,21 @@ export function PlacesSheetBody({
 
 export function AirSheetBody({
   observation,
+  estimate,
+  estimateEpoch,
   weather,
   timeFmt,
   nowMs,
 }: {
   observation: AqhiReading | null;
+  /** Shown only when there is no observation; labelled as a model value. */
+  estimate: AqhiEstimate | null;
+  estimateEpoch: number | null;
   weather: HourlyConditions | null;
   timeFmt: TimeFormat;
   nowMs: number;
 }) {
+  const aqhi = observation ?? estimate;
   const stats = [
     {
       k: SheetStrings.airStatKeys.pm25,
@@ -215,8 +222,8 @@ export function AirSheetBody({
     },
     {
       k: SheetStrings.airStatKeys.aqhi,
-      v: formatAqhi(observation),
-      u: observation?.category ?? DataStrings.unavailable,
+      v: formatAqhi(aqhi),
+      u: aqhi?.category ?? DataStrings.unavailable,
     },
     {
       k: SheetStrings.airStatKeys.rain,
@@ -225,9 +232,12 @@ export function AirSheetBody({
     },
   ];
 
-  const provenance = observation
-    ? `${DataStrings.communityLine(observation.community, observation.distanceKm)} · ${DataStrings.observedAt(formatClock(Date.parse(observation.timestamp), timeFmt), formatAge(Date.parse(observation.timestamp), nowMs))}`
-    : DataStrings.unavailable;
+  let provenance: string = DataStrings.unavailable;
+  if (observation) {
+    provenance = `${DataStrings.communityLine(observation.community, observation.distanceKm)} · ${DataStrings.observedAt(formatClock(Date.parse(observation.timestamp), timeFmt), formatAge(Date.parse(observation.timestamp), nowMs))}`;
+  } else if (estimate && estimateEpoch !== null) {
+    provenance = `${DataStrings.modelSource} · ${DataStrings.forecastFor(formatClock(estimateEpoch, timeFmt))}`;
+  }
 
   return (
     <View style={styles.airBody}>
