@@ -67,8 +67,7 @@ const BAR_SCALE = 1.16;
 
 export default function TodayScreen() {
   const { settings, activity, setActivity, prefs } = useSettings();
-  const { live, aqhi, aqhiCoverage, fetchedAt, refreshing, refresh, now: nowMs, place } =
-    useConditions();
+  const { live, aqhi, fetchedAt, refreshing, refresh, now: nowMs, place } = useConditions();
   const placesSheet = usePlacesSheet();
   const [airOpen, setAirOpen] = useState(false);
   const [actsOpen, setActsOpen] = useState(false);
@@ -202,13 +201,6 @@ export default function TodayScreen() {
               style={styles.cardAction}>
               <Text style={styles.cardActionText}>{DataStrings.choosePlace}</Text>
             </Pressable>
-          </View>
-        )}
-
-        {aqhiCoverage === 'none' && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{DataStrings.modelAqhiTitle}</Text>
-            <Text style={styles.cardNote}>{DataStrings.modelAqhiNote}</Text>
           </View>
         )}
 

@@ -69,11 +69,6 @@ export const DataStrings = {
   /** The action on that card; opens the places sheet. */
   choosePlace: 'Choose a place',
 
-  /** A card on Today when the AQHI is the model's rather than ECCC's. */
-  modelAqhiTitle: 'AQHI from the Open-Meteo air quality model',
-  modelAqhiNote:
-    'Calculated with the Canadian AQHI formula from modelled PM2.5, ozone and NO₂ (Copernicus CAMS, via Open-Meteo).',
-
   errorTitle: 'Conditions could not be loaded',
   errorSource: {
     weather: 'The weather service did not respond.',
