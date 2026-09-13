@@ -67,6 +67,7 @@ treat an estimate differently from a measurement, say so here.
 | Sensitivity | Normal · Reactive | Normal |
 | Rain tolerance | None · Light · Moderate · Heavy | Light |
 | Wind tolerance | 8–40 km/h, in steps of 4 | 32 |
+| Heat tolerance | 22–38 °C, in steps of 2 | 30 |
 
 There is no air-quality ceiling. The air rule is ECCC's, keyed by the two
 settings above; see 3.1.
@@ -164,7 +165,7 @@ are different, and the worked examples pin which is which.
 | --- | --- | --- | --- |
 | **Air** | lookup in 3.1 gives 2 | lookup in 3.1 gives 1 | 0 |
 | **Rain** | rain **≥** tolerance × 2.6 | rain **≥** tolerance | 0 |
-| **Heat** | temp **≥** 34 | temp **≥** 30 | 0 |
+| **Heat** | temp **≥** tolerance + 4 | temp **≥** tolerance | 0 |
 | **Wind** | wind **≥** tolerance + 14 | wind **≥** tolerance | 0 |
 
 Notes:
@@ -173,7 +174,10 @@ Notes:
   to 3 (Low) and 3.5 to 4 (Moderate); 10.4 rounds to 10 (High) and 10.5 to
   11 (Very High). The model's estimate (1.1) is unrounded and goes through
   the same rounding.
-- Heat has no user setting. The thresholds are fixed.
+- The heat and wind red margins (+4 °C, +14 km/h) and the rain red multiplier
+  (× 2.6) are fixed and not shown to the user. The heat default of 30 °C with
+  a +4 margin reproduces the prototype's fixed 30 / 34 lines, so a user who
+  never touches the slider sees what they saw before it existed.
 - The rain level-2 threshold is computed in floating point. Light tolerance is
   1.5, and 1.5 × 2.6 is 3.9000000000000004, so a reading of exactly 3.9 mm/h
   is level 1, not 2. Moderate (3.5 × 2.6 = 9.1) lands exactly. This is
@@ -263,8 +267,9 @@ and `src/lib/rating.test.ts` asserts them. Add rows for any boundary a new rule
 introduces — the value exactly at the threshold and one just below — and the
 tests will be written from them.
 
-Unless a cell says otherwise: **Cycling · Normal · Light · 32**.
-Base readings are AQHI 2, 20 °C, 10 km/h, 0 mm/h.
+Unless a cell says otherwise: **Cycling · Normal · Light · 32 km/h · 30 °C**.
+Base readings are AQHI 2, 20 °C, 10 km/h, 0 mm/h. The "Wind tol" column
+reads "wind · heat" where heat is not the default.
 
 | # | Case | AQHI | Temp | Wind | Rain | Activity | Sens | Rain tol | Wind tol | Category | Level | Driver |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -285,9 +290,10 @@ Base readings are AQHI 2, 20 °C, 10 km/h, 0 mm/h.
 | 15 | Rain: exactly at Light tolerance | 2 | 20 | 10 | 1.5 | Cycling | Normal | Light | 32 | Low | **1** | rainfall |
 | 16 | Rain: past 2.6 × Light tolerance | 2 | 20 | 10 | 4 | Cycling | Normal | Light | 32 | Low | **2** | rainfall |
 | 17 | Rain: 4.0 mm/h with Heavy tolerance | 2 | 20 | 10 | 4 | Cycling | Normal | Heavy | 32 | Low | **0** | — |
-| 18 | Heat: 29 °C | 2 | 29 | 10 | 0 | Cycling | Normal | Light | 32 | Low | **0** | — |
-| 19 | Heat: exactly 30 °C | 2 | 30 | 10 | 0 | Cycling | Normal | Light | 32 | Low | **1** | heat |
-| 20 | Heat: exactly 34 °C | 2 | 34 | 10 | 0 | Cycling | Normal | Light | 32 | Low | **2** | heat |
+| 18 | Heat: 29 °C, tolerance 30 | 2 | 29 | 10 | 0 | Cycling | Normal | Light | 32 · 30 | Low | **0** | — |
+| 19 | Heat: exactly at tolerance | 2 | 30 | 10 | 0 | Cycling | Normal | Light | 32 · 30 | Low | **1** | heat |
+| 20 | Heat: tolerance + 4 | 2 | 34 | 10 | 0 | Cycling | Normal | Light | 32 · 30 | Low | **2** | heat |
+| 20a | Heat: 34 °C with tolerance 36 | 2 | 34 | 10 | 0 | Cycling | Normal | Light | 32 · 36 | Low | **0** | — |
 | 21 | Wind: 31 km/h, tolerance 32 | 2 | 20 | 31 | 0 | Cycling | Normal | Light | 32 | Low | **0** | — |
 | 22 | Wind: exactly at tolerance | 2 | 20 | 32 | 0 | Cycling | Normal | Light | 32 | Low | **1** | wind |
 | 23 | Wind: tolerance + 14 | 2 | 20 | 46 | 0 | Cycling | Normal | Light | 32 | Low | **2** | wind |

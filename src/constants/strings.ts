@@ -221,7 +221,7 @@ export const ThresholdsStrings = {
   sensitivityLabel: 'Air quality sensitivity',
 
   weatherCardTitle: 'Weather limits',
-  weatherCardCaption: 'How much rain and wind you will train in.',
+  weatherCardCaption: 'How much rain, wind and heat you will train in.',
   rainLabel: 'Rain',
   rainSliderLabel: 'Rain tolerance',
   windLabel: 'Wind',
@@ -230,6 +230,14 @@ export const ThresholdsStrings = {
   windNote: (windTol: number): string => {
     if (windTol <= 16) return 'a breeze turns it amber';
     if (windTol >= 36) return 'only a gale stops you';
+    return 'typical tolerance';
+  },
+  heatLabel: 'Heat',
+  heatSliderLabel: 'Heat tolerance',
+  heatValue: (heatTol: number) => `${heatTol} °C`,
+  heatNote: (heatTol: number): string => {
+    if (heatTol <= 24) return 'a warm afternoon turns it amber';
+    if (heatTol >= 36) return 'only a heatwave stops you';
     return 'typical tolerance';
   },
 } as const;

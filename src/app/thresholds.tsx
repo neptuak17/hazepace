@@ -97,6 +97,22 @@ export default function ThresholdsScreen() {
             style={styles.sliderTight}
           />
           <Text style={styles.note}>{ThresholdsStrings.windNote(settings.windTol)}</Text>
+
+          <View style={styles.limitRow}>
+            <Text style={styles.limitLabel}>{ThresholdsStrings.heatLabel}</Text>
+            <Text style={styles.limitValue}>{ThresholdsStrings.heatValue(settings.heatTol)}</Text>
+          </View>
+          <Slider
+            value={settings.heatTol}
+            min={22}
+            max={38}
+            step={2}
+            onChange={(heatTol) => update({ heatTol })}
+            label={ThresholdsStrings.heatSliderLabel}
+            valueLabel={ThresholdsStrings.heatValue(settings.heatTol)}
+            style={styles.sliderTight}
+          />
+          <Text style={styles.note}>{ThresholdsStrings.heatNote(settings.heatTol)}</Text>
         </View>
 
         <Pressable

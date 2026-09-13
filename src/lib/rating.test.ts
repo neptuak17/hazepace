@@ -32,12 +32,13 @@ import {
   type Sensitivity,
 } from './rating.ts';
 
-/** The app's defaults: Cycling, Normal sensitivity, Light rain, 32 km/h. */
+/** The app's defaults: Cycling, Normal sensitivity, Light rain, 32 km/h, 30 °C. */
 const DEFAULTS: Prefs = {
   activity: 'Cycling',
   sensitivity: 'Normal',
   rainTol: 1,
   windTol: 32,
+  heatTol: 30,
 };
 
 const prefs = (over: Partial<Prefs> = {}): Prefs => ({ ...DEFAULTS, ...over });
@@ -159,10 +160,15 @@ describe('judge', () => {
     assert.equal(judge(calm({ rainMmH: 9.1 }), prefs({ rainTol: 2 })).level, 2);
   });
 
-  test('heat thresholds are fixed, not preference-driven', () => {
+  test('heat thresholds key off the tolerance', () => {
     assert.equal(judge(calm({ tempC: 29 }), prefs()).level, 0);
     assert.equal(judge(calm({ tempC: 30 }), prefs()).level, 1);
+    assert.equal(judge(calm({ tempC: 33 }), prefs()).level, 1);
     assert.equal(judge(calm({ tempC: 34 }), prefs()).level, 2);
+    // A higher tolerance moves both lines together.
+    assert.equal(judge(calm({ tempC: 34 }), prefs({ heatTol: 36 })).level, 0);
+    assert.equal(judge(calm({ tempC: 36 }), prefs({ heatTol: 36 })).level, 1);
+    assert.equal(judge(calm({ tempC: 40 }), prefs({ heatTol: 36 })).level, 2);
   });
 
   test('wind thresholds key off the tolerance', () => {

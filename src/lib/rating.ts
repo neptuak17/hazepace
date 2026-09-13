@@ -45,6 +45,8 @@ export interface Prefs {
   rainTol: number;
   /** km/h, 8–40 in steps of 4. */
   windTol: number;
+  /** °C, 22–38 in steps of 2. */
+  heatTol: number;
 }
 
 /**
@@ -122,7 +124,7 @@ export function factorLevels(r: Reading, prefs: Prefs): FactorLevels {
   return {
     air: band(r.aqhi, prefs),
     rain: r.rainMmH >= rainAt * 2.6 ? 2 : r.rainMmH >= rainAt ? 1 : 0,
-    heat: r.tempC >= 34 ? 2 : r.tempC >= 30 ? 1 : 0,
+    heat: r.tempC >= prefs.heatTol + 4 ? 2 : r.tempC >= prefs.heatTol ? 1 : 0,
     wind: r.windKmh >= prefs.windTol + 14 ? 2 : r.windKmh >= prefs.windTol ? 1 : 0,
   };
 }

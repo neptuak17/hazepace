@@ -31,6 +31,8 @@ export interface Settings {
   rainTol: number;
   /** km/h, 8-40 in steps of 4. */
   windTol: number;
+  /** °C, 22-38 in steps of 2. */
+  heatTol: number;
   timeFmt: TimeFormat;
   /**
    * A place the user chose instead of the device's location. Null means
@@ -44,6 +46,7 @@ const DEFAULTS: Settings = {
   sensitivity: 'Normal',
   rainTol: 1,
   windTol: 32,
+  heatTol: 30,
   timeFmt: '24-hour',
   manualPlace: null,
 };
@@ -93,6 +96,7 @@ function merge(stored: unknown): Settings {
     sensitivity: s.sensitivity === 'Reactive' ? 'Reactive' : DEFAULTS.sensitivity,
     rainTol: typeof s.rainTol === 'number' ? s.rainTol : DEFAULTS.rainTol,
     windTol: typeof s.windTol === 'number' ? s.windTol : DEFAULTS.windTol,
+    heatTol: typeof s.heatTol === 'number' ? s.heatTol : DEFAULTS.heatTol,
     timeFmt: s.timeFmt ?? DEFAULTS.timeFmt,
     manualPlace: manualPlaceOf(s.manualPlace),
   };
@@ -165,6 +169,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         sensitivity: settings.sensitivity,
         rainTol: settings.rainTol,
         windTol: settings.windTol,
+        heatTol: settings.heatTol,
       },
       ready,
     }),
