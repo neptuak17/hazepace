@@ -1,12 +1,12 @@
 /**
- * The three sheet bodies: saved places, air detail, and the activity
- * comparison.
+ * The three sheet bodies: places, air detail, and the activity comparison.
  *
  * All three take their numbers from the caller. A sheet never fetches, and
  * never fills a gap: a value the caller did not have renders as "—".
  */
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { Icon } from '@/components/icon';
 import {
   Accent2,
   Neutral,
@@ -21,48 +21,97 @@ import { Common, DataStrings, SheetStrings } from '@/constants/strings';
 import type { AqhiReading } from '@/lib/aqhi';
 import { formatAge, formatAqhi, formatClock, formatValue } from '@/lib/live';
 import type { HourlyConditions } from '@/lib/open-meteo';
-import { band, type Activity, type Prefs, type TimeFormat } from '@/lib/rating';
+import type { ManualPlace } from '@/lib/place';
+import { band, type Activity, type Level, type Prefs, type TimeFormat } from '@/lib/rating';
 
-/* ── Saved places ────────────────────────────────────────────────────────── */
+/* ── Places ──────────────────────────────────────────────────────────────── */
 
 /**
- * The prototype's saved places. They carry no coordinates, and AQHI is one
- * value per community, so there is no reading to show for any of them yet.
- * Kept as names only; the circles read "—" until places have locations.
+ * A short fixed list for now, standing in for a place search. Coordinates
+ * are town centres, already at two decimals. The next pass replaces this
+ * list with a search box; the rows and the "use my location" row stay.
  */
-const PLACE_NAMES = [
-  { name: 'East Hill', note: 'The bench, 480 m' },
-  { name: 'Kal Lake Road', note: 'Lakeshore, 350 m' },
-  { name: 'Silver Star', note: 'Summit road, 1,610 m' },
-  { name: 'Predator Ridge', note: 'Rolling, 600 m' },
+const PLACES: ManualPlace[] = [
+  { name: 'Vernon', region: 'British Columbia, Canada', latitude: 50.27, longitude: -119.27 },
+  { name: 'Kelowna', region: 'British Columbia, Canada', latitude: 49.89, longitude: -119.5 },
+  { name: 'Kamloops', region: 'British Columbia, Canada', latitude: 50.67, longitude: -120.33 },
+  { name: 'Revelstoke', region: 'British Columbia, Canada', latitude: 51.0, longitude: -118.2 },
 ];
 
+const samePlace = (a: ManualPlace | null, b: ManualPlace | null) =>
+  a !== null && b !== null && a.latitude === b.latitude && a.longitude === b.longitude;
+
+/**
+ * The circle shows the AQHI for the place currently in use, coloured by the
+ * user's thresholds, and "—" for every other row: the app fetches one place
+ * at a time and does not pretend to know the others.
+ */
+function PlaceCircle({ aqhi, level }: { aqhi: string | null; level: Level | null }) {
+  const bg = level === null ? Neutral[200] : Verdict.tint[level];
+  const ink = level === null ? Neutral[600] : Verdict.deepInk[level];
+  return (
+    <View style={[styles.circle, { backgroundColor: bg }]}>
+      <Text style={[styles.circleNumber, { color: ink }]}>{aqhi ?? DataStrings.unavailable}</Text>
+      <Text style={[styles.circleCaps, { color: ink }]}>{Common.aqhi}</Text>
+    </View>
+  );
+}
+
 export function PlacesSheetBody({
+  manualPlace,
+  currentAqhi,
+  currentLevel,
+  onUseDevice,
   onPick,
 }: {
-  prefs: Prefs;
-  onPick: (place: string) => void;
+  /** The place in use, or null when it is the device. */
+  manualPlace: ManualPlace | null;
+  /** The AQHI showing right now, already formatted, for the row in use. */
+  currentAqhi: string | null;
+  currentLevel: Level | null;
+  onUseDevice: () => void;
+  onPick: (place: ManualPlace) => void;
 }) {
+  const deviceInUse = manualPlace === null;
   return (
     <View style={styles.rows}>
-      {PLACE_NAMES.map((p) => (
-        <Pressable
-          key={p.name}
-          onPress={() => onPick(p.name)}
-          accessibilityRole="button"
-          style={styles.placeRow}>
-          <View style={[styles.circle, { backgroundColor: Neutral[200] }]}>
-            <Text style={[styles.circleNumber, { color: Neutral[600] }]}>
-              {DataStrings.unavailable}
-            </Text>
-            <Text style={[styles.circleCaps, { color: Neutral[600] }]}>{Common.aqhi}</Text>
+      <Pressable
+        onPress={onUseDevice}
+        accessibilityRole="button"
+        accessibilityState={{ selected: deviceInUse }}
+        accessibilityHint={deviceInUse ? SheetStrings.placeInUse : undefined}
+        style={styles.placeRow}>
+        {deviceInUse ? (
+          <PlaceCircle aqhi={currentAqhi} level={currentLevel} />
+        ) : (
+          <View style={[styles.circle, { backgroundColor: Accent2[600] }]}>
+            <Icon name="mapPin" size={20} color={Palette.bg} />
           </View>
-          <View style={styles.grow}>
-            <Text style={styles.rowName}>{p.name}</Text>
-            <Text style={styles.rowNote}>{p.note}</Text>
-          </View>
-        </Pressable>
-      ))}
+        )}
+        <View style={styles.grow}>
+          <Text style={styles.rowName}>{SheetStrings.useMyLocation}</Text>
+          <Text style={styles.rowNote}>{SheetStrings.useMyLocationNote}</Text>
+        </View>
+      </Pressable>
+
+      {PLACES.map((p) => {
+        const inUse = samePlace(p, manualPlace);
+        return (
+          <Pressable
+            key={p.name}
+            onPress={() => onPick(p)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: inUse }}
+            accessibilityHint={inUse ? SheetStrings.placeInUse : undefined}
+            style={styles.placeRow}>
+            <PlaceCircle aqhi={inUse ? currentAqhi : null} level={inUse ? currentLevel : null} />
+            <View style={styles.grow}>
+              <Text style={styles.rowName}>{p.name}</Text>
+              <Text style={styles.rowNote}>{p.region ?? DataStrings.unavailable}</Text>
+            </View>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }

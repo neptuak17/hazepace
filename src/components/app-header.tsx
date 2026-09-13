@@ -17,15 +17,22 @@ import { PlacesSheetBody } from '@/components/sheets';
 import { Accent, Accent2, Neutral, Palette, Space, Type } from '@/constants/design-tokens';
 import { DataStrings, HeaderStrings, SheetStrings } from '@/constants/strings';
 import { useConditions } from '@/lib/conditions';
-import { FAR_COMMUNITY_KM, formatClock, formatDate } from '@/lib/live';
+import { FAR_COMMUNITY_KM, formatAqhi, formatClock, formatDate } from '@/lib/live';
+import { band } from '@/lib/rating';
 import { useSettings } from '@/lib/settings';
 
 export function AppHeader() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { settings, prefs, update } = useSettings();
-  const { aqhi, aqhiCoverage, now, place } = useConditions();
+  const { aqhi, now, place } = useConditions();
   const [placesOpen, setPlacesOpen] = useState(false);
+
+  // For the sheet: the reading in use, banded by the user's own thresholds.
+  const observation = aqhi?.observation ?? null;
+  const currentAqhi = observation ? formatAqhi(observation) : null;
+  const currentLevel =
+    observation && observation.value !== null ? band(observation.value, prefs) : null;
 
   // The place row names where the AQHI reading is from. Beyond the cutoff the
   // distance moves up into the headline rather than staying in the grey meta
@@ -37,18 +44,20 @@ export function AppHeader() {
   let headline: string;
   if (community && km !== null) {
     headline = far ? DataStrings.communityFar(community, km) : community;
-  } else if (aqhiCoverage === 'none') {
-    headline = place?.label ?? settings.place;
+  } else if (place?.label) {
+    headline = place.label;
   } else {
-    headline = settings.place;
+    headline = HeaderStrings.deviceHeadline;
   }
 
   // The meta line says how the coordinate was chosen whenever it was not the
-  // device: a fixed place must never read as "where you are".
+  // device: a fixed or chosen place must never read as "where you are".
   const clock = formatClock(now, settings.timeFmt);
   let meta: string;
   if (place?.source === 'fallback' && place.label) {
     meta = `${DataStrings.fixedPlace(place.label)} · ${clock}`;
+  } else if (place?.source === 'manual' && place.label) {
+    meta = `${DataStrings.chosenPlace(place.label)} · ${clock}`;
   } else if (place?.source === 'override' && place.label) {
     meta = `${DataStrings.overridePlace(place.label)} · ${clock}`;
   } else if (community && km !== null && !far) {
@@ -102,9 +111,15 @@ export function AppHeader() {
 
       <Sheet visible={placesOpen} title={SheetStrings.placesTitle} onClose={() => setPlacesOpen(false)}>
         <PlacesSheetBody
-          prefs={prefs}
-          onPick={(place) => {
-            update({ place });
+          manualPlace={settings.manualPlace}
+          currentAqhi={currentAqhi}
+          currentLevel={currentLevel}
+          onUseDevice={() => {
+            update({ manualPlace: null });
+            setPlacesOpen(false);
+          }}
+          onPick={(manualPlace) => {
+            update({ manualPlace });
             setPlacesOpen(false);
           }}
         />

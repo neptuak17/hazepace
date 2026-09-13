@@ -49,13 +49,15 @@ export const DataStrings = {
 
   /** The header's meta line when the app is not using the device's location. */
   fixedPlace: (name: string) => `${name} · fixed location`,
+  chosenPlace: (name: string) => `${name} · chosen place`,
   overridePlace: (label: string) => `${label} · test coordinate`,
 
   /** A card on Today explaining why the fixed place is showing. */
   fallbackTitle: (name: string) => `Showing ${name}`,
   fallbackDenied:
-    'Location access is off for this app. Allow it in Settings to see conditions where you are.',
-  fallbackUnavailable: 'Your location could not be determined right now.',
+    'Location access is off for this app. Choose a place at the top of the screen, or allow location in Settings to see conditions where you are.',
+  fallbackUnavailable:
+    'Your location could not be determined right now. You can choose a place at the top of the screen.',
 
   noCoverageTitle: 'No AQHI community in range',
   noCoverageNote: (name: string | null, km: number | null) =>
@@ -92,6 +94,8 @@ export const HeaderStrings = {
   about: 'About yourself',
   howItWorks: 'How this works',
   changePlace: (place: string) => `Place: ${place}. Change place.`,
+  /** The headline when the device's location is in use and no AQHI community names it. */
+  deviceHeadline: 'Your location',
 } as const;
 
 /* ── Today ───────────────────────────────────────────────────────────────── */
@@ -327,7 +331,12 @@ export const HowItWorksStrings = {
 /* ── Sheets ──────────────────────────────────────────────────────────────── */
 
 export const SheetStrings = {
-  placesTitle: 'Near you, right now',
+  placesTitle: 'Where to look',
+  /** The first row of the places sheet: back to the device's own position. */
+  useMyLocation: 'Use my location',
+  useMyLocationNote: 'Conditions where the phone is',
+  /** Accessibility hint on the row that is currently in use. */
+  placeInUse: 'in use',
   airTitle: "What's in the air",
   activityTitle: 'Same air, three verdicts',
 

@@ -13,6 +13,12 @@
  *   ready   — both snapshots present, or weather present and AQHI reporting
  *             no coverage (which is an answer, not a failure)
  *   error   — something failed; the screens do not render partial data
+ *
+ * The place is resolved here too (see place.ts for the precedence). A change
+ * of place — the user picking one in the sheet, or going back to the device —
+ * reloads with the previous data left on screen behind the refresh spinner,
+ * and the new place name lands in the same render as its data, so the header
+ * never names one place above another place's numbers.
  */
 import {
   createContext,
@@ -26,13 +32,15 @@ import {
 } from 'react';
 
 import { clearAqhiCache, fetchAqhi, type AqhiSnapshot } from '@/lib/aqhi';
-import { COORDINATE_OVERRIDE, FALLBACK_PLACE, joinLive, type LiveHour } from '@/lib/live';
-import { locate, type Coordinate } from '@/lib/location';
+import { COORDINATE_OVERRIDE, joinLive, type LiveHour } from '@/lib/live';
+import { locate } from '@/lib/location';
 import {
   clearConditionsCache,
   fetchConditions,
   type ConditionsSnapshot,
 } from '@/lib/open-meteo';
+import { needsDeviceLocation, resolvePlace, type PlaceResolution } from '@/lib/place';
+import { useSettings } from '@/lib/settings';
 
 export type ConditionsStatus = 'loading' | 'ready' | 'error';
 
@@ -43,20 +51,7 @@ export interface ConditionsFailure {
   detail: string;
 }
 
-/** The coordinate the current snapshots describe, and how it was chosen. */
-export interface PlaceResolution {
-  coordinate: Coordinate;
-  /**
-   * device   — the phone's own position, rounded to a kilometre
-   * fallback — the fixed place, because location was denied or unavailable
-   * override — EXPO_PUBLIC_LAT/LON, for testing
-   */
-  source: 'device' | 'fallback' | 'override';
-  /** Name to show for a fallback or override; null when it is the device. */
-  label: string | null;
-  /** Why the fallback was used. Null otherwise. */
-  fallbackReason: 'denied' | 'unavailable' | null;
-}
+export type { PlaceResolution } from '@/lib/place';
 
 export interface ConditionsValue {
   status: ConditionsStatus;
@@ -96,29 +91,6 @@ export interface ConditionsValue {
 
 const ConditionsContext = createContext<ConditionsValue | null>(null);
 
-async function resolvePlace(prompt: boolean): Promise<PlaceResolution> {
-  if (COORDINATE_OVERRIDE) {
-    return {
-      coordinate: COORDINATE_OVERRIDE,
-      source: 'override',
-      label: `${COORDINATE_OVERRIDE.latitude}, ${COORDINATE_OVERRIDE.longitude}`,
-      fallbackReason: null,
-    };
-  }
-
-  const result = await locate({ prompt });
-  if (result.status === 'granted') {
-    return { coordinate: result.coordinate, source: 'device', label: null, fallbackReason: null };
-  }
-
-  return {
-    coordinate: { latitude: FALLBACK_PLACE.latitude, longitude: FALLBACK_PLACE.longitude },
-    source: 'fallback',
-    label: FALLBACK_PLACE.name,
-    fallbackReason: result.status === 'denied' ? 'denied' : 'unavailable',
-  };
-}
-
 /**
  * Below this, a refresh completes before the overlay has finished fading in
  * and the screen appears to flash. Applies to the initial load only.
@@ -126,6 +98,9 @@ async function resolvePlace(prompt: boolean): Promise<PlaceResolution> {
 const MIN_INITIAL_LOAD_MS = 600;
 
 export function ConditionsProvider({ children }: { children: ReactNode }) {
+  const { settings, ready: settingsReady } = useSettings();
+  const manualPlace = settings.manualPlace;
+
   const [status, setStatus] = useState<ConditionsStatus>('loading');
   const [weather, setWeather] = useState<ConditionsSnapshot | null>(null);
   const [aqhi, setAqhi] = useState<AqhiSnapshot | null>(null);
@@ -140,83 +115,108 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
   // A later request must not be overwritten by an earlier one that finished
   // late, so each load carries a sequence number and only the newest lands.
   const sequence = useRef(0);
+  const started = useRef(false);
 
-  const load = useCallback(async (initial: boolean) => {
-    const seq = ++sequence.current;
-    const started = Date.now();
+  /**
+   * `prompt` — whether the system permission dialog may be shown. True on
+   * the initial load and when the user switches back to the device, both of
+   * which are the user's own doing; false on a pull-to-refresh, so a denial
+   * is never nagged. Moot when a manual place is set: the device is not
+   * asked at all.
+   */
+  const load = useCallback(
+    async (options: { initial: boolean; prompt: boolean }) => {
+      const seq = ++sequence.current;
+      const startedAt = Date.now();
 
-    // Where to look. The system permission dialog is shown on the initial
-    // load only; a refresh reuses whatever the user already decided, so a
-    // denial is never nagged.
-    const resolved = await resolvePlace(initial);
-    if (seq !== sequence.current) return;
-    setPlace(resolved);
+      const inputs = { override: COORDINATE_OVERRIDE, manual: manualPlace };
+      const location = needsDeviceLocation(inputs)
+        ? await locate({ prompt: options.prompt })
+        : null;
+      if (seq !== sequence.current) return;
+      const resolved = resolvePlace({ ...inputs, location });
 
-    const { latitude, longitude } = resolved.coordinate;
-    const [w, a] = await Promise.all([
-      fetchConditions(latitude, longitude),
-      fetchAqhi(latitude, longitude),
-    ]);
+      const { latitude, longitude } = resolved.coordinate;
+      const [w, a] = await Promise.all([
+        fetchConditions(latitude, longitude),
+        fetchAqhi(latitude, longitude),
+      ]);
 
-    if (initial) {
-      const remaining = MIN_INITIAL_LOAD_MS - (Date.now() - started);
-      if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
-    }
-    if (seq !== sequence.current) return;
+      if (options.initial) {
+        const remaining = MIN_INITIAL_LOAD_MS - (Date.now() - startedAt);
+        if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
+      }
+      if (seq !== sequence.current) return;
 
-    const weatherFailed = !w.ok;
-    const aqhiFailed = a.status === 'error';
+      // The place lands with its data, never ahead of it.
+      setPlace(resolved);
 
-    if (weatherFailed || aqhiFailed) {
-      const details: string[] = [];
-      if (!w.ok) details.push(`weather: ${w.error.message}`);
-      if (a.status === 'error') details.push(`AQHI: ${a.error.message}`);
-      setFailure({
-        source: weatherFailed && aqhiFailed ? 'both' : weatherFailed ? 'weather' : 'aqhi',
-        detail: details.join(' · '),
-      });
-      // On a failed refresh the previous snapshots are dropped too: a screen
-      // must not keep showing numbers the user just asked to replace.
-      setWeather(null);
-      setAqhi(null);
-      setAqhiCoverage(null);
-      setAqhiNearest(null);
-      setStatus('error');
-      return;
-    }
+      const weatherFailed = !w.ok;
+      const aqhiFailed = a.status === 'error';
 
-    setWeather(w.value);
-    if (a.status === 'ok') {
-      setAqhi(a.value);
-      setAqhiCoverage('ok');
-      setAqhiNearest(null);
-    } else {
-      setAqhi(null);
-      setAqhiCoverage('none');
-      setAqhiNearest({ name: a.nearestName, km: a.nearestKm });
-    }
-    setFailure(null);
-    const done = Date.now();
-    setFetchedAt(done);
-    setNow(done);
-    setStatus('ready');
-  }, []);
+      if (weatherFailed || aqhiFailed) {
+        const details: string[] = [];
+        if (!w.ok) details.push(`weather: ${w.error.message}`);
+        if (a.status === 'error') details.push(`AQHI: ${a.error.message}`);
+        setFailure({
+          source: weatherFailed && aqhiFailed ? 'both' : weatherFailed ? 'weather' : 'aqhi',
+          detail: details.join(' · '),
+        });
+        // On a failed refresh the previous snapshots are dropped too: a screen
+        // must not keep showing numbers the user just asked to replace.
+        setWeather(null);
+        setAqhi(null);
+        setAqhiCoverage(null);
+        setAqhiNearest(null);
+        setStatus('error');
+        return;
+      }
+
+      setWeather(w.value);
+      if (a.status === 'ok') {
+        setAqhi(a.value);
+        setAqhiCoverage('ok');
+        setAqhiNearest(null);
+      } else {
+        setAqhi(null);
+        setAqhiCoverage('none');
+        setAqhiNearest({ name: a.nearestName, km: a.nearestKm });
+      }
+      setFailure(null);
+      const done = Date.now();
+      setFetchedAt(done);
+      setNow(done);
+      setStatus('ready');
+    },
+    [manualPlace],
+  );
 
   useEffect(() => {
     const tick = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(tick);
   }, []);
 
+  // The first load waits for the stored settings, so a saved manual place is
+  // honoured from the start rather than loading the device first and then
+  // the place. Every later run of this effect is a change of place: `load`
+  // is rebuilt whenever the manual place changes.
   useEffect(() => {
-    load(true);
-  }, [load]);
+    if (!settingsReady) return;
+    if (!started.current) {
+      started.current = true;
+      load({ initial: true, prompt: true });
+      return;
+    }
+    setRefreshing(true);
+    load({ initial: false, prompt: true }).finally(() => setRefreshing(false));
+  }, [settingsReady, load]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
     clearConditionsCache();
     clearAqhiCache();
     try {
-      await load(false);
+      await load({ initial: false, prompt: false });
     } finally {
       setRefreshing(false);
     }

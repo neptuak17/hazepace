@@ -20,6 +20,7 @@ import {
   type ReactNode,
 } from 'react';
 
+import type { ManualPlace } from '@/lib/place';
 import type { Activity, Prefs, Sensitivity, TimeFormat } from '@/lib/rating';
 
 export interface Settings {
@@ -33,7 +34,11 @@ export interface Settings {
   /** km/h, 8-40 in steps of 4. */
   windTol: number;
   timeFmt: TimeFormat;
-  place: string;
+  /**
+   * A place the user chose instead of the device's location. Null means
+   * "use my location". Wins over the device while set — see place.ts.
+   */
+  manualPlace: ManualPlace | null;
 }
 
 const DEFAULTS: Settings = {
@@ -43,7 +48,7 @@ const DEFAULTS: Settings = {
   rainTol: 1,
   windTol: 32,
   timeFmt: '24-hour',
-  place: 'East Hill',
+  manualPlace: null,
 };
 
 const STORAGE_KEY = 'hazepace.settings.v1';
@@ -64,6 +69,21 @@ interface SettingsValue {
 
 const SettingsContext = createContext<SettingsValue | null>(null);
 
+/** A stored manual place, or null if the shape is not one. */
+function manualPlaceOf(raw: unknown): ManualPlace | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const p = raw as Partial<ManualPlace>;
+  if (typeof p.name !== 'string' || !p.name) return null;
+  if (typeof p.latitude !== 'number' || !Number.isFinite(p.latitude)) return null;
+  if (typeof p.longitude !== 'number' || !Number.isFinite(p.longitude)) return null;
+  return {
+    name: p.name,
+    region: typeof p.region === 'string' ? p.region : null,
+    latitude: p.latitude,
+    longitude: p.longitude,
+  };
+}
+
 /** Narrows stored JSON back to Settings, ignoring anything unrecognised. */
 function merge(stored: unknown): Settings {
   if (!stored || typeof stored !== 'object') return DEFAULTS;
@@ -75,7 +95,7 @@ function merge(stored: unknown): Settings {
     rainTol: typeof s.rainTol === 'number' ? s.rainTol : DEFAULTS.rainTol,
     windTol: typeof s.windTol === 'number' ? s.windTol : DEFAULTS.windTol,
     timeFmt: s.timeFmt ?? DEFAULTS.timeFmt,
-    place: s.place ?? DEFAULTS.place,
+    manualPlace: manualPlaceOf(s.manualPlace),
   };
 }
 
