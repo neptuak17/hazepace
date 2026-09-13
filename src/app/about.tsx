@@ -2,8 +2,9 @@
  * About yourself — what you do, how smoke affects you, and how you read time.
  *
  * The sports selected here decide which activity chips appear on Today, and
- * the sensitivity feeds straight into the model's ventilation multiplier, so
- * this screen changes every verdict in the app as directly as Thresholds does.
+ * the sensitivity picks which row of ECCC's AQHI guidance the air level is
+ * read from, so this screen changes every verdict in the app as directly as
+ * Thresholds does.
  */
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -26,7 +27,7 @@ import { RAIN_TOL, type Activity, type Sensitivity, type TimeFormat } from '@/li
 import { useSettings } from '@/lib/settings';
 
 const ACTIVITIES: Activity[] = ['Running', 'Cycling', 'Hiking / Walking'];
-const SENSITIVITIES: Sensitivity[] = ['Low', 'Normal', 'Reactive'];
+const SENSITIVITIES: Sensitivity[] = ['Normal', 'Reactive'];
 const TIME_FORMATS: TimeFormat[] = ['24-hour', '12-hour'];
 
 export default function AboutScreen() {
@@ -34,7 +35,7 @@ export default function AboutScreen() {
   const { settings, update, toggleSport } = useSettings();
 
   const tiles: { icon: IconName; value: string; label: string }[] = [
-    { icon: 'wind', value: String(settings.ceiling), label: AboutStrings.tileLabels.ceiling },
+    { icon: 'wind', value: settings.sensitivity, label: AboutStrings.tileLabels.sensitivity },
     { icon: 'droplet', value: RAIN_TOL[settings.rainTol].name, label: AboutStrings.tileLabels.rain },
     {
       icon: 'windAlt',

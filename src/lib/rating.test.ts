@@ -4,7 +4,7 @@
  *
  * Run with `npm test`. These use Node's built-in test runner and its
  * TypeScript type stripping — no test framework is installed, because
- * `rating.ts` has no runtime imports and needs no bundler to execute.
+ * `rating.ts` has no platform imports and needs no bundler to execute.
  *
  * Note this covers the model only. Testing components would need a real React
  * Native test environment (jest-expo), which is not set up.
@@ -14,9 +14,9 @@ import { describe, test } from 'node:test';
 
 import {
   SLOTS,
+  STRENUOUS,
   band,
   bestWindow,
-  effectiveAqhi,
   factorLevels,
   formatHour,
   formatTick,
@@ -24,18 +24,18 @@ import {
   judgeDay,
   longestRun,
   quality,
-  ventilation,
   windowLabel,
+  type Activity,
   type Level,
   type Prefs,
   type Reading,
+  type Sensitivity,
 } from './rating.ts';
 
-/** The app's defaults: Cycling, Normal sensitivity, ceiling 5, Light rain, 32 km/h. */
+/** The app's defaults: Cycling, Normal sensitivity, Light rain, 32 km/h. */
 const DEFAULTS: Prefs = {
   activity: 'Cycling',
   sensitivity: 'Normal',
-  ceiling: 5,
   rainTol: 1,
   windTol: 32,
 };
@@ -51,53 +51,83 @@ const calm = (over: Partial<Reading> = {}): Reading => ({
   ...over,
 });
 
-describe('ventilation', () => {
-  test('multiplies activity by sensitivity', () => {
-    assert.equal(ventilation(prefs({ activity: 'Hiking / Walking', sensitivity: 'Normal' })), 1);
-    assert.equal(ventilation(prefs({ activity: 'Running', sensitivity: 'Normal' })), 1.7);
-    // 1.5 * 1.25 in floating point, so compare with tolerance.
-    assert.ok(
-      Math.abs(ventilation(prefs({ activity: 'Cycling', sensitivity: 'Reactive' })) - 1.875) < 1e-9,
-    );
+describe('band — ECCC lookup (decision-rules.md §3.1)', () => {
+  test('Hiking / Walking is the one non-strenuous activity', () => {
+    assert.deepEqual(STRENUOUS, { Running: true, Cycling: true, 'Hiking / Walking': false });
   });
 
-  test('effective AQHI scales the raw reading', () => {
-    assert.equal(effectiveAqhi(4, prefs({ activity: 'Hiking / Walking' })), 4);
-    assert.equal(effectiveAqhi(4, prefs({ activity: 'Cycling' })), 6);
-  });
-});
+  /** One representative published value per ECCC category. */
+  const CATEGORY_VALUES = { Low: 2, Moderate: 5, High: 8, 'Very High': 11 } as const;
 
-describe('band', () => {
-  test('bands every AQHI at the defaults', () => {
-    const expected: Record<number, Level> = { 2: 0, 3: 0, 4: 1, 5: 1, 6: 1, 7: 1, 8: 2, 9: 2 };
+  test('every cell of the table', () => {
+    // [Normal strenuous, Normal other, Reactive strenuous, Reactive other]
+    const table: Record<keyof typeof CATEGORY_VALUES, [Level, Level, Level, Level]> = {
+      Low: [0, 0, 0, 0],
+      Moderate: [0, 0, 1, 0],
+      High: [1, 0, 2, 1],
+      'Very High': [2, 2, 2, 2],
+    };
+    const cells: [Sensitivity, Activity][] = [
+      ['Normal', 'Cycling'],
+      ['Normal', 'Hiking / Walking'],
+      ['Reactive', 'Cycling'],
+      ['Reactive', 'Hiking / Walking'],
+    ];
+    for (const [category, expected] of Object.entries(table)) {
+      const aqhi = CATEGORY_VALUES[category as keyof typeof CATEGORY_VALUES];
+      cells.forEach(([sensitivity, activity], i) => {
+        assert.equal(
+          band(aqhi, prefs({ sensitivity, activity })),
+          expected[i],
+          `${category} · ${sensitivity} · ${activity}`,
+        );
+      });
+    }
+  });
+
+  test('Running and Cycling are the same column', () => {
+    for (const aqhi of [2, 5, 8, 11]) {
+      for (const sensitivity of ['Normal', 'Reactive'] as const) {
+        assert.equal(
+          band(aqhi, prefs({ activity: 'Running', sensitivity })),
+          band(aqhi, prefs({ activity: 'Cycling', sensitivity })),
+          `AQHI ${aqhi} · ${sensitivity}`,
+        );
+      }
+    }
+  });
+
+  test('bands every whole AQHI at the defaults', () => {
+    const expected: Record<number, Level> = {
+      1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 1, 8: 1, 9: 1, 10: 1, 11: 2, 12: 2,
+    };
     for (const [aqhi, level] of Object.entries(expected)) {
       assert.equal(band(Number(aqhi), prefs()), level, `AQHI ${aqhi}`);
     }
   });
 
-  test('the ceiling can push a level up on its own', () => {
-    // Walking, so effective AQHI equals the reading and only the ceiling bites.
-    const walking = prefs({ activity: 'Hiking / Walking', ceiling: 2 });
-    assert.equal(band(2, walking), 0, 'at the ceiling is still fine');
-    assert.equal(band(3, walking), 1, 'one over the ceiling is amber');
-    assert.equal(band(5, walking), 1, 'three over is still amber');
-    assert.equal(band(6, walking), 2, 'more than three over is red');
+  test('category boundaries are on the published (rounded) value', () => {
+    const reactiveWalk = prefs({ sensitivity: 'Reactive', activity: 'Hiking / Walking' });
+    // Moderate starts at 4: Reactive strenuous is the row that moves there.
+    const reactive = prefs({ sensitivity: 'Reactive' });
+    assert.equal(band(3.4, reactive), 0, '3.4 rounds to 3, Low');
+    assert.equal(band(3.5, reactive), 1, '3.5 rounds to 4, Moderate');
+    // High starts at 7: Normal strenuous moves there.
+    assert.equal(band(6.4, prefs()), 0, '6.4 rounds to 6, Moderate');
+    assert.equal(band(6.5, prefs()), 1, '6.5 rounds to 7, High');
+    // Very High starts above 10: everyone is 2 there.
+    assert.equal(band(10.4, reactiveWalk), 1, '10.4 rounds to 10, High');
+    assert.equal(band(10.5, reactiveWalk), 2, '10.5 rounds to 11, Very High');
+    assert.equal(band(10.5, prefs({ activity: 'Hiking / Walking' })), 2, 'Very High is red for everyone');
   });
 
-  test('a higher ceiling keeps the effective-AQHI limits in force', () => {
-    // Ceiling 9 cannot save Cycling from a reading of 8: 8 * 1.5 = 12 > 10.5.
-    assert.equal(band(8, prefs({ ceiling: 9 })), 2);
-    // The same reading walking is under both limits.
-    assert.equal(band(8, prefs({ ceiling: 9, activity: 'Hiking / Walking' })), 1);
-  });
-
-  test('sensitivity moves the boundary', () => {
-    // 4 * 1.5 = 6, over the green max of 5.5.
-    assert.equal(band(4, prefs()), 1);
-    // 4 * 1.5 * 0.85 = 5.1, back under it — but the ceiling of 5 still allows it.
-    assert.equal(band(4, prefs({ sensitivity: 'Low' })), 0);
-    // 4 * 1.5 * 1.25 = 7.5, still amber rather than red.
-    assert.equal(band(4, prefs({ sensitivity: 'Reactive' })), 1);
+  test('Very High is level 2 for every combination', () => {
+    for (const sensitivity of ['Normal', 'Reactive'] as const) {
+      for (const activity of ['Running', 'Cycling', 'Hiking / Walking'] as const) {
+        assert.equal(band(11, prefs({ sensitivity, activity })), 2, `${sensitivity} · ${activity}`);
+        assert.equal(band(15, prefs({ sensitivity, activity })), 2, `${sensitivity} · ${activity} · 15`);
+      }
+    }
   });
 });
 
@@ -148,8 +178,8 @@ describe('judge', () => {
   });
 
   test('ties are named air, then rain, then heat, then wind', () => {
-    // Every factor amber at once.
-    const all = judge({ aqhi: 4, rainMmH: 1.5, tempC: 30, windKmh: 32 }, prefs());
+    // Every factor amber at once. AQHI 7 is High: amber for Normal · Cycling.
+    const all = judge({ aqhi: 7, rainMmH: 1.5, tempC: 30, windKmh: 32 }, prefs());
     assert.equal(all.level, 1);
     assert.equal(all.driver, 'smoke');
 
@@ -163,7 +193,7 @@ describe('judge', () => {
   });
 
   test('factorLevels agrees with the level judge reduces to', () => {
-    const r = { aqhi: 8, rainMmH: 1.6, tempC: 31, windKmh: 33 };
+    const r = { aqhi: 11, rainMmH: 1.6, tempC: 31, windKmh: 33 };
     const f = factorLevels(r, prefs());
     assert.deepEqual(f, { air: 2, rain: 1, heat: 1, wind: 1 });
     assert.equal(judge(r, prefs()).level, Math.max(f.air, f.rain, f.heat, f.wind));
@@ -172,23 +202,31 @@ describe('judge', () => {
 
 describe('quality', () => {
   test('floors at 6 rather than 0 so a bar stays visible', () => {
-    assert.equal(quality(calm({ aqhi: 11, tempC: 40, rainMmH: 20 }), prefs()), 6);
+    assert.equal(quality(calm({ aqhi: 11, tempC: 40, rainMmH: 20 })), 6);
   });
 
   test('caps at 100', () => {
-    assert.equal(quality(calm({ aqhi: 0 }), prefs()), 100);
+    assert.equal(quality(calm({ aqhi: 0 })), 100);
   });
 
   test('falls as the air worsens', () => {
-    const clean = quality(calm({ aqhi: 2 }), prefs());
-    const dirty = quality(calm({ aqhi: 6 }), prefs());
+    const clean = quality(calm({ aqhi: 2 }));
+    const dirty = quality(calm({ aqhi: 6 }));
     assert.ok(dirty < clean, `${dirty} should be below ${clean}`);
+  });
+
+  test('matches the worked values in decision-rules.md §4.1', () => {
+    assert.equal(quality({ aqhi: 2, tempC: 20, rainMmH: 0, windKmh: 10 }), 88);
+    assert.equal(quality({ aqhi: 6, tempC: 20, rainMmH: 0, windKmh: 10 }), 40);
+    assert.equal(quality({ aqhi: 2, tempC: 20, rainMmH: 8, windKmh: 10 }), 43);
+    assert.equal(quality({ aqhi: 2, tempC: 32, rainMmH: 0, windKmh: 10 }), 72);
+    assert.equal(quality({ aqhi: 11, tempC: 40, rainMmH: 20, windKmh: 10 }), 6);
   });
 
   test('rain contributes at most 45 points', () => {
     // Beyond ~6.4 mm/h the rain term is pinned, so more rain changes nothing.
-    const a = quality(calm({ aqhi: 3, rainMmH: 7 }), prefs());
-    const b = quality(calm({ aqhi: 3, rainMmH: 30 }), prefs());
+    const a = quality(calm({ aqhi: 3, rainMmH: 7 }));
+    const b = quality(calm({ aqhi: 3, rainMmH: 30 }));
     assert.equal(a, b);
   });
 });
@@ -220,7 +258,7 @@ describe('judgeDay', () => {
 
   test('prefers a green run over a longer amber one', () => {
     // Slots: one green pair at the end, a long amber stretch before it.
-    const v = judgeDay(dayOf([4, 4, 4, 4, 4, 4, 2, 2]), prefs());
+    const v = judgeDay(dayOf([7, 7, 7, 7, 7, 7, 2, 2]), prefs());
     assert.equal(v.level, 0, 'a green run exists, so the day is green');
     assert.deepEqual(v.run, { start: 6, end: 7 });
   });
@@ -228,13 +266,13 @@ describe('judgeDay', () => {
   test('falls back to the amber run when no green one exists', () => {
     // Deliberately asymmetric: a single longest amber stretch, so this asserts
     // the fallback rather than the tie-break.
-    const v = judgeDay(dayOf([8, 8, 4, 4, 4, 4, 8, 8]), prefs());
+    const v = judgeDay(dayOf([11, 11, 7, 7, 7, 7, 11, 11]), prefs());
     assert.equal(v.level, 1);
     assert.deepEqual(v.run, { start: 2, end: 5 });
   });
 
   test('is red with no run when nothing clears', () => {
-    const v = judgeDay(dayOf([8, 8, 8, 8, 8, 8, 8, 8]), prefs());
+    const v = judgeDay(dayOf([11, 11, 11, 11, 11, 11, 11, 11]), prefs());
     assert.equal(v.level, 2);
     assert.equal(v.run, null);
     assert.equal(windowLabel(v.run, '24-hour'), null);
@@ -242,15 +280,20 @@ describe('judgeDay', () => {
 
   test('the verdict is the best run, not the worst slot', () => {
     // One red slot must not drag down a day that is otherwise clear.
-    const v = judgeDay(dayOf([9, 2, 2, 2, 2, 2, 2, 2]), prefs());
+    const v = judgeDay(dayOf([11, 2, 2, 2, 2, 2, 2, 2]), prefs());
     assert.equal(v.level, 0);
     assert.equal(v.blocks[0], 2, 'the red slot is still reported');
   });
 
-  test('re-derives when the ceiling changes', () => {
-    const day = dayOf([6, 6, 6, 6, 6, 6, 6, 6]);
-    assert.equal(judgeDay(day, prefs({ ceiling: 5 })).level, 1);
-    assert.equal(judgeDay(day, prefs({ ceiling: 2 })).level, 2, 'a low ceiling makes it red');
+  test('re-derives when the sensitivity changes', () => {
+    // Moderate all day: nothing for the general population, amber for at-risk.
+    const day = dayOf([5, 5, 5, 5, 5, 5, 5, 5]);
+    assert.equal(judgeDay(day, prefs({ sensitivity: 'Normal' })).level, 0);
+    assert.equal(judgeDay(day, prefs({ sensitivity: 'Reactive' })).level, 1);
+    // High all day: amber for general strenuous, red for at-risk strenuous.
+    const high = dayOf([8, 8, 8, 8, 8, 8, 8, 8]);
+    assert.equal(judgeDay(high, prefs({ sensitivity: 'Normal' })).level, 1);
+    assert.equal(judgeDay(high, prefs({ sensitivity: 'Reactive' })).level, 2);
   });
 });
 

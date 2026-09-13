@@ -1,20 +1,25 @@
 /**
- * The rating model, ported verbatim from the HazePace design prototype.
+ * The rating model. Specified by docs/decision-rules.md; that file leads and
+ * this one follows it.
  *
  * One rule set judges every hour the app rates — today's hours and forecast
  * slots alike — so a change to any preference re-derives everything at once.
- * Kept as a pure module with no React or platform imports so it can be unit
- * tested directly.
+ * Kept pure, with no React or platform imports, so it can be unit tested
+ * directly.
  *
- * Levels are 0 / 1 / 2 (the design's GREEN / AMBER / RED). They describe
- * conditions measured against limits the user set themselves; they are not a
- * judgement about the user.
+ * Levels are 0 / 1 / 2 (the design's GREEN / AMBER / RED). For air they
+ * relay Environment and Climate Change Canada's published AQHI guidance for
+ * the user's sport and sensitivity; for rain, heat and wind they describe
+ * conditions against limits the user set themselves. Neither is a judgement
+ * about the user.
  */
+import { categoryFor, type AqhiCategory } from './aqhi.ts';
 
 export type Level = 0 | 1 | 2;
 
 export type Activity = 'Running' | 'Cycling' | 'Hiking / Walking';
-export type Sensitivity = 'Low' | 'Normal' | 'Reactive';
+/** Normal maps to ECCC's general population, Reactive to its at-risk one. */
+export type Sensitivity = 'Normal' | 'Reactive';
 export type TimeFormat = '24-hour' | '12-hour';
 
 /** Which factor set the level. `null` when nothing did. */
@@ -36,25 +41,38 @@ export interface Reading {
 export interface Prefs {
   activity: Activity;
   sensitivity: Sensitivity;
-  /** AQHI the user will not train above. 2–9. */
-  ceiling: number;
   /** Index into RAIN_TOL. 0–3. */
   rainTol: number;
   /** km/h, 8–40 in steps of 4. */
   windTol: number;
 }
 
-/** Air moved per minute, relative to walking. */
-export const VENT: Record<Activity, number> = {
-  Running: 1.7,
-  Cycling: 1.5,
-  'Hiking / Walking': 1.0,
+/**
+ * Whether ECCC's guidance would call the activity strenuous. Its AQHI
+ * messages turn on this word; "Hiking / Walking" is the design's baseline
+ * and is classed as not strenuous. See decision-rules.md §1.2.
+ */
+export const STRENUOUS: Record<Activity, boolean> = {
+  Running: true,
+  Cycling: true,
+  'Hiking / Walking': false,
 };
 
-export const SENS: Record<Sensitivity, number> = {
-  Low: 0.85,
-  Normal: 1,
-  Reactive: 1.25,
+/**
+ * ECCC's AQHI health messages, reduced to a level.
+ *
+ * Indexed [category][population][strenuous]. Level 1 where ECCC says
+ * "consider reducing or rescheduling strenuous activities", level 2 where it
+ * says "reduce or reschedule" or "avoid", 0 where the guidance does not
+ * reach that population and activity. Very High is 2 for everyone — the one
+ * cell that goes beyond ECCC's wording, so that nothing above 10 is green.
+ * The full table, with its sourcing, is decision-rules.md §3.1.
+ */
+const AIR_LEVEL: Record<AqhiCategory, Record<Sensitivity, { strenuous: Level; other: Level }>> = {
+  Low: { Normal: { strenuous: 0, other: 0 }, Reactive: { strenuous: 0, other: 0 } },
+  Moderate: { Normal: { strenuous: 0, other: 0 }, Reactive: { strenuous: 1, other: 0 } },
+  High: { Normal: { strenuous: 1, other: 0 }, Reactive: { strenuous: 2, other: 1 } },
+  'Very High': { Normal: { strenuous: 2, other: 2 }, Reactive: { strenuous: 2, other: 2 } },
 };
 
 export const RAIN_TOL = [
@@ -64,25 +82,19 @@ export const RAIN_TOL = [
   { name: 'Heavy', mm: 8, note: 'only a downpour stops you' },
 ] as const;
 
-const GREEN_MAX = 5.5;
-const AMBER_MAX = 10.5;
-
-/** The multiplier applied to a raw AQHI before it is banded. */
-export function ventilation(prefs: Prefs): number {
-  return VENT[prefs.activity] * SENS[prefs.sensitivity];
-}
-
-/** Effective AQHI: the reading as this user, doing this activity, meets it. */
-export function effectiveAqhi(aqhi: number, prefs: Prefs): number {
-  return aqhi * ventilation(prefs);
-}
-
-/** Air-quality level on its own, before the weather factors are considered. */
+/**
+ * Air-quality level on its own, before the weather factors are considered.
+ *
+ * The reading is placed in ECCC's category on its published (rounded) value
+ * — the same banding the screens use to name a category — and the level is
+ * read from the table above.
+ */
 export function band(aqhi: number, prefs: Prefs): Level {
-  const e = effectiveAqhi(aqhi, prefs);
-  if (e > AMBER_MAX || aqhi > prefs.ceiling + 3) return 2;
-  if (e > GREEN_MAX || aqhi > prefs.ceiling) return 1;
-  return 0;
+  const category = categoryFor(aqhi);
+  // categoryFor is null only for a null reading, which cannot reach here.
+  if (category === null) return 0;
+  const row = AIR_LEVEL[category][prefs.sensitivity];
+  return STRENUOUS[prefs.activity] ? row.strenuous : row.other;
 }
 
 export interface Judgement {
@@ -135,12 +147,12 @@ export function judge(r: Reading, prefs: Prefs): Judgement {
  * deliberately not the same thing as the level — it varies within a level so
  * the chart has shape.
  *
- * Floors at 6 rather than 0 so a bar is always visible.
+ * Floors at 6 rather than 0 so a bar is always visible. Uses the raw AQHI, so
+ * it does not vary with sport or sensitivity — only the colours do.
  */
-export function quality(r: Reading, prefs: Prefs): number {
-  const e = effectiveAqhi(r.aqhi, prefs);
+export function quality(r: Reading): number {
   const q =
-    100 - (e - 1) * 12 - Math.min(45, r.rainMmH * 7) - Math.max(0, (r.tempC - 28) * 4);
+    100 - (r.aqhi - 1) * 12 - Math.min(45, r.rainMmH * 7) - Math.max(0, (r.tempC - 28) * 4);
   return Math.max(6, Math.min(100, q));
 }
 

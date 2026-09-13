@@ -5,12 +5,18 @@ what is written here, and the tests in `src/lib/rating.test.ts` pin the
 worked examples in section 5. When the rules change, change this file first;
 the code and tests follow it.
 
-**Status:** these are the design prototype's rules, transcribed as-is. They
-are placeholders until replaced.
+**Status:** the **air** rule (section 3.1) was decided on 2026-09-13: it
+follows Environment and Climate Change Canada's published AQHI guidance and
+has no user-set ceiling. The rain, heat and wind rules are still the design
+prototype's placeholders; the intent is for the user's settings to become the
+limits above which they will not train, with a caution band derived below
+each — the size of that band is not yet decided.
 
-Everything here is measured against limits the user set themselves. The app
-presents conditions, thresholds and timing; it does not make health or safety
-claims, and nothing added to this file should either.
+Air is judged by relaying ECCC's guidance for the user's sport and
+sensitivity; rain, heat and wind are measured against limits the user set
+themselves. In both cases the app presents conditions, thresholds and
+timing; it does not make health or safety claims, and nothing added to this
+file should either.
 
 ---
 
@@ -58,10 +64,30 @@ treat an estimate differently from a measurement, say so here.
 | Setting | Values | Default |
 | --- | --- | --- |
 | Activity | Running · Cycling · Hiking / Walking | Cycling |
-| Sensitivity | Low · Normal · Reactive | Normal |
-| Ceiling | 2–9 (AQHI the user will not train above) | 5 |
+| Sensitivity | Normal · Reactive | Normal |
 | Rain tolerance | None · Light · Moderate · Heavy | Light |
 | Wind tolerance | 8–40 km/h, in steps of 4 | 32 |
+
+There is no air-quality ceiling. The air rule is ECCC's, keyed by the two
+settings above; see 3.1.
+
+The two settings map onto the two populations ECCC writes its AQHI guidance
+for, and the activities onto whether ECCC would call them strenuous:
+
+| Sensitivity | ECCC population |
+| --- | --- |
+| Normal | General population |
+| Reactive | At-risk population |
+
+| Activity | Strenuous |
+| --- | --- |
+| Running | yes |
+| Cycling | yes |
+| Hiking / Walking | no |
+
+"Hiking / Walking" is classed as not strenuous because it is the design's
+baseline activity. If hiking should count as strenuous, split the activity
+or move it — this table is the only place the classification lives.
 
 Rain tolerance names map to rates:
 
@@ -78,30 +104,56 @@ Rain tolerance names map to rates:
 
 Every factor, every hour and every day resolves to one of three levels.
 
-| Level | Word | Meaning |
-| --- | --- | --- |
-| 0 | GREEN | within the user's limits |
-| 1 | AMBER | past a limit |
-| 2 | RED | well past a limit |
+| Level | Word | Meaning — air | Meaning — rain, heat, wind |
+| --- | --- | --- | --- |
+| 0 | GREEN | ECCC guidance does not mention this activity at this AQHI | within the user's limits |
+| 1 | AMBER | ECCC guidance says *consider reducing or rescheduling* | past a limit |
+| 2 | RED | ECCC guidance says *reduce or reschedule* / *avoid* | well past a limit |
 
 ---
 
 ## 3. Hourly verdict
 
-### 3.1 Effective AQHI
+### 3.1 Air — ECCC's AQHI guidance as a lookup
 
-The raw AQHI is scaled by how hard the sport breathes and by the user's
-sensitivity before it is compared to anything.
+The AQHI is first placed in ECCC's category on its **published value** (the
+reading rounded to the nearest whole number; "10+" is anything that rounds
+above 10):
 
-```
-effective = aqhi × VENT[activity] × SENS[sensitivity]
-```
+| Category | Published AQHI |
+| --- | --- |
+| Low | 1–3 |
+| Moderate | 4–6 |
+| High | 7–10 |
+| Very High | above 10 |
 
-| Activity | VENT |  | Sensitivity | SENS |
+The air level is then read from this table, by category, ECCC population
+(from sensitivity) and whether the activity is strenuous (both from 1.2):
+
+| Category | General · strenuous | General · not strenuous | At risk · strenuous | At risk · not strenuous |
 | --- | --- | --- | --- | --- |
-| Running | 1.7 |  | Low | 0.85 |
-| Cycling | 1.5 |  | Normal | 1.0 |
-| Hiking / Walking | 1.0 |  | Reactive | 1.25 |
+| Low | 0 | 0 | 0 | 0 |
+| Moderate | 0 | 0 | 1 | 0 |
+| High | 1 | 0 | 2 | 1 |
+| Very High | 2 | 2 | 2 | 2 |
+
+Each cell follows the corresponding line of ECCC's *AQHI health messages*
+table: level 1 where ECCC says *consider reducing or rescheduling strenuous
+activities*, level 2 where it says *reduce or reschedule* or *avoid*, and
+level 0 where the guidance does not apply to that population and activity.
+One explicit override: **Very High is level 2 for everyone**, including
+non-strenuous activity by the general population, where ECCC's wording is
+only "reduce or reschedule strenuous activities". Above 10 the app does not
+show green to anyone.
+
+There are no multipliers. The prototype's ventilation (1.0 / 1.5 / 1.7) and
+sensitivity (0.85 / 1.0 / 1.25) factors, and its fixed 5.5 / 10.5 lines, are
+gone: every number in the air rule is ECCC's.
+
+Source: Environment and Climate Change Canada, "Understanding Air Quality
+Health Index messages" (the health-messages table by category and
+population). The category thresholds are the same ones `aqhi.ts` uses to
+band a reading for display, so the two cannot drift apart.
 
 ### 3.2 Four factors
 
@@ -110,17 +162,17 @@ are different, and the worked examples pin which is which.
 
 | Factor | Level 2 if | Level 1 if | Otherwise |
 | --- | --- | --- | --- |
-| **Air** | effective **>** 10.5 **or** aqhi **>** ceiling + 3 | effective **>** 5.5 **or** aqhi **>** ceiling | 0 |
+| **Air** | lookup in 3.1 gives 2 | lookup in 3.1 gives 1 | 0 |
 | **Rain** | rain **≥** tolerance × 2.6 | rain **≥** tolerance | 0 |
 | **Heat** | temp **≥** 34 | temp **≥** 30 | 0 |
 | **Wind** | wind **≥** tolerance + 14 | wind **≥** tolerance | 0 |
 
 Notes:
 
-- Air has two routes to each level: the effective value, or the raw AQHI
-  against the ceiling. Either is enough. This means a low ceiling can push an
-  hour up even when the effective value is fine (example 5), and a high
-  ceiling cannot rescue a high effective value (example 6).
+- Air boundaries are on the *published* AQHI, so they fall at .5: 3.4 rounds
+  to 3 (Low) and 3.5 to 4 (Moderate); 10.4 rounds to 10 (High) and 10.5 to
+  11 (Very High). The model's estimate (1.1) is unrounded and goes through
+  the same rounding.
 - Heat has no user setting. The thresholds are fixed.
 - The rain level-2 threshold is computed in floating point. Light tolerance is
   1.5, and 1.5 × 2.6 is 3.9000000000000004, so a reading of exactly 3.9 mm/h
@@ -155,22 +207,23 @@ Not a verdict. It gives the hourly bars shape within a level so the chart is
 not three flat bands.
 
 ```
-quality = 100 − (effective − 1) × 12
+quality = 100 − (aqhi − 1) × 12
               − min(45, rain × 7)
               − max(0, (temp − 28) × 4)
 ```
 
 Clamped to **6–100**. The floor is 6 rather than 0 so a bar is always visible.
+The prototype used the effective AQHI here; with the multipliers gone it uses
+the raw reading, so the bar heights no longer change with sport or
+sensitivity — only the colours do.
 
-| Case | AQHI | Temp | Rain | Effective | Quality |
-| --- | --- | --- | --- | --- | --- |
-| Clean | 2 | 20 | 0 | 3.0 | 76.0 |
-| AQHI 6, cycling | 6 | 20 | 0 | 9.0 | 6.0 |
-| Heavy rain | 2 | 20 | 8 | 3.0 | 31.0 |
-| 32 °C | 2 | 32 | 0 | 3.0 | 60.0 |
-| Everything bad | 11 | 40 | 20 | 16.5 | 6.0 |
-
-(All at Cycling / Normal / ceiling 5.)
+| Case | AQHI | Temp | Rain | Quality |
+| --- | --- | --- | --- | --- |
+| Clean | 2 | 20 | 0 | 88.0 |
+| AQHI 6 | 6 | 20 | 0 | 40.0 |
+| Heavy rain | 2 | 20 | 8 | 43.0 |
+| 32 °C | 2 | 32 | 0 | 72.0 |
+| Everything bad | 11 | 40 | 20 | 6.0 |
 
 ### 4.2 Day verdict — Forecast screen
 
@@ -210,33 +263,38 @@ and `src/lib/rating.test.ts` asserts them. Add rows for any boundary a new rule
 introduces — the value exactly at the threshold and one just below — and the
 tests will be written from them.
 
-Unless a cell says otherwise: **Cycling · Normal · ceiling 5 · Light · 32**.
+Unless a cell says otherwise: **Cycling · Normal · Light · 32**.
 Base readings are AQHI 2, 20 °C, 10 km/h, 0 mm/h.
 
-| # | Case | AQHI | Temp | Wind | Rain | Activity | Sens | Ceiling | Rain tol | Wind tol | Effective | Level | Driver |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | Clean hour, defaults | 2 | 20 | 10 | 0 | Cycling | Normal | 5 | Light | 32 | 3.00 | **0** | — |
-| 2 | Air: effective crosses 5.5 (4 × 1.5 = 6) | 4 | 20 | 10 | 0 | Cycling | Normal | 5 | Light | 32 | 6.00 | **1** | smoke |
-| 3 | Air: same reading walking (4 × 1.0) stays under | 4 | 20 | 10 | 0 | Hiking / Walking | Normal | 5 | Light | 32 | 4.00 | **0** | — |
-| 4 | Air: same reading, Low sensitivity (4 × 1.5 × 0.85 = 5.1) | 4 | 20 | 10 | 0 | Cycling | Low | 5 | Light | 32 | 5.10 | **0** | — |
-| 5 | Air: ceiling alone — walking, ceiling 2, AQHI 3 | 3 | 20 | 10 | 0 | Hiking / Walking | Normal | 2 | Light | 32 | 3.00 | **1** | smoke |
-| 6 | Air: effective crosses 10.5 (8 × 1.5 = 12) | 8 | 20 | 10 | 0 | Cycling | Normal | 5 | Light | 32 | 12.00 | **2** | smoke |
-| 7 | Air: AQHI 7 cycling — effective exactly 10.5, not over | 7 | 20 | 10 | 0 | Cycling | Normal | 5 | Light | 32 | 10.50 | **1** | smoke |
-| 8 | Air: ceiling + 3 alone — walking, ceiling 2, AQHI 6 | 6 | 20 | 10 | 0 | Hiking / Walking | Normal | 2 | Light | 32 | 6.00 | **2** | smoke |
-| 9 | Rain: just under Light tolerance (1.4 < 1.5) | 2 | 20 | 10 | 1.4 | Cycling | Normal | 5 | Light | 32 | 3.00 | **0** | — |
-| 10 | Rain: exactly at Light tolerance | 2 | 20 | 10 | 1.5 | Cycling | Normal | 5 | Light | 32 | 3.00 | **1** | rainfall |
-| 11 | Rain: past 2.6 × Light tolerance | 2 | 20 | 10 | 4 | Cycling | Normal | 5 | Light | 32 | 3.00 | **2** | rainfall |
-| 12 | Rain: 4.0 mm/h with Heavy tolerance | 2 | 20 | 10 | 4 | Cycling | Normal | 5 | Heavy | 32 | 3.00 | **0** | — |
-| 13 | Heat: 29 °C | 2 | 29 | 10 | 0 | Cycling | Normal | 5 | Light | 32 | 3.00 | **0** | — |
-| 14 | Heat: exactly 30 °C | 2 | 30 | 10 | 0 | Cycling | Normal | 5 | Light | 32 | 3.00 | **1** | heat |
-| 15 | Heat: exactly 34 °C | 2 | 34 | 10 | 0 | Cycling | Normal | 5 | Light | 32 | 3.00 | **2** | heat |
-| 16 | Wind: 31 km/h, tolerance 32 | 2 | 20 | 31 | 0 | Cycling | Normal | 5 | Light | 32 | 3.00 | **0** | — |
-| 17 | Wind: exactly at tolerance | 2 | 20 | 32 | 0 | Cycling | Normal | 5 | Light | 32 | 3.00 | **1** | wind |
-| 18 | Wind: tolerance + 14 | 2 | 20 | 46 | 0 | Cycling | Normal | 5 | Light | 32 | 3.00 | **2** | wind |
-| 19 | Worst wins: heat 1, wind 2 | 2 | 30 | 46 | 0 | Cycling | Normal | 5 | Light | 32 | 3.00 | **2** | wind |
-| 20 | Tie at 1: all four amber — air named first | 4 | 30 | 32 | 1.5 | Cycling | Normal | 5 | Light | 32 | 6.00 | **1** | smoke |
-| 21 | Tie at 1: rain and heat, clean air — rain named | 2 | 30 | 10 | 1.5 | Cycling | Normal | 5 | Light | 32 | 3.00 | **1** | rainfall |
-| 22 | Tie at 1: heat and wind, clean air — heat named | 2 | 30 | 32 | 0 | Cycling | Normal | 5 | Light | 32 | 3.00 | **1** | heat |
+| # | Case | AQHI | Temp | Wind | Rain | Activity | Sens | Rain tol | Wind tol | Category | Level | Driver |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | Clean hour, defaults | 2 | 20 | 10 | 0 | Cycling | Normal | Light | 32 | Low | **0** | — |
+| 2 | Air: Moderate (AQHI 5) — general strenuous stays 0 | 5 | 20 | 10 | 0 | Cycling | Normal | Light | 32 | Moderate | **0** | — |
+| 3 | Air: Moderate (AQHI 5) — at-risk strenuous is 1 | 5 | 20 | 10 | 0 | Cycling | Reactive | Light | 32 | Moderate | **1** | smoke |
+| 4 | Air: Moderate (AQHI 5) — at-risk walking is 0 | 5 | 20 | 10 | 0 | Hiking / Walking | Reactive | Light | 32 | Moderate | **0** | — |
+| 5 | Air: High (AQHI 8) — general strenuous is 1 | 8 | 20 | 10 | 0 | Cycling | Normal | Light | 32 | High | **1** | smoke |
+| 6 | Air: High (AQHI 8) — general walking is 0 | 8 | 20 | 10 | 0 | Hiking / Walking | Normal | Light | 32 | High | **0** | — |
+| 7 | Air: High (AQHI 8) — at-risk strenuous is 2 | 8 | 20 | 10 | 0 | Cycling | Reactive | Light | 32 | High | **2** | smoke |
+| 8 | Air: High (AQHI 8) — at-risk walking is 1 | 8 | 20 | 10 | 0 | Hiking / Walking | Reactive | Light | 32 | High | **1** | smoke |
+| 9 | Air: Very High (AQHI 11) — general walking is 2 (the override) | 11 | 20 | 10 | 0 | Hiking / Walking | Normal | Light | 32 | Very High | **2** | smoke |
+| 10 | Air: boundary 6.4 rounds to 6, Moderate | 6.4 | 20 | 10 | 0 | Cycling | Normal | Light | 32 | Moderate | **0** | — |
+| 11 | Air: boundary 6.5 rounds to 7, High | 6.5 | 20 | 10 | 0 | Cycling | Normal | Light | 32 | High | **1** | smoke |
+| 12 | Air: boundary 10.4 rounds to 10, High — at-risk walking | 10.4 | 20 | 10 | 0 | Hiking / Walking | Reactive | Light | 32 | High | **1** | smoke |
+| 13 | Air: boundary 10.5 rounds to 11, Very High | 10.5 | 20 | 10 | 0 | Hiking / Walking | Reactive | Light | 32 | Very High | **2** | smoke |
+| 14 | Rain: just under Light tolerance (1.4 < 1.5) | 2 | 20 | 10 | 1.4 | Cycling | Normal | Light | 32 | Low | **0** | — |
+| 15 | Rain: exactly at Light tolerance | 2 | 20 | 10 | 1.5 | Cycling | Normal | Light | 32 | Low | **1** | rainfall |
+| 16 | Rain: past 2.6 × Light tolerance | 2 | 20 | 10 | 4 | Cycling | Normal | Light | 32 | Low | **2** | rainfall |
+| 17 | Rain: 4.0 mm/h with Heavy tolerance | 2 | 20 | 10 | 4 | Cycling | Normal | Heavy | 32 | Low | **0** | — |
+| 18 | Heat: 29 °C | 2 | 29 | 10 | 0 | Cycling | Normal | Light | 32 | Low | **0** | — |
+| 19 | Heat: exactly 30 °C | 2 | 30 | 10 | 0 | Cycling | Normal | Light | 32 | Low | **1** | heat |
+| 20 | Heat: exactly 34 °C | 2 | 34 | 10 | 0 | Cycling | Normal | Light | 32 | Low | **2** | heat |
+| 21 | Wind: 31 km/h, tolerance 32 | 2 | 20 | 31 | 0 | Cycling | Normal | Light | 32 | Low | **0** | — |
+| 22 | Wind: exactly at tolerance | 2 | 20 | 32 | 0 | Cycling | Normal | Light | 32 | Low | **1** | wind |
+| 23 | Wind: tolerance + 14 | 2 | 20 | 46 | 0 | Cycling | Normal | Light | 32 | Low | **2** | wind |
+| 24 | Worst wins: heat 1, wind 2 | 2 | 30 | 46 | 0 | Cycling | Normal | Light | 32 | Low | **2** | wind |
+| 25 | Tie at 1: all four amber — air named first | 7 | 30 | 32 | 1.5 | Cycling | Normal | Light | 32 | High | **1** | smoke |
+| 26 | Tie at 1: rain and heat, clean air — rain named | 2 | 30 | 10 | 1.5 | Cycling | Normal | Light | 32 | Low | **1** | rainfall |
+| 27 | Tie at 1: heat and wind, clean air — heat named | 2 | 30 | 32 | 0 | Cycling | Normal | Light | 32 | Low | **1** | heat |
 
 ### 5.1 Day verdict examples
 
@@ -263,7 +321,7 @@ here because a new driver or level needs a sentence to go with it.
 
 | Driver | Level 2 | Level 1 |
 | --- | --- | --- |
-| smoke | Smoke is pooled on the valley floor. Well past your ceiling for hard efforts. | Thin smoke. Steady work is fine; save the intervals. |
+| smoke | Heavy smoke. Past the level ECCC's guidance sets for strenuous activity. | Thin smoke. Steady work is fine; save the intervals. |
 | rainfall | Thunderstorm over the valley — heavy rain and gusts. | Steady rain, but the air behind it is the cleanest today. |
 | heat | Heat is the limit now, not the air. | Hot enough to cost you. Shorten it or move it later. |
 | wind | *(none — falls back)* | Gusty. The air is fine; the handling is not. |

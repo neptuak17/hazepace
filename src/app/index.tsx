@@ -31,7 +31,7 @@ import {
   tracking,
 } from '@/constants/design-tokens';
 import { Attribution, Common, DataStrings, SheetStrings, TodayStrings } from '@/constants/strings';
-import { ECCC_ATTRIBUTION } from '@/lib/aqhi';
+import { ECCC_ATTRIBUTION, categoryFor } from '@/lib/aqhi';
 import { useConditions } from '@/lib/conditions';
 import {
   aqhiOf,
@@ -49,7 +49,6 @@ import {
 import { OPEN_METEO_ATTRIBUTION } from '@/lib/open-meteo';
 import {
   bestWindow,
-  effectiveAqhi,
   formatHour,
   formatTick,
   judge,
@@ -173,10 +172,8 @@ export default function TodayScreen() {
     { k: TodayStrings.statKeys.rain, v: formatValue(w?.precipitationMm ?? null, 1, ' mm') },
     { k: TodayStrings.statKeys.humidity, v: formatValue(w?.relativeHumidityPct ?? null, 0, '%') },
     {
-      k: TodayStrings.statKeys.effective,
-      v: selectedReading
-        ? effectiveAqhi(selectedReading.aqhi, prefs).toFixed(1)
-        : DataStrings.unavailable,
+      k: TodayStrings.statKeys.category,
+      v: categoryFor(selectedAqhi?.value ?? null) ?? DataStrings.unavailable,
     },
   ];
 
@@ -282,7 +279,7 @@ export default function TodayScreen() {
               // An hour the model could not judge is drawn at the minimum
               // height in the neutral track colour — present, but plainly
               // not a reading.
-              const height = reading ? BAR_BASE + quality(reading, prefs) * BAR_SCALE : BAR_BASE;
+              const height = reading ? BAR_BASE + quality(reading) * BAR_SCALE : BAR_BASE;
               const colour = level === null ? Neutral[300] : Verdict.ink[level];
               const isSelected = hr.hour === selectedHour;
               return (

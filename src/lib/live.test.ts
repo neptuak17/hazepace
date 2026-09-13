@@ -29,7 +29,6 @@ import type { Prefs } from './rating.ts';
 const PREFS: Prefs = {
   activity: 'Cycling',
   sensitivity: 'Normal',
-  ceiling: 5,
   rainTol: 1,
   windTol: 32,
 };
@@ -149,9 +148,10 @@ describe('judgeLiveDay — missing slots', () => {
   });
 
   test('a missing slot never contributes a level', () => {
-    // One complete amber slot, seven missing. The day is amber from that slot
+    // One complete amber slot (AQHI 8 is High: amber at the defaults), seven
+    // missing. The day is amber from that slot
     // alone — the gaps do not drag it to red.
-    const v = judgeLiveDay([null, null, null, slot(5), null, null, null, null], PREFS);
+    const v = judgeLiveDay([null, null, null, slot(8), null, null, null, null], PREFS);
     assert.equal(v.level, 1);
     assert.deepEqual(v.run, { start: 3, end: 3 });
   });

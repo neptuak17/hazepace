@@ -123,7 +123,7 @@ export const TodayStrings = {
    */
   sentences: {
     smoke: {
-      2: 'Smoke is pooled on the valley floor. Well past your ceiling for hard efforts.',
+      2: "Heavy smoke. Past the level ECCC's guidance sets for strenuous activity.",
       1: 'Thin smoke. Steady work is fine; save the intervals.',
     },
     rainfall: {
@@ -156,7 +156,7 @@ export const TodayStrings = {
     wind: 'Wind',
     rain: 'Rain',
     humidity: 'Humidity',
-    effective: 'Effective',
+    category: 'Category',
   },
 
   airLink: "What's in the air →",
@@ -209,26 +209,14 @@ export const ForecastStrings = {
 export const ThresholdsStrings = {
   title: HeaderStrings.thresholds,
 
-  airCardTitle: 'Air quality limits',
-  airCardCaption:
-    'Your tolerance for air quality. Always follow local government recommendations and advisories.',
-  ceilingMeta: (word: string) => `AQHI · ${word}`,
-  ceilingSliderLabel: 'Air quality ceiling',
-  ceilingSliderValue: (ceiling: number, word: string) => `AQHI ${ceiling}, ${word}`,
-
+  airCardTitle: 'Air quality',
   /**
-   * How permissive the chosen ceiling is.
-   *
-   * The design labelled the top of the range "not recommended", which is
-   * advice about a limit rather than a description of it. These say where the
-   * setting sits and leave the judgement to the reader.
+   * There is no air limit to set. The air level follows ECCC's published
+   * AQHI guidance for the user's sensitivity and sport (decision-rules.md
+   * §3.1), so this card only holds the sensitivity.
    */
-  ceilingWord: (ceiling: number): string => {
-    if (ceiling <= 3) return 'cautious';
-    if (ceiling <= 5) return 'typical';
-    if (ceiling <= 7) return 'permissive';
-    return 'very permissive';
-  },
+  airCardCaption:
+    "Air levels follow Environment and Climate Change Canada's AQHI guidance for your sensitivity and sport. Always follow local advisories.",
 
   sensitivityLabel: 'Air quality sensitivity',
 
@@ -263,13 +251,12 @@ export const AboutStrings = {
    * says what the setting does to the thresholds instead.
    */
   sensitivityNote: {
-    Low: 'Smoke rarely bothers you.',
-    Normal: 'Standard thresholds.',
-    Reactive: 'Smoke affects you at lower levels than most.',
+    Normal: "Air levels follow ECCC's guidance for the general population.",
+    Reactive: "Air levels follow ECCC's guidance for people more affected by smoke.",
   } as Record<Sensitivity, string>,
 
   tileLabels: {
-    ceiling: 'AQHI max',
+    sensitivity: 'Smoke',
     rain: 'Rain',
     wind: 'Wind',
   },
@@ -322,15 +309,17 @@ export const HowItWorksStrings = {
 
   ventTitle: 'Why your verdict differs',
   /**
-   * The design said "move far more air through your lungs". Anatomical framing
-   * is a health claim, so this states the same mechanism as a rate.
+   * The air level is ECCC's guidance, which turns on whether an activity is
+   * strenuous and on which population the reader is in; the tiles show the
+   * classification the app applies. Rain, heat and wind are the reader's own
+   * limits.
    */
   ventCaption:
-    'Hard efforts move far more air per minute, so the same reading meets you differently on a bike than on a walk. Your sport, your sensitivity and your limits all shift the thresholds — set them in Thresholds.',
+    "ECCC's AQHI guidance distinguishes strenuous activity from the rest, and people more affected by smoke from the general population. Your sport and sensitivity pick the row. Rain, wind and heat are measured against your own limits — set them in Thresholds.",
   ventTiles: [
-    { name: 'Walking', mult: '1.0×' },
-    { name: 'Cycling', mult: '1.5×' },
-    { name: 'Running', mult: '1.7×' },
+    { name: 'Walking', mult: 'not strenuous' },
+    { name: 'Cycling', mult: 'strenuous' },
+    { name: 'Running', mult: 'strenuous' },
   ],
 
   sourcesTitle: 'Where the data comes from',
@@ -397,10 +386,9 @@ export const SheetStrings = {
    * is a health claim, so it names the time spent instead.
    */
   activityNote: {
-    Running:
-      'Highest intake per minute — the strictest ceiling, and not before the inversion lifts.',
-    Cycling: 'Sustained intake for hours at a time — a long ride spends the most time in it.',
-    'Hiking / Walking': 'Low ventilation. An hour on the bench is defensible.',
+    Running: 'Strenuous — the row ECCC writes its guidance for. Not before the inversion lifts.',
+    Cycling: 'Strenuous, and for hours at a time — a long ride spends the most time in it.',
+    'Hiking / Walking': 'Not strenuous. An hour on the bench is defensible.',
   } as Record<Activity, string>,
 } as const;
 

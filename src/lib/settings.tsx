@@ -27,8 +27,6 @@ export interface Settings {
   /** Every activity the user does. Drives which chips appear on Today. */
   sports: Activity[];
   sensitivity: Sensitivity;
-  /** AQHI the user will not train above. 2-9. */
-  ceiling: number;
   /** Index into RAIN_TOL. 0-3. */
   rainTol: number;
   /** km/h, 8-40 in steps of 4. */
@@ -44,7 +42,6 @@ export interface Settings {
 const DEFAULTS: Settings = {
   sports: ['Cycling', 'Running'],
   sensitivity: 'Normal',
-  ceiling: 5,
   rainTol: 1,
   windTol: 32,
   timeFmt: '24-hour',
@@ -90,8 +87,10 @@ function merge(stored: unknown): Settings {
   const s = stored as Partial<Settings>;
   return {
     sports: Array.isArray(s.sports) && s.sports.length ? s.sports : DEFAULTS.sports,
-    sensitivity: s.sensitivity ?? DEFAULTS.sensitivity,
-    ceiling: typeof s.ceiling === 'number' ? s.ceiling : DEFAULTS.ceiling,
+    // 'Low' existed before the air rule became ECCC's lookup; it folds into
+    // Normal (both are ECCC's general population). Any stored ceiling is
+    // ignored — there is no such setting now.
+    sensitivity: s.sensitivity === 'Reactive' ? 'Reactive' : DEFAULTS.sensitivity,
     rainTol: typeof s.rainTol === 'number' ? s.rainTol : DEFAULTS.rainTol,
     windTol: typeof s.windTol === 'number' ? s.windTol : DEFAULTS.windTol,
     timeFmt: s.timeFmt ?? DEFAULTS.timeFmt,
@@ -164,7 +163,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       prefs: {
         activity,
         sensitivity: settings.sensitivity,
-        ceiling: settings.ceiling,
         rainTol: settings.rainTol,
         windTol: settings.windTol,
       },

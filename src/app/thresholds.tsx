@@ -25,7 +25,7 @@ import { Common, ThresholdsStrings } from '@/constants/strings';
 import { RAIN_TOL, type Sensitivity } from '@/lib/rating';
 import { useSettings } from '@/lib/settings';
 
-const SENSITIVITIES: Sensitivity[] = ['Low', 'Normal', 'Reactive'];
+const SENSITIVITIES: Sensitivity[] = ['Normal', 'Reactive'];
 
 export default function ThresholdsScreen() {
   const router = useRouter();
@@ -41,24 +41,6 @@ export default function ThresholdsScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{ThresholdsStrings.airCardTitle}</Text>
           <Text style={styles.caption}>{ThresholdsStrings.airCardCaption}</Text>
-
-          <View style={styles.valueRow}>
-            <Text style={styles.bigValue}>{settings.ceiling}</Text>
-            <Text style={styles.valueMeta}>
-              {ThresholdsStrings.ceilingMeta(ThresholdsStrings.ceilingWord(settings.ceiling))}
-            </Text>
-          </View>
-
-          <Slider
-            value={settings.ceiling}
-            min={2}
-            max={9}
-            step={1}
-            onChange={(ceiling) => update({ ceiling })}
-            label={ThresholdsStrings.ceilingSliderLabel}
-            valueLabel={ThresholdsStrings.ceilingSliderValue(settings.ceiling, ThresholdsStrings.ceilingWord(settings.ceiling))}
-            style={styles.sliderTop}
-          />
 
           <Text style={styles.subLabel}>{ThresholdsStrings.sensitivityLabel}</Text>
           <View style={styles.chipRow}>
@@ -149,16 +131,6 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 
-  valueRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 8,
-    marginTop: Space.three,
-  },
-  bigValue: { ...Type.ceiling, lineHeight: 44, color: Accent[700] },
-  valueMeta: { ...Type.pillLabel, fontFamily: Type.body.fontFamily, color: Neutral[700] },
-
-  sliderTop: { marginTop: Space.three },
   sliderTight: { marginTop: 6 },
 
   subLabel: {
