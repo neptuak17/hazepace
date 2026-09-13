@@ -55,9 +55,10 @@ export const DataStrings = {
   /** A card on Today explaining why the fixed place is showing. */
   fallbackTitle: (name: string) => `Showing ${name}`,
   fallbackDenied:
-    'Location access is off for this app. Choose a place at the top of the screen, or allow location in Settings to see conditions where you are.',
-  fallbackUnavailable:
-    'Your location could not be determined right now. You can choose a place at the top of the screen.',
+    'Location access is off for this app. Choose a place instead, or allow location in Settings to see conditions where you are.',
+  fallbackUnavailable: 'Your location could not be determined right now. You can choose a place instead.',
+  /** The action on that card; opens the places sheet. */
+  choosePlace: 'Choose a place',
 
   noCoverageTitle: 'No AQHI community in range',
   noCoverageNote: (name: string | null, km: number | null) =>
@@ -337,6 +338,12 @@ export const SheetStrings = {
   useMyLocationNote: 'Conditions where the phone is',
   /** Accessibility hint on the row that is currently in use. */
   placeInUse: 'in use',
+  searchPlaceholder: 'Search for a town or city',
+  searchLabel: 'Place search',
+  clearSearch: 'Clear search',
+  searching: 'Searching…',
+  searchEmpty: (query: string) => `No places found for “${query}”`,
+  searchError: 'Place search did not respond. Check your connection and try again.',
   airTitle: "What's in the air",
   activityTitle: 'Same air, three verdicts',
 

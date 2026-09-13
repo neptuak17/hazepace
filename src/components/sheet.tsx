@@ -13,7 +13,9 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import {
   Animated,
   Easing,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -62,7 +64,11 @@ export function Sheet({ visible, title, onClose, children }: SheetProps) {
       animationType="none"
       onRequestClose={onClose}
       statusBarTranslucent>
-      <View style={styles.root}>
+      {/* The panel sits on the keyboard when a sheet has a text input, so
+          the rows under the input stay reachable. Inert otherwise. */}
+      <KeyboardAvoidingView
+        style={styles.root}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <Animated.View style={[StyleSheet.absoluteFill, { opacity: progress }]}>
           <Pressable
             style={styles.scrim}
@@ -87,9 +93,12 @@ export function Sheet({ visible, title, onClose, children }: SheetProps) {
               <Icon name="close" size={19} color={Accent.base} />
             </Pressable>
           </View>
-          <ScrollView bounces={false}>{children}</ScrollView>
+          {/* Taps on rows must land while the keyboard is up, not dismiss it. */}
+          <ScrollView bounces={false} keyboardShouldPersistTaps="handled">
+            {children}
+          </ScrollView>
         </Animated.View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

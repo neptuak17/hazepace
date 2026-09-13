@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ErrorPanel } from '@/components/error-panel';
 import { LaunchOverlay } from '@/components/launch-overlay';
+import { PlacesSheetProvider } from '@/components/places-sheet';
 import { TabNavigator } from '@/components/tab-bar';
 import { Palette } from '@/constants/design-tokens';
 import { ConditionsProvider, useConditions } from '@/lib/conditions';
@@ -67,9 +68,11 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <SettingsProvider>
         <ConditionsProvider>
-          <View style={styles.root}>
-            <Shell />
-          </View>
+          <PlacesSheetProvider>
+            <View style={styles.root}>
+              <Shell />
+            </View>
+          </PlacesSheetProvider>
           {/* The design is a single warm light palette, so the status bar is
               always dark-on-light. */}
           <StatusBar style="dark" />

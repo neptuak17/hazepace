@@ -1,13 +1,16 @@
 /**
  * The three sheet bodies: places, air detail, and the activity comparison.
  *
- * All three take their numbers from the caller. A sheet never fetches, and
- * never fills a gap: a value the caller did not have renders as "—".
+ * All three take their numbers from the caller, and none fills a gap: a value
+ * the caller did not have renders as "—". The places sheet is the one that
+ * fetches anything, and only its own search.
  */
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Icon } from '@/components/icon';
 import {
+  Accent,
   Accent2,
   Neutral,
   Palette,
@@ -23,20 +26,9 @@ import { formatAge, formatAqhi, formatClock, formatValue } from '@/lib/live';
 import type { HourlyConditions } from '@/lib/open-meteo';
 import type { ManualPlace } from '@/lib/place';
 import { band, type Activity, type Level, type Prefs, type TimeFormat } from '@/lib/rating';
+import { usePlaceSearch } from '@/lib/use-place-search';
 
 /* ── Places ──────────────────────────────────────────────────────────────── */
-
-/**
- * A short fixed list for now, standing in for a place search. Coordinates
- * are town centres, already at two decimals. The next pass replaces this
- * list with a search box; the rows and the "use my location" row stay.
- */
-const PLACES: ManualPlace[] = [
-  { name: 'Vernon', region: 'British Columbia, Canada', latitude: 50.27, longitude: -119.27 },
-  { name: 'Kelowna', region: 'British Columbia, Canada', latitude: 49.89, longitude: -119.5 },
-  { name: 'Kamloops', region: 'British Columbia, Canada', latitude: 50.67, longitude: -120.33 },
-  { name: 'Revelstoke', region: 'British Columbia, Canada', latitude: 51.0, longitude: -118.2 },
-];
 
 const samePlace = (a: ManualPlace | null, b: ManualPlace | null) =>
   a !== null && b !== null && a.latitude === b.latitude && a.longitude === b.longitude;
@@ -57,6 +49,45 @@ function PlaceCircle({ aqhi, level }: { aqhi: string | null; level: Level | null
   );
 }
 
+function PlaceRow({
+  place,
+  inUse,
+  currentAqhi,
+  currentLevel,
+  onPress,
+}: {
+  place: ManualPlace;
+  inUse: boolean;
+  currentAqhi: string | null;
+  currentLevel: Level | null;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: inUse }}
+      accessibilityHint={inUse ? SheetStrings.placeInUse : undefined}
+      style={styles.placeRow}>
+      <PlaceCircle aqhi={inUse ? currentAqhi : null} level={inUse ? currentLevel : null} />
+      <View style={styles.grow}>
+        <Text style={styles.rowName} numberOfLines={1}>
+          {place.name}
+        </Text>
+        <Text style={styles.rowNote} numberOfLines={1}>
+          {place.region ?? DataStrings.unavailable}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+/**
+ * The one sheet that fetches: a place search, debounced, via Open-Meteo's
+ * geocoder (see geocode.ts). Below the search box the device row is always
+ * present; beneath it, the chosen place while the box is empty, or the
+ * results while it is not.
+ */
 export function PlacesSheetBody({
   manualPlace,
   currentAqhi,
@@ -72,9 +103,73 @@ export function PlacesSheetBody({
   onUseDevice: () => void;
   onPick: (place: ManualPlace) => void;
 }) {
+  const [query, setQuery] = useState('');
+  const search = usePlaceSearch(query);
   const deviceInUse = manualPlace === null;
+
+  let body: ReactNode;
+  if (search.status === 'idle') {
+    body = manualPlace ? (
+      <PlaceRow
+        place={manualPlace}
+        inUse
+        currentAqhi={currentAqhi}
+        currentLevel={currentLevel}
+        onPress={() => onPick(manualPlace)}
+      />
+    ) : null;
+  } else if (search.status === 'error') {
+    body = <Text style={styles.searchNote}>{SheetStrings.searchError}</Text>;
+  } else if (search.status === 'searching' && search.places.length === 0) {
+    body = (
+      <View style={styles.searchStatus}>
+        <ActivityIndicator color={Accent.base} />
+        <Text style={styles.searchNote}>{SheetStrings.searching}</Text>
+      </View>
+    );
+  } else if (search.places.length === 0) {
+    body = <Text style={styles.searchNote}>{SheetStrings.searchEmpty(search.query)}</Text>;
+  } else {
+    body = search.places.map((p) => (
+      <PlaceRow
+        key={`${p.name}|${p.region ?? ''}|${p.latitude}|${p.longitude}`}
+        place={p}
+        inUse={samePlace(p, manualPlace)}
+        currentAqhi={currentAqhi}
+        currentLevel={currentLevel}
+        onPress={() => onPick(p)}
+      />
+    ));
+  }
+
   return (
     <View style={styles.rows}>
+      <View style={styles.searchBox}>
+        <Icon name="search" size={17} color={Neutral[600]} />
+        <TextInput
+          style={styles.searchInput}
+          value={query}
+          onChangeText={setQuery}
+          placeholder={SheetStrings.searchPlaceholder}
+          placeholderTextColor={Neutral[600]}
+          accessibilityLabel={SheetStrings.searchLabel}
+          autoCapitalize="words"
+          autoCorrect={false}
+          returnKeyType="search"
+          clearButtonMode="never"
+        />
+        {query.length > 0 && (
+          <Pressable
+            onPress={() => setQuery('')}
+            accessibilityRole="button"
+            accessibilityLabel={SheetStrings.clearSearch}
+            hitSlop={8}
+            style={styles.searchClear}>
+            <Icon name="close" size={15} color={Neutral[600]} />
+          </Pressable>
+        )}
+      </View>
+
       <Pressable
         onPress={onUseDevice}
         accessibilityRole="button"
@@ -94,24 +189,7 @@ export function PlacesSheetBody({
         </View>
       </Pressable>
 
-      {PLACES.map((p) => {
-        const inUse = samePlace(p, manualPlace);
-        return (
-          <Pressable
-            key={p.name}
-            onPress={() => onPick(p)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: inUse }}
-            accessibilityHint={inUse ? SheetStrings.placeInUse : undefined}
-            style={styles.placeRow}>
-            <PlaceCircle aqhi={inUse ? currentAqhi : null} level={inUse ? currentLevel : null} />
-            <View style={styles.grow}>
-              <Text style={styles.rowName}>{p.name}</Text>
-              <Text style={styles.rowNote}>{p.region ?? DataStrings.unavailable}</Text>
-            </View>
-          </Pressable>
-        );
-      })}
+      {body}
     </View>
   );
 }
@@ -244,6 +322,21 @@ const styles = StyleSheet.create({
   circleCaps: { ...Type.zoneCaps, letterSpacing: tracking(9.5, 0.04), lineHeight: 10 },
   rowName: { ...Type.rowLabel, flex: 1, color: Palette.text },
   rowNote: { ...Type.bodySmall, color: Neutral[700] },
+
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Space.two,
+    backgroundColor: Neutral[200],
+    borderRadius: Radius.md,
+    paddingHorizontal: Space.three,
+    minHeight: 44,
+    marginBottom: Space.two,
+  },
+  searchInput: { ...Type.body, flex: 1, minWidth: 0, color: Palette.text, paddingVertical: 10 },
+  searchClear: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
+  searchStatus: { flexDirection: 'row', alignItems: 'center', gap: Space.two, paddingVertical: 12 },
+  searchNote: { ...Type.bodySmall, color: Neutral[700], paddingVertical: 12 },
 
   airBody: { gap: Space.three },
   statRow: { flexDirection: 'row', gap: Space.three },

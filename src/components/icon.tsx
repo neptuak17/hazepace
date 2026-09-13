@@ -32,6 +32,7 @@ const GLYPHS = {
   chevronDown: { paths: ['M6 9l6 6 6-6'] },
   chevronRight: { paths: ['M9 6l6 6-6 6'] },
   close: { paths: ['M6 6l12 12M18 6L6 18'] },
+  search: { paths: ['M16.5 16.5L21 21'], circles: [{ cx: 11, cy: 11, r: 6.5 }] },
 
   settings: {
     paths: [

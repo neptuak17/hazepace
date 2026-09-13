@@ -15,6 +15,7 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 
 import { AppHeader } from '@/components/app-header';
 import { Icon } from '@/components/icon';
+import { usePlacesSheet } from '@/components/places-sheet';
 import { Sheet } from '@/components/sheet';
 import { ActivitySheetBody, AirSheetBody } from '@/components/sheets';
 import {
@@ -68,6 +69,7 @@ export default function TodayScreen() {
   const { settings, activity, setActivity, prefs } = useSettings();
   const { live, aqhi, aqhiCoverage, aqhiNearest, fetchedAt, refreshing, refresh, now: nowMs, place } =
     useConditions();
+  const placesSheet = usePlacesSheet();
   const [airOpen, setAirOpen] = useState(false);
   const [actsOpen, setActsOpen] = useState(false);
 
@@ -181,6 +183,13 @@ export default function TodayScreen() {
                 ? DataStrings.fallbackDenied
                 : DataStrings.fallbackUnavailable}
             </Text>
+            <Pressable
+              onPress={placesSheet.open}
+              accessibilityRole="button"
+              hitSlop={8}
+              style={styles.cardAction}>
+              <Text style={styles.cardActionText}>{DataStrings.choosePlace}</Text>
+            </Pressable>
           </View>
         )}
 
@@ -466,6 +475,8 @@ const styles = StyleSheet.create({
   cardTitle: { ...Type.dayRow, color: Palette.text },
   cardHint: { ...Type.caption, color: Neutral[600] },
   cardNote: { ...Type.bodySmall, color: Neutral[700], lineHeight: 13 * 1.4, marginTop: 3 },
+  cardAction: { alignSelf: 'flex-start', marginTop: Space.two, minHeight: 32, justifyContent: 'center' },
+  cardActionText: { ...Type.rowLabel, color: Accent.base },
 
   chart: {
     flexDirection: 'row',
