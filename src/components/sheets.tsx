@@ -1,5 +1,5 @@
 /**
- * The three sheet bodies: places, air detail, and the activity comparison.
+ * The two sheet bodies: places and air detail.
  *
  * All three take their numbers from the caller, and none fills a gap: a value
  * the caller did not have renders as "—". The places sheet is the one that
@@ -21,12 +21,11 @@ import {
   tracking,
 } from '@/constants/design-tokens';
 import { Common, DataStrings, SheetStrings } from '@/constants/strings';
-import type { AqhiEstimate } from '@/lib/aqhi-estimate';
-import type { AqhiReading } from '@/lib/aqhi';
-import { formatAge, formatAqhi, formatClock, formatValue } from '@/lib/live';
-import type { HourlyConditions } from '@/lib/open-meteo';
+import { ECCC_ATTRIBUTION, categoryFor, type AqhiReading } from '@/lib/aqhi';
+import { aqhiOf, formatAge, formatAqhi, formatClock, formatValue, type LiveHour } from '@/lib/live';
+import { OPEN_METEO_ATTRIBUTION } from '@/lib/open-meteo';
 import type { ManualPlace } from '@/lib/place';
-import { band, type Activity, type Level, type Prefs, type TimeFormat } from '@/lib/rating';
+import type { Level, TimeFormat } from '@/lib/rating';
 import { usePlaceSearch } from '@/lib/use-place-search';
 
 /* ── Places ──────────────────────────────────────────────────────────────── */
@@ -197,113 +196,111 @@ export function PlacesSheetBody({
 
 /* ── What's in the air ───────────────────────────────────────────────────── */
 
+/**
+ * The detail behind one hour of the chart: the AQHI with where it came from,
+ * the pollutants ECCC's index is built from, ECCC's own notes when they
+ * publish any, and the weather Today has no room for. Everything shown is
+ * a reading; nothing is derived here beyond formatting.
+ */
 export function AirSheetBody({
+  hour,
+  isCurrentHour,
   observation,
-  estimate,
-  estimateEpoch,
-  weather,
   timeFmt,
   nowMs,
 }: {
+  hour: LiveHour;
+  /** True when `hour` is the one underway, so the observation applies. */
+  isCurrentHour: boolean;
+  /** ECCC's latest observation, used only for the current hour. */
   observation: AqhiReading | null;
-  /** Shown only when there is no observation; labelled as a model value. */
-  estimate: AqhiEstimate | null;
-  estimateEpoch: number | null;
-  weather: HourlyConditions | null;
   timeFmt: TimeFormat;
   nowMs: number;
 }) {
-  const aqhi = observation ?? estimate;
-  const stats = [
-    {
-      k: SheetStrings.airStatKeys.pm25,
-      v: formatValue(weather?.pm25 ?? null, 1),
-      u: SheetStrings.airStatUnits.pm25,
-    },
-    {
-      k: SheetStrings.airStatKeys.aqhi,
-      v: formatAqhi(aqhi),
-      u: aqhi?.category ?? DataStrings.unavailable,
-    },
-    {
-      k: SheetStrings.airStatKeys.rain,
-      v: formatValue(weather?.precipitationMm ?? null, 1),
-      u: SheetStrings.airStatUnits.rain,
-    },
+  const w = hour.weather;
+  const clock = formatClock(hour.epoch, timeFmt);
+
+  // The hour's AQHI and its provenance, in the same order of preference as
+  // the Today hero: measured, then ECCC's forecast, then the model.
+  let aqhiValue: string = DataStrings.unavailable;
+  let aqhiCategory: string = DataStrings.unavailable;
+  let provenance: string = DataStrings.unavailable;
+  if (isCurrentHour && observation && observation.value !== null) {
+    aqhiValue = formatAqhi(observation);
+    aqhiCategory = observation.category ?? DataStrings.unavailable;
+    provenance = `${DataStrings.communityLine(observation.community, observation.distanceKm)} · ${DataStrings.observedAt(formatClock(Date.parse(observation.timestamp), timeFmt), formatAge(Date.parse(observation.timestamp), nowMs))}`;
+  } else {
+    const a = aqhiOf(hour);
+    if (a?.source === 'eccc' && hour.aqhi) {
+      aqhiValue = formatAqhi(hour.aqhi);
+      aqhiCategory = hour.aqhi.category ?? DataStrings.unavailable;
+      provenance = `${DataStrings.communityLine(hour.aqhi.community, hour.aqhi.distanceKm)} · ${DataStrings.forecastFor(clock)}`;
+    } else if (a?.source === 'estimate' && hour.aqhiEstimate) {
+      aqhiValue = formatAqhi(hour.aqhiEstimate);
+      aqhiCategory = categoryFor(hour.aqhiEstimate.value) ?? DataStrings.unavailable;
+      provenance = `${DataStrings.modelSource} · ${DataStrings.forecastFor(clock)}`;
+    }
+  }
+
+  const pollutants = [
+    { k: SheetStrings.airPollutantKeys.pm25, v: formatValue(w?.pm25 ?? null, 1) },
+    { k: SheetStrings.airPollutantKeys.pm10, v: formatValue(w?.pm10 ?? null, 1) },
+    { k: SheetStrings.airPollutantKeys.ozone, v: formatValue(w?.ozoneUgm3 ?? null, 0) },
+    { k: SheetStrings.airPollutantKeys.no2, v: formatValue(w?.nitrogenDioxideUgm3 ?? null, 1) },
   ];
 
-  let provenance: string = DataStrings.unavailable;
-  if (observation) {
-    provenance = `${DataStrings.communityLine(observation.community, observation.distanceKm)} · ${DataStrings.observedAt(formatClock(Date.parse(observation.timestamp), timeFmt), formatAge(Date.parse(observation.timestamp), nowMs))}`;
-  } else if (estimate && estimateEpoch !== null) {
-    provenance = `${DataStrings.modelSource} · ${DataStrings.forecastFor(formatClock(estimateEpoch, timeFmt))}`;
-  }
+  const other = [
+    { k: SheetStrings.airOtherKeys.feelsLike, v: formatValue(w?.apparentTemperatureC ?? null, 0, ' °C') },
+    { k: SheetStrings.airOtherKeys.gusts, v: formatValue(w?.windGustsKmh ?? null, 0, ' km/h') },
+    { k: SheetStrings.airOtherKeys.rainChance, v: formatValue(w?.precipitationProbabilityPct ?? null, 0, '%') },
+    { k: SheetStrings.airOtherKeys.uv, v: formatValue(w?.uvIndex ?? null, 0) },
+  ];
+
+  const notes = observation?.specialNotes ?? null;
 
   return (
     <View style={styles.airBody}>
+      <View style={styles.aqhiTile}>
+        <Text style={styles.statKey}>{SheetStrings.airAqhiKey}</Text>
+        <View style={styles.aqhiRow}>
+          <Text style={styles.statValue}>{aqhiValue}</Text>
+          <Text style={styles.aqhiCategory}>{aqhiCategory}</Text>
+        </View>
+        <Text style={styles.statUnit}>{provenance}</Text>
+      </View>
+
+      <Text style={styles.sectionLabel}>{SheetStrings.airPollutantsLabel}</Text>
       <View style={styles.statRow}>
-        {stats.map((s) => (
+        {pollutants.map((s) => (
           <View key={s.k} style={styles.statTile}>
             <Text style={styles.statKey}>{s.k}</Text>
-            <Text style={styles.statValue}>{s.v}</Text>
-            <Text style={styles.statUnit}>{s.u}</Text>
+            <Text style={styles.statValueSmall}>{s.v}</Text>
+            <Text style={styles.statUnit}>{SheetStrings.airPollutantUnit}</Text>
+          </View>
+        ))}
+      </View>
+      <Text style={styles.sourceLine}>{SheetStrings.airFormulaNote}</Text>
+
+      {notes && (
+        <>
+          <Text style={styles.sectionLabel}>{SheetStrings.airNotesLabel}</Text>
+          <Text style={styles.notes}>{notes}</Text>
+        </>
+      )}
+
+      <Text style={styles.sectionLabel}>{SheetStrings.airOtherLabel}</Text>
+      <View style={styles.kvList}>
+        {other.map((s) => (
+          <View key={s.k} style={styles.kvRow}>
+            <Text style={styles.kvKey}>{s.k}</Text>
+            <Text style={styles.kvValue}>{s.v}</Text>
           </View>
         ))}
       </View>
 
-      {/*
-        The prototype drew composition bars here (PM2.5 / ozone / NO2 as a
-        share of the index). Neither source provides that breakdown, and a
-        share of an index is a derivation in any case, so they are not drawn.
-      */}
-
-      <Text style={styles.sourceLine}>{provenance}</Text>
-      <Text style={styles.sourceLine}>
-        {SheetStrings.airSource(formatClock(nowMs, timeFmt))}
-      </Text>
-    </View>
-  );
-}
-
-/* ── Same air, three verdicts ────────────────────────────────────────────── */
-
-const ACTIVITIES: Activity[] = ['Running', 'Cycling', 'Hiking / Walking'];
-
-export function ActivitySheetBody({
-  aqhi,
-  prefs,
-  onPick,
-}: {
-  /** The current AQHI, or null when there is none to compare against. */
-  aqhi: number | null;
-  prefs: Prefs;
-  onPick: (activity: Activity) => void;
-}) {
-  return (
-    <View style={styles.rows}>
-      {ACTIVITIES.map((a) => {
-        // Each row is rated as if that sport were the active one.
-        const level = aqhi === null ? null : band(aqhi, { ...prefs, activity: a });
-        const ink = level === null ? Neutral[500] : Verdict.ink[level];
-        return (
-          <Pressable
-            key={a}
-            onPress={() => onPick(a)}
-            accessibilityRole="button"
-            style={styles.actRow}>
-            <View style={[styles.actDot, { backgroundColor: ink }]} />
-            <View style={styles.grow}>
-              <View style={styles.actHead}>
-                <Text style={styles.rowName}>{a}</Text>
-                <Text style={[styles.actWord, { color: ink }]}>
-                  {level === null ? DataStrings.unavailable : Verdict.word[level]}
-                </Text>
-              </View>
-              <Text style={styles.actNote}>{SheetStrings.activityNote[a]}</Text>
-            </View>
-          </Pressable>
-        );
-      })}
+      <Text style={styles.sectionLabel}>{SheetStrings.airSourcesLabel}</Text>
+      <Text style={styles.sourceLine}>{OPEN_METEO_ATTRIBUTION}</Text>
+      <Text style={styles.sourceLine}>{ECCC_ATTRIBUTION}</Text>
     </View>
   );
 }
@@ -348,14 +345,47 @@ const styles = StyleSheet.create({
   searchStatus: { flexDirection: 'row', alignItems: 'center', gap: Space.two, paddingVertical: 12 },
   searchNote: { ...Type.bodySmall, color: Neutral[700], paddingVertical: 12 },
 
-  airBody: { gap: Space.three },
-  statRow: { flexDirection: 'row', gap: Space.three },
-  statTile: {
-    flex: 1,
+  airBody: { gap: Space.two },
+  sectionLabel: {
+    ...Type.capsLabel,
+    letterSpacing: tracking(11, 0.06),
+    color: Neutral[600],
+    marginTop: Space.two,
+  },
+  aqhiTile: {
     backgroundColor: Neutral[200],
     borderRadius: Radius.md,
     padding: Space.three,
   },
+  aqhiRow: { flexDirection: 'row', alignItems: 'baseline', gap: Space.two },
+  aqhiCategory: { ...Type.rowLabel, color: Neutral[800] },
+  statRow: { flexDirection: 'row', gap: Space.two },
+  statTile: {
+    flex: 1,
+    minWidth: 0,
+    backgroundColor: Neutral[200],
+    borderRadius: Radius.md,
+    padding: Space.two,
+  },
+  statValueSmall: {
+    fontFamily: Type.pageTitle.fontFamily,
+    fontSize: 20,
+    lineHeight: 20 * 1.1,
+    color: Palette.text,
+    marginTop: 4,
+  },
+  notes: { ...Type.bodySmall, color: Palette.text, lineHeight: 13 * 1.45 },
+  kvList: { gap: 2 },
+  kvRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    paddingVertical: 8,
+    borderTopWidth: 1.5,
+    borderTopColor: Palette.divider,
+  },
+  kvKey: { ...Type.bodySmall, color: Neutral[700] },
+  kvValue: { ...Type.rowLabel, color: Palette.text },
   statKey: {
     ...Type.capsLabel,
     letterSpacing: tracking(11, 0.06),
@@ -370,17 +400,4 @@ const styles = StyleSheet.create({
   },
   statUnit: { ...Type.caption, color: Neutral[700] },
   sourceLine: { ...Type.caption, color: Neutral[600], lineHeight: 12 * 1.45 },
-
-  actRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Space.three,
-    paddingVertical: 13,
-    borderTopWidth: 1.5,
-    borderTopColor: Palette.divider,
-  },
-  actDot: { width: 8, height: 8, borderRadius: 4, marginTop: 7 },
-  actHead: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  actWord: { ...Type.caption, fontFamily: Type.rowLabel.fontFamily, letterSpacing: tracking(12, 0.04) },
-  actNote: { ...Type.bodySmall, color: Neutral[700], lineHeight: 13 * 1.4, marginTop: 2 },
 });

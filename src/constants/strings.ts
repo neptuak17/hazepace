@@ -155,7 +155,6 @@ export const TodayStrings = {
   },
 
   airLink: "What's in the air →",
-  comparisonRow: 'Same air, three verdicts',
 } as const;
 
 /* ── Map ─────────────────────────────────────────────────────────────────── */
@@ -345,54 +344,29 @@ export const SheetStrings = {
   searching: 'Searching…',
   searchEmpty: (query: string) => `No places found for “${query}”`,
   searchError: 'Place search did not respond. Check your connection and try again.',
-  airTitle: "What's in the air",
-  activityTitle: 'Same air, three verdicts',
-
-  airStatKeys: {
+  /** The air sheet follows the hour selected in the hour-by-hour chart. */
+  airTitle: (time: string) => `What's in the air · ${time}`,
+  airAqhiKey: 'AQHI',
+  airPollutantsLabel: 'Pollutants',
+  airPollutantKeys: {
     pm25: 'PM2.5',
-    aqhi: 'AQHI',
-    rain: 'Rain',
-    visibility: 'Visibility',
+    pm10: 'PM10',
+    ozone: 'Ozone',
+    no2: 'NO₂',
   },
-  airStatUnits: {
-    pm25: 'µg/m³, 1 h mean',
-    rain: 'mm/h, washing out',
-    visibility: 'km, hazy',
+  airPollutantUnit: 'µg/m³',
+  /** Why those three pollutants are listed together. A statement of method. */
+  airFormulaNote: "ECCC's AQHI is calculated from three-hour means of NO₂, ozone and PM2.5.",
+  /** Heading over ECCC's own notes, shown verbatim when they publish any. */
+  airNotesLabel: 'Notes from Environment and Climate Change Canada',
+  airOtherLabel: 'Also this hour',
+  airOtherKeys: {
+    feelsLike: 'Feels like',
+    gusts: 'Wind gusts',
+    rainChance: 'Chance of rain',
+    uv: 'UV index',
   },
-
-  /**
-   * The AQHI band name.
-   *
-   * The design called these "risk bands". That is health framing, so the band
-   * is named without it — the number and its band, not a claim about what it
-   * does to the reader.
-   */
-  aqhiBandName: (aqhi: number): string => {
-    if (aqhi <= 3) return 'low band';
-    if (aqhi <= 6) return 'moderate band';
-    if (aqhi <= 10) return 'high band';
-    return 'very high band';
-  },
-
-  airBars: [
-    { k: 'PM2.5 (wildfire smoke)', v: '86% of the index', pct: 86 },
-    { k: 'Ozone', v: '9%', pct: 9 },
-    { k: 'NO₂ (traffic)', v: '5%', pct: 5 },
-  ],
-  airSource: (time: string) =>
-    `FireSmoke.ca (BlueSky) plume model · Environment Canada AQHI & hourly weather · PurpleAir #4412, Vernon Bench. Updated ${time}.`,
-
-  /**
-   * Why the same air rates differently per sport.
-   *
-   * The design's cycling note ended "the biggest total dose". Exposure framing
-   * is a health claim, so it names the time spent instead.
-   */
-  activityNote: {
-    Running: 'Strenuous — the row ECCC writes its guidance for. Not before the inversion lifts.',
-    Cycling: 'Strenuous, and for hours at a time — a long ride spends the most time in it.',
-    'Hiking / Walking': 'Not strenuous. An hour on the bench is defensible.',
-  } as Record<Activity, string>,
+  airSourcesLabel: 'Sources',
 } as const;
 
 /* ── Launch ──────────────────────────────────────────────────────────────── */

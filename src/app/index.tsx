@@ -17,7 +17,7 @@ import { AppHeader } from '@/components/app-header';
 import { Icon } from '@/components/icon';
 import { usePlacesSheet } from '@/components/places-sheet';
 import { Sheet } from '@/components/sheet';
-import { ActivitySheetBody, AirSheetBody } from '@/components/sheets';
+import { AirSheetBody } from '@/components/sheets';
 import {
   Accent,
   Accent2,
@@ -70,7 +70,6 @@ export default function TodayScreen() {
   const { live, aqhi, fetchedAt, refreshing, refresh, now: nowMs, place } = useConditions();
   const placesSheet = usePlacesSheet();
   const [airOpen, setAirOpen] = useState(false);
-  const [actsOpen, setActsOpen] = useState(false);
 
   const now = fractionalHour(nowMs);
   const hours = todayHours(live, nowMs);
@@ -362,20 +361,6 @@ export default function TodayScreen() {
           </View>
         </View>
 
-        {/*
-          The prototype defines this sheet but never wires a trigger to it. The
-          handoff describes a comparison row on Today that opens it, so that is
-          what this is; its treatment follows the best-window pill.
-        */}
-        <Pressable
-          onPress={() => setActsOpen(true)}
-          accessibilityRole="button"
-          style={styles.comparisonRow}>
-          <Icon name="bars" size={18} color={Neutral[700]} />
-          <Text style={styles.comparisonText}>{TodayStrings.comparisonRow}</Text>
-          <Icon name="chevronRight" size={17} color={Neutral[600]} />
-        </Pressable>
-
         <View style={styles.attributionBlock}>
           <Text style={styles.attribution}>{Attribution.today}</Text>
           <Text style={styles.attribution}>{OPEN_METEO_ATTRIBUTION}</Text>
@@ -388,30 +373,19 @@ export default function TodayScreen() {
         </View>
       </ScrollView>
 
-      <Sheet visible={airOpen} title={SheetStrings.airTitle} onClose={() => setAirOpen(false)}>
+      <Sheet
+        visible={airOpen}
+        title={SheetStrings.airTitle(formatHour(selected.hour, settings.timeFmt))}
+        onClose={() => setAirOpen(false)}>
         <AirSheetBody
+          hour={selected}
+          isCurrentHour={Math.floor(now) === selected.hour}
           observation={observation}
-          estimate={observation ? null : nowEstimate}
-          estimateEpoch={nowHour?.epoch ?? null}
-          weather={nowWeather}
           timeFmt={settings.timeFmt}
           nowMs={nowMs}
         />
       </Sheet>
 
-      <Sheet
-        visible={actsOpen}
-        title={SheetStrings.activityTitle}
-        onClose={() => setActsOpen(false)}>
-        <ActivitySheetBody
-          aqhi={nowAqhi}
-          prefs={prefs}
-          onPick={(a) => {
-            setActivity(a);
-            setActsOpen(false);
-          }}
-        />
-      </Sheet>
     </View>
   );
 }
@@ -538,18 +512,6 @@ const styles = StyleSheet.create({
     fontFamily: Type.rowLabel.fontFamily,
     color: Accent[700],
   },
-
-  comparisonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: Neutral[200],
-    borderRadius: Radius.pill,
-    paddingVertical: 12,
-    paddingHorizontal: Space.four,
-    minHeight: 44,
-  },
-  comparisonText: { ...Type.pillLabel, flex: 1, color: Neutral[800] },
 
   attributionBlock: { gap: 4 },
   attribution: { ...Type.caption, color: Neutral[600], lineHeight: 12 * 1.4 },
