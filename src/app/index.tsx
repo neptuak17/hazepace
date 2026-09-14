@@ -64,6 +64,8 @@ const ACTIVITIES: Activity[] = ['Running', 'Cycling', 'Hiking / Walking'];
 const CHART_HEIGHT = 140;
 const BAR_BASE = 16;
 const BAR_SCALE = 1.16;
+/** The selection ring's stroke, and how far outside the bar it sits. */
+const RING_WIDTH = 2.5;
 
 export default function TodayScreen() {
   const { settings, activity, setActivity, prefs } = useSettings();
@@ -291,9 +293,16 @@ export default function TodayScreen() {
                   />
                   {/* The design rings the selected bar with a box-shadow spread.
                       RN has no outline, so the ring is a sibling inset outward
-                      by its own width to sit outside the bar rather than eat
-                      into it. */}
-                  {isSelected && <View pointerEvents="none" style={[styles.barRing, { height }]} />}
+                      by its own width on every side — the height is the bar's
+                      plus one ring width top and bottom, to match the
+                      left/right/bottom offsets — so it sits outside the bar
+                      rather than eating into it. */}
+                  {isSelected && (
+                    <View
+                      pointerEvents="none"
+                      style={[styles.barRing, { height: height + RING_WIDTH * 2 }]}
+                    />
+                  )}
                 </Pressable>
               );
             })}
@@ -473,10 +482,10 @@ const styles = StyleSheet.create({
   bar: { borderRadius: Radius.pill },
   barRing: {
     position: 'absolute',
-    left: -2.5,
-    right: -2.5,
-    bottom: -2.5,
-    borderWidth: 2.5,
+    left: -RING_WIDTH,
+    right: -RING_WIDTH,
+    bottom: -RING_WIDTH,
+    borderWidth: RING_WIDTH,
     borderColor: Palette.text,
     borderRadius: Radius.pill,
   },
