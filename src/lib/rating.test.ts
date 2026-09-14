@@ -69,7 +69,7 @@ describe('band — ECCC lookup (decision-rules.md §3.1)', () => {
     const table: Record<keyof typeof CATEGORY_VALUES, [Level, Level, Level, Level]> = {
       Low: [0, 0, 0, 0],
       Moderate: [0, 0, 1, 0],
-      High: [1, 0, 2, 1],
+      High: [1, 0, 2, 0],
       'Very High': [2, 2, 2, 2],
     };
     const cells: [Sensitivity, Activity][] = [
@@ -121,7 +121,7 @@ describe('band — ECCC lookup (decision-rules.md §3.1)', () => {
     assert.equal(band(6.4, prefs()), 0, '6.4 rounds to 6, Moderate');
     assert.equal(band(6.5, prefs()), 1, '6.5 rounds to 7, High');
     // Very High starts above 10: everyone is 2 there.
-    assert.equal(band(10.4, reactiveWalk), 1, '10.4 rounds to 10, High');
+    assert.equal(band(10.4, reactiveWalk), 0, '10.4 rounds to 10, High — not strenuous');
     assert.equal(band(10.5, reactiveWalk), 2, '10.5 rounds to 11, Very High');
     assert.equal(band(10.5, prefs({ activity: 'Hiking / Walking' })), 2, 'Very High is red for everyone');
   });

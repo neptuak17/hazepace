@@ -142,26 +142,41 @@ The air level is then read from this table, by category, ECCC population
 | --- | --- | --- | --- | --- |
 | Low | 0 | 0 | 0 | 0 |
 | Moderate | 0 | 0 | 1 | 0 |
-| High | 1 | 0 | 2 | 1 |
+| High | 1 | 0 | 2 | 0 |
 | Very High | 2 | 2 | 2 | 2 |
 
-Each cell follows the corresponding line of ECCC's *AQHI health messages*
-table: level 1 where ECCC says *consider reducing or rescheduling strenuous
-activities*, level 2 where it says *reduce or reschedule* or *avoid*, and
-level 0 where the guidance does not apply to that population and activity.
+Each cell follows the corresponding line of ECCC's guidance, checked
+against the page on 2026-09-14: level 1 where ECCC says *consider reducing
+or rescheduling strenuous outdoor activities*, level 2 where it says *reduce
+or reschedule* or *avoid*, and level 0 where the guidance does not apply to
+that population and activity. ECCC's wording, verbatim:
+
+| Category | General population | At-risk population |
+| --- | --- | --- |
+| Low | enjoy your usual outdoor activities | enjoy your usual outdoor activities |
+| Moderate | continue usual outdoor activities unless you have symptoms like coughing and throat irritation | consider reducing or rescheduling strenuous outdoor activities if you have symptoms like coughing or throat irritation |
+| High | consider reducing or rescheduling strenuous outdoor activities if you have symptoms like coughing and throat irritation | reduce or reschedule strenuous outdoor activities |
+| Very High | reduce or reschedule strenuous outdoor activities, especially if you have symptoms like coughing and throat irritation | avoid strenuous activities outdoors |
+
+Two of the level-1 cells (Moderate · at risk, High · general) are conditional
+in ECCC's text — *if you have symptoms*. The app cannot know that, so it
+shows the caution and leaves the judgement to the reader.
+
 One explicit override: **Very High is level 2 for everyone**, including
-non-strenuous activity by the general population, where ECCC's wording is
-only "reduce or reschedule strenuous activities". Above 10 the app does not
-show green to anyone.
+non-strenuous activity, where ECCC's wording is only about strenuous
+activity. Above 10 the app does not show green to anyone. Every other cell
+is ECCC's as written.
 
 There are no multipliers. The prototype's ventilation (1.0 / 1.5 / 1.7) and
 sensitivity (0.85 / 1.0 / 1.25) factors, and its fixed 5.5 / 10.5 lines, are
 gone: every number in the air rule is ECCC's.
 
-Source: Environment and Climate Change Canada, "Understanding Air Quality
-Health Index messages" (the health-messages table by category and
-population). The category thresholds are the same ones `aqhi.ts` uses to
-band a reading for display, so the two cannot drift apart.
+Source: Environment and Climate Change Canada, "About Air Quality Health
+Index" — <https://www.canada.ca/en/environment-climate-change/services/air-quality-health-index/about.html>
+(the former "Understanding AQHI messages" page redirects here). ECCC defines
+at risk as children, people over 65 and those with health conditions. The
+category thresholds are the same ones `aqhi.ts` uses to band a reading for
+display, so the two cannot drift apart.
 
 ### 3.2 Four factors
 
@@ -296,11 +311,11 @@ Base readings are AQHI 2, 20 °C, 10 km/h, 0 mm/h. The "Limits" column reads
 | 5 | Air: High (AQHI 8) — general strenuous is 1 | 8 | 20 | 10 | 0 | Cycling | Normal | Light · 32 · 32 | High | **1** | smoke |
 | 6 | Air: High (AQHI 8) — general walking is 0 | 8 | 20 | 10 | 0 | Hiking / Walking | Normal | Light · 32 · 32 | High | **0** | — |
 | 7 | Air: High (AQHI 8) — at-risk strenuous is 2 | 8 | 20 | 10 | 0 | Cycling | Reactive | Light · 32 · 32 | High | **2** | smoke |
-| 8 | Air: High (AQHI 8) — at-risk walking is 1 | 8 | 20 | 10 | 0 | Hiking / Walking | Reactive | Light · 32 · 32 | High | **1** | smoke |
+| 8 | Air: High (AQHI 8) — at-risk walking is 0 | 8 | 20 | 10 | 0 | Hiking / Walking | Reactive | Light · 32 · 32 | High | **0** | — |
 | 9 | Air: Very High (AQHI 11) — general walking is 2 (the override) | 11 | 20 | 10 | 0 | Hiking / Walking | Normal | Light · 32 · 32 | Very High | **2** | smoke |
 | 10 | Air: boundary 6.4 rounds to 6, Moderate | 6.4 | 20 | 10 | 0 | Cycling | Normal | Light · 32 · 32 | Moderate | **0** | — |
 | 11 | Air: boundary 6.5 rounds to 7, High | 6.5 | 20 | 10 | 0 | Cycling | Normal | Light · 32 · 32 | High | **1** | smoke |
-| 12 | Air: boundary 10.4 rounds to 10, High — at-risk walking | 10.4 | 20 | 10 | 0 | Hiking / Walking | Reactive | Light · 32 · 32 | High | **1** | smoke |
+| 12 | Air: boundary 10.4 rounds to 10, High — at-risk walking | 10.4 | 20 | 10 | 0 | Hiking / Walking | Reactive | Light · 32 · 32 | High | **0** | — |
 | 13 | Air: boundary 10.5 rounds to 11, Very High | 10.5 | 20 | 10 | 0 | Hiking / Walking | Reactive | Light · 32 · 32 | Very High | **2** | smoke |
 | 14 | Rain: just under the Light amber edge (0.93 < 0.94) | 2 | 20 | 10 | 0.93 | Cycling | Normal | Light · 32 · 32 | Low | **0** | — |
 | 15 | Rain: on the Light amber edge | 2 | 20 | 10 | 0.94 | Cycling | Normal | Light · 32 · 32 | Low | **1** | rainfall |

@@ -78,14 +78,15 @@ export const STRENUOUS: Record<Activity, boolean> = {
  * Indexed [category][population][strenuous]. Level 1 where ECCC says
  * "consider reducing or rescheduling strenuous activities", level 2 where it
  * says "reduce or reschedule" or "avoid", 0 where the guidance does not
- * reach that population and activity. Very High is 2 for everyone — the one
- * cell that goes beyond ECCC's wording, so that nothing above 10 is green.
+ * reach that population and activity. Very High is 2 for everyone — the
+ * only cells that go beyond ECCC's wording, so that nothing above 10 is
+ * green. Checked against ECCC's page on 2026-09-14.
  * The full table, with its sourcing, is decision-rules.md §3.1.
  */
 const AIR_LEVEL: Record<AqhiCategory, Record<Sensitivity, { strenuous: Level; other: Level }>> = {
   Low: { Normal: { strenuous: 0, other: 0 }, Reactive: { strenuous: 0, other: 0 } },
   Moderate: { Normal: { strenuous: 0, other: 0 }, Reactive: { strenuous: 1, other: 0 } },
-  High: { Normal: { strenuous: 1, other: 0 }, Reactive: { strenuous: 2, other: 1 } },
+  High: { Normal: { strenuous: 1, other: 0 }, Reactive: { strenuous: 2, other: 0 } },
   'Very High': { Normal: { strenuous: 2, other: 2 }, Reactive: { strenuous: 2, other: 2 } },
 };
 
