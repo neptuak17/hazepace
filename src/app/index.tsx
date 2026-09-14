@@ -30,7 +30,14 @@ import {
   Verdict,
   tracking,
 } from '@/constants/design-tokens';
-import { Attribution, Common, DataStrings, SheetStrings, TodayStrings } from '@/constants/strings';
+import {
+  Attribution,
+  Common,
+  DataStrings,
+  HowItWorksStrings,
+  SheetStrings,
+  TodayStrings,
+} from '@/constants/strings';
 import { ECCC_ATTRIBUTION, categoryFor } from '@/lib/aqhi';
 import { useConditions } from '@/lib/conditions';
 import {
@@ -49,12 +56,15 @@ import {
 import { OPEN_METEO_ATTRIBUTION } from '@/lib/open-meteo';
 import {
   bestWindow,
+  factorLevels,
   formatHour,
   formatTick,
   judge,
   quality,
   type Activity,
+  type FactorLevels,
   type HourReading,
+  type Level,
 } from '@/lib/rating';
 import { useSettings } from '@/lib/settings';
 
@@ -153,29 +163,61 @@ export default function TodayScreen() {
     hours.find((h) => h.hour === selectedHour) ?? hours[0];
   const selectedReading = readingOf(selected);
   const selectedVerdict = selectedReading ? judge(selectedReading, prefs) : null;
+  // Each factor's own level, so the stat that is driving the verdict can be
+  // tinted. Null when the model could not run on this hour.
+  const selectedFactors: FactorLevels | null = selectedReading
+    ? factorLevels(selectedReading, prefs)
+    : null;
   const w = selected.weather;
   const selectedAqhi = aqhiOf(selected);
 
-  const stats = [
+  // A stat's `level` is its factor's level when the model judged it; stats
+  // the model does not read (humidity, the category) have none. Only amber
+  // and red draw a chip — a clean stat says nothing, on purpose.
+  const stats: { k: string; v: string; level: Level | null }[] = [
     {
       k: TodayStrings.statKeys.aqhi,
       v: formatAqhi(selectedAqhi?.source === 'estimate' ? selected.aqhiEstimate : selected.aqhi),
+      level: selectedFactors?.air ?? null,
     },
-    { k: TodayStrings.statKeys.temp, v: formatValue(w?.temperatureC ?? null, 0, '°C') },
+    {
+      k: TodayStrings.statKeys.temp,
+      v: formatValue(w?.temperatureC ?? null, 0, '°C'),
+      level: selectedFactors?.heat ?? null,
+    },
     {
       k: TodayStrings.statKeys.wind,
       v:
         w?.windSpeedKmh === null || w?.windSpeedKmh === undefined
           ? DataStrings.unavailable
           : `${compass(w.windDirectionDeg) ?? ''} ${Math.round(w.windSpeedKmh)}`.trim(),
+      level: selectedFactors?.wind ?? null,
     },
-    { k: TodayStrings.statKeys.rain, v: formatValue(w?.precipitationMm ?? null, 1, ' mm') },
-    { k: TodayStrings.statKeys.humidity, v: formatValue(w?.relativeHumidityPct ?? null, 0, '%') },
+    {
+      k: TodayStrings.statKeys.rain,
+      v: formatValue(w?.precipitationMm ?? null, 1, ' mm'),
+      level: selectedFactors?.rain ?? null,
+    },
+    {
+      k: TodayStrings.statKeys.humidity,
+      v: formatValue(w?.relativeHumidityPct ?? null, 0, '%'),
+      level: null,
+    },
     {
       k: TodayStrings.statKeys.category,
       v: categoryFor(selectedAqhi?.value ?? null) ?? DataStrings.unavailable,
+      level: null,
     },
   ];
+
+  const pillText = !selectedVerdict
+    ? DataStrings.unavailable
+    : selectedVerdict.driver
+      ? TodayStrings.pillWithDriver(
+          Verdict.word[selectedVerdict.level],
+          HowItWorksStrings.driverWord[selectedVerdict.driver],
+        )
+      : Verdict.word[selectedVerdict.level];
 
   return (
     <View style={styles.screen}>
@@ -336,19 +378,45 @@ export default function TodayScreen() {
                       : Neutral[400],
                   },
                 ]}>
-                <Text style={styles.readoutPillText}>
-                  {selectedVerdict ? Verdict.word[selectedVerdict.level] : DataStrings.unavailable}
-                </Text>
+                <Text style={styles.readoutPillText}>{pillText}</Text>
               </View>
             </View>
 
             <View style={styles.statGrid}>
-              {stats.map((s) => (
-                <View key={s.k} style={styles.stat}>
-                  <Text style={styles.statKey}>{s.k}</Text>
-                  <Text style={styles.statValue}>{s.v}</Text>
-                </View>
-              ))}
+              {stats.map((s) => {
+                // Every stat carries the same padding so a chip appearing
+                // changes only its colour, never the grid's layout.
+                const flagged = s.level !== null && s.level > 0;
+                return (
+                  <View
+                    key={s.k}
+                    accessible
+                    accessibilityLabel={TodayStrings.statLabel(
+                      s.k,
+                      s.v,
+                      flagged ? Verdict.word[s.level as Level] : null,
+                    )}
+                    style={[
+                      styles.stat,
+                      flagged && { backgroundColor: Verdict.tint[s.level as Level] },
+                    ]}>
+                    <Text
+                      style={[
+                        styles.statKey,
+                        flagged && { color: Verdict.deepInk[s.level as Level] },
+                      ]}>
+                      {s.k}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.statValue,
+                        flagged && { color: Verdict.deepInk[s.level as Level] },
+                      ]}>
+                      {s.v}
+                    </Text>
+                  </View>
+                );
+              })}
             </View>
 
             {selectedAqhi?.source === 'eccc' && selected.aqhi && (
@@ -510,8 +578,9 @@ const styles = StyleSheet.create({
   },
   readoutProvenance: { ...Type.caption, color: Neutral[600], marginTop: 10 },
 
-  statGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10, columnGap: 18, marginTop: 10 },
-  stat: { minWidth: 62 },
+  statGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 6, columnGap: 10, marginTop: 10 },
+  // Padded and rounded whether or not it is tinted, so the grid never moves.
+  stat: { minWidth: 62, paddingHorizontal: 8, paddingVertical: 4, borderRadius: Radius.sm },
   statKey: { ...Type.capsLabel, letterSpacing: tracking(11, 0.06), color: Neutral[600] },
   statValue: { ...Type.cardTitle, color: Palette.text },
 

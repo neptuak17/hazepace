@@ -149,6 +149,11 @@ export const TodayStrings = {
   chartHint: 'taller is better',
   barLabel: (time: string, aqhi: number) => `${time}, AQHI ${aqhi}`,
   now: ' · now',
+  /** The verdict pill in the readout names the driver: "AMBER · wind". */
+  pillWithDriver: (word: string, driver: string) => `${word} · ${driver}`,
+  /** Spoken form of a stat, with its factor's level when it has one. */
+  statLabel: (key: string, value: string, level: string | null) =>
+    level ? `${key}, ${value}, ${level}` : `${key}, ${value}`,
 
   statKeys: {
     aqhi: 'AQHI',
