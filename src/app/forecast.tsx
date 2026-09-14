@@ -27,7 +27,7 @@ import {
   Verdict,
   tracking,
 } from '@/constants/design-tokens';
-import { Attribution, DataStrings, ForecastStrings } from '@/constants/strings';
+import { DataStrings, ForecastStrings } from '@/constants/strings';
 import { ECCC_ATTRIBUTION } from '@/lib/aqhi';
 import { useConditions } from '@/lib/conditions';
 import { DAY_SLOTS, formatDayName, formatShortDate, liveDays } from '@/lib/live';
@@ -137,7 +137,6 @@ export default function ForecastScreen() {
         </View>
 
         <View style={styles.attributionBlock}>
-          <Text style={styles.attribution}>{Attribution.forecast}</Text>
           <Text style={styles.attribution}>{OPEN_METEO_ATTRIBUTION}</Text>
           <Text style={styles.attribution}>{ECCC_ATTRIBUTION}</Text>
         </View>

@@ -380,34 +380,30 @@ export const LaunchStrings = {
 
 /**
  * Source attribution, which the project requires to stay visible in the UI.
- * All of it is public government data plus one community sensor network.
+ *
+ * The licence lines themselves — OPEN_METEO_ATTRIBUTION (CC BY 4.0) and
+ * ECCC_ATTRIBUTION — live beside the code that fetches from each source and
+ * are rendered on every data screen. What is here is the prose around them.
+ * Two sources only; nothing else feeds the app.
  */
 export const Attribution = {
-  today:
-    'Air data follows the Canadian AQHI. Sources: Environment and Climate Change Canada, FireSmoke.ca — BlueSky Canada, BC Ministry of Environment, PurpleAir, BC Wildfire Service.',
-  map: 'Smoke plume model: FireSmoke.ca — BlueSky Canada. Air quality: Environment and Climate Change Canada, BC Ministry of Environment, PurpleAir. Fire perimeters: BC Wildfire Service.',
-  forecast:
-    'Forecasts: Environment and Climate Change Canada. Smoke plume model: FireSmoke.ca — BlueSky Canada.',
+  today: 'Air quality follows the Canadian AQHI.',
   sources: [
     {
       name: 'Environment and Climate Change Canada',
-      what: 'AQHI observations and forecasts, plus hourly temperature, wind and precipitation.',
+      what: 'AQHI observations and hourly AQHI forecasts for the nearest reporting community, and the AQHI formula and guidance the app applies.',
     },
     {
-      name: 'FireSmoke.ca — BlueSky Canada',
-      what: 'The wildfire smoke plume model behind the map and the forward scrub.',
+      name: 'Open-Meteo — weather',
+      what: 'Hourly temperature, wind, gusts, precipitation, humidity and UV for the exact coordinate.',
     },
     {
-      name: 'BC Ministry of Environment air monitoring',
-      what: 'The reference PM2.5 stations that anchor the valley readings.',
+      name: 'Open-Meteo — air quality',
+      what: 'Hourly PM2.5, PM10, ozone and NO₂ from the Copernicus CAMS model, and the AQHI estimated from them where ECCC has no reading.',
     },
     {
-      name: 'PurpleAir community sensors',
-      what: 'Fills the gaps between stations so zones a few kilometres apart read separately.',
-    },
-    {
-      name: 'BC Wildfire Service',
-      what: 'Active fire perimeters and advisories shown on the map.',
+      name: 'Open-Meteo — place search',
+      what: 'Turns a typed town or city into a coordinate when you choose a place.',
     },
   ],
 } as const;

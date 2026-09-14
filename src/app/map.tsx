@@ -25,7 +25,7 @@ import {
   Verdict,
   tracking,
 } from '@/constants/design-tokens';
-import { Attribution, Common, DataStrings, HeaderStrings, MapStrings } from '@/constants/strings';
+import { Common, DataStrings, HeaderStrings, MapStrings } from '@/constants/strings';
 import { ECCC_ATTRIBUTION } from '@/lib/aqhi';
 import { useConditions } from '@/lib/conditions';
 import { FAR_COMMUNITY_KM, currentHour, formatAge, formatAqhi, formatClock } from '@/lib/live';
@@ -182,7 +182,6 @@ export default function MapScreen() {
         </View>
 
         <View style={styles.attributionBlock}>
-          <Text style={styles.attribution}>{Attribution.map}</Text>
           <Text style={styles.attribution}>{OPEN_METEO_ATTRIBUTION}</Text>
           <Text style={styles.attribution}>{ECCC_ATTRIBUTION}</Text>
         </View>
