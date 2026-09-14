@@ -6,16 +6,16 @@
  * until both exist the area is left as a labelled placeholder rather than
  * approximated, because a fake plume would be a fake reading.
  *
- * The design had three sub-community zones. AQHI is one value per community
- * and no finer source exists, so the zone card holds one row: the community
- * the reading is from, how far away it is, and how old it is.
+ * The design had three sub-community zones and a plume time scrubber. AQHI
+ * is one value per community and no finer source exists, and there is no
+ * plume to scrub, so the page shows current conditions only: a card with
+ * the AQHI the verdict is using, and — when that is the model's number — the
+ * nearest ECCC community within the Map's wider range, for context.
  */
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/app-header';
 import {
-  Accent,
   Card,
   Neutral,
   Palette,
@@ -26,37 +26,125 @@ import {
   tracking,
 } from '@/constants/design-tokens';
 import { Common, DataStrings, HeaderStrings, MapStrings } from '@/constants/strings';
-import { ECCC_ATTRIBUTION } from '@/lib/aqhi';
+import { ECCC_ATTRIBUTION, type AqhiSnapshot } from '@/lib/aqhi';
 import { useConditions } from '@/lib/conditions';
 import { FAR_COMMUNITY_KM, currentHour, formatAge, formatAqhi, formatClock } from '@/lib/live';
 import { OPEN_METEO_ATTRIBUTION } from '@/lib/open-meteo';
-import { band } from '@/lib/rating';
+import { band, type Level, type Prefs, type TimeFormat } from '@/lib/rating';
 import { useSettings } from '@/lib/settings';
 
+/** One row of the card: a banded AQHI circle, a name, a line of provenance. */
+function ZoneRow({
+  value,
+  level,
+  name,
+  meta,
+}: {
+  value: string;
+  level: Level | null;
+  name: string;
+  meta: string;
+}) {
+  const ink = level === null ? Neutral[600] : Verdict.ink[level];
+  return (
+    <View style={styles.zoneRow}>
+      <View
+        style={[
+          styles.zoneCircle,
+          { backgroundColor: level === null ? Neutral[200] : Verdict.tint[level] },
+        ]}>
+        <Text style={[styles.zoneNumber, { color: ink }]}>{value}</Text>
+        <Text
+          style={[
+            styles.zoneCaps,
+            { color: level === null ? Neutral[600] : Verdict.deepInk[level] },
+          ]}>
+          {Common.aqhi}
+        </Text>
+      </View>
+      <View style={styles.zoneNameWrap}>
+        <Text style={styles.zoneName} numberOfLines={1}>
+          {name}
+        </Text>
+        <Text style={styles.zoneMeta} numberOfLines={2}>
+          {meta}
+        </Text>
+      </View>
+      <Text style={[styles.zoneWord, { color: ink }]}>
+        {level === null ? DataStrings.unavailable : Verdict.word[level]}
+      </Text>
+    </View>
+  );
+}
+
 /**
- * The plume scrub hours from the design. There is no plume data to scrub, so
- * these chips select nothing yet; they stay so the layout matches.
+ * The row for an ECCC community: its observation, how far, how old. The
+ * name has the line to itself; the distance sits with the time beneath it,
+ * so a long community name cannot push the distance off the end.
  */
-const PLUME_HOURS = [8, 11, 14, 17];
+function communityRow(
+  snapshot: AqhiSnapshot,
+  prefs: Prefs,
+  timeFmt: TimeFormat,
+  nowMs: number,
+): { value: string; level: Level | null; name: string; meta: string } {
+  const observation = snapshot.observation;
+  const level = observation && observation.value !== null ? band(observation.value, prefs) : null;
+  const distance =
+    snapshot.distanceKm > FAR_COMMUNITY_KM
+      ? DataStrings.distanceFar(snapshot.distanceKm)
+      : DataStrings.distance(snapshot.distanceKm);
+  const observed = observation
+    ? DataStrings.observedAt(
+        formatClock(Date.parse(observation.timestamp), timeFmt),
+        formatAge(Date.parse(observation.timestamp), nowMs),
+      )
+    : DataStrings.unavailable;
+  return {
+    value: formatAqhi(observation),
+    level,
+    name: snapshot.community.name,
+    meta: `${distance} · ${observed}`,
+  };
+}
 
 export default function MapScreen() {
   const { settings, prefs } = useSettings();
-  const { aqhi, aqhiCoverage, live, now: nowMs, place } = useConditions();
-  const [plume, setPlume] = useState(0);
+  const { aqhi, aqhiCoverage, aqhiFar, live, now: nowMs, place } = useConditions();
 
-  const observation = aqhi?.observation ?? null;
-  const level = observation?.value === null || observation === null ? null : band(observation.value, prefs);
+  // The rows, in order: the AQHI the verdict is using first, then the
+  // nearest community for context when that is not the same thing.
+  //   ≤ 100 km   community row only (it is what the verdict uses)
+  //   100–200 km model row, then the community row
+  //   > 200 km   model row only
+  const rows: { key: string; value: string; level: Level | null; name: string; meta: string }[] = [];
 
-  // With no ECCC community in range, the row is the model's AQHI for this
-  // hour, named as such, and banded like any other.
-  const nowHour = currentHour(live, nowMs);
-  const estimate = nowHour?.aqhiEstimate ?? null;
-  const estimateLevel = estimate ? band(estimate.value, prefs) : null;
-  const far = aqhi !== null && aqhi.distanceKm > FAR_COMMUNITY_KM;
+  if (aqhiCoverage === 'none') {
+    const nowHour = currentHour(live, nowMs);
+    const estimate = nowHour?.aqhiEstimate ?? null;
+    rows.push({
+      key: 'model',
+      value: formatAqhi(estimate),
+      level: estimate ? band(estimate.value, prefs) : null,
+      name: DataStrings.modelSource,
+      // Same shape as the community row's meta — where, then when — with
+      // "this location" where a community would have a distance.
+      meta:
+        estimate && nowHour
+          ? `${DataStrings.thisLocation} · ${DataStrings.forecastFor(formatClock(nowHour.epoch, settings.timeFmt))}`
+          : DataStrings.unavailable,
+    });
+  }
+
+  const community = aqhi ?? aqhiFar;
+  if (community) {
+    rows.push({ key: 'community', ...communityRow(community, prefs, settings.timeFmt, nowMs) });
+  }
 
   const legendTime = formatClock(nowMs, settings.timeFmt);
   // The legend names where the air reading is for: the ECCC community when
-  // there is one, otherwise the place itself — the same rule as the header.
+  // there is one in the model's range, otherwise the place itself — the
+  // same rule as the header.
   const legendPlace = aqhi?.community.name ?? place?.label ?? HeaderStrings.deviceHeadline;
 
   return (
@@ -66,118 +154,21 @@ export default function MapScreen() {
       <ScrollView style={styles.pane} contentContainerStyle={styles.paneContent}>
         <Text style={styles.title}>{MapStrings.title}</Text>
 
-        <View style={styles.chipRow}>
-          {PLUME_HOURS.map((h, i) => {
-            const on = i === plume;
-            const label = formatClock(new Date(nowMs).setHours(h, 0, 0, 0), settings.timeFmt);
-            return (
-              <Pressable
-                key={h}
-                onPress={() => setPlume(i)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: on }}
-                style={[styles.chip, on ? styles.chipOn : styles.chipOff]}>
-                <Text style={[styles.chipText, { color: on ? Neutral[100] : Neutral[800] }]}>
-                  {label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
         <View style={styles.plate}>
           <Text style={styles.plateTitle}>{MapStrings.plateTitle}</Text>
           <Text style={styles.plateNote}>{MapStrings.plateNote}</Text>
         </View>
 
         <View style={styles.legendRow}>
-          <Text style={styles.legend}>
-            {MapStrings.legend(legendPlace, legendTime)}
-          </Text>
+          <Text style={styles.legend}>{MapStrings.legend(legendPlace, legendTime)}</Text>
         </View>
 
         <View style={styles.card}>
           <Text style={styles.cardKicker}>{MapStrings.communityKicker}</Text>
           <View style={styles.zoneList}>
-            {aqhiCoverage === 'none' ? (
-              <View style={styles.zoneRow}>
-                <View
-                  style={[
-                    styles.zoneCircle,
-                    { backgroundColor: estimateLevel === null ? Neutral[200] : Verdict.tint[estimateLevel] },
-                  ]}>
-                  <Text
-                    style={[
-                      styles.zoneNumber,
-                      { color: estimateLevel === null ? Neutral[600] : Verdict.ink[estimateLevel] },
-                    ]}>
-                    {formatAqhi(estimate)}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.zoneCaps,
-                      { color: estimateLevel === null ? Neutral[600] : Verdict.deepInk[estimateLevel] },
-                    ]}>
-                    {Common.aqhi}
-                  </Text>
-                </View>
-                <View style={styles.zoneNameWrap}>
-                  <Text style={styles.zoneName}>{DataStrings.modelSource}</Text>
-                  <Text style={styles.zoneMeta}>
-                    {estimate && nowHour
-                      ? DataStrings.forecastFor(formatClock(nowHour.epoch, settings.timeFmt))
-                      : DataStrings.unavailable}
-                  </Text>
-                </View>
-              </View>
-            ) : (
-              <View style={styles.zoneRow}>
-                <View
-                  style={[
-                    styles.zoneCircle,
-                    { backgroundColor: level === null ? Neutral[200] : Verdict.tint[level] },
-                  ]}>
-                  <Text
-                    style={[
-                      styles.zoneNumber,
-                      { color: level === null ? Neutral[600] : Verdict.ink[level] },
-                    ]}>
-                    {formatAqhi(observation)}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.zoneCaps,
-                      { color: level === null ? Neutral[600] : Verdict.deepInk[level] },
-                    ]}>
-                    {Common.aqhi}
-                  </Text>
-                </View>
-                <View style={styles.zoneNameWrap}>
-                  <Text style={styles.zoneName}>
-                    {aqhi
-                      ? far
-                        ? DataStrings.communityFar(aqhi.community.name, aqhi.distanceKm)
-                        : DataStrings.communityLine(aqhi.community.name, aqhi.distanceKm)
-                      : DataStrings.unavailable}
-                  </Text>
-                  <Text style={styles.zoneMeta}>
-                    {observation
-                      ? DataStrings.observedAt(
-                          formatClock(Date.parse(observation.timestamp), settings.timeFmt),
-                          formatAge(Date.parse(observation.timestamp), nowMs),
-                        )
-                      : DataStrings.unavailable}
-                  </Text>
-                </View>
-                <Text
-                  style={[
-                    styles.zoneWord,
-                    { color: level === null ? Neutral[600] : Verdict.ink[level] },
-                  ]}>
-                  {level === null ? DataStrings.unavailable : Verdict.word[level]}
-                </Text>
-              </View>
-            )}
+            {rows.map((r) => (
+              <ZoneRow key={r.key} value={r.value} level={r.level} name={r.name} meta={r.meta} />
+            ))}
           </View>
         </View>
 
@@ -201,19 +192,6 @@ const styles = StyleSheet.create({
   },
 
   title: { ...Type.sectionTitle, color: Palette.text },
-
-  chipRow: { flexDirection: 'row', gap: 6 },
-  chip: {
-    flex: 1,
-    minHeight: 40,
-    borderRadius: Radius.pill,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipOn: { backgroundColor: Accent[600], borderColor: Accent[600] },
-  chipOff: { backgroundColor: 'transparent', borderColor: Neutral[300] },
-  chipText: { ...Type.bodySmall, fontFamily: Type.rowLabel.fontFamily },
 
   plate: {
     height: 340,

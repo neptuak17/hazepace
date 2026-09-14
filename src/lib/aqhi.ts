@@ -361,21 +361,21 @@ export function nearestCommunity(
   return best;
 }
 
-/** The closest community, or a no-coverage result past the cutoff. */
-export async function findNearestCommunity(
-  latitude: number,
-  longitude: number,
-): Promise<AqhiResult<NearestCommunity>> {
-  const communities = await fetchCommunities();
-  if (communities.status === 'error') return communities;
-
-  const nearest = nearestCommunity(communities.value, latitude, longitude);
+/**
+ * Applies the distance cutoff to a ranked nearest community.
+ *
+ * Past the cutoff the community is named so the caller can say how far
+ * the nearest one is, but no reading is fetched for it: it describes
+ * somewhere else.
+ */
+export function withinRange(
+  nearest: NearestCommunity | null,
+  maxDistanceKm: number,
+): AqhiResult<NearestCommunity> {
   if (!nearest) {
     return { status: 'no-coverage', nearestName: null, nearestKm: null };
   }
-  if (nearest.distanceKm > MAX_COMMUNITY_DISTANCE_KM) {
-    // Named so the caller can say how far the nearest one is, but the reading
-    // itself is withheld: it describes somewhere else.
+  if (nearest.distanceKm > maxDistanceKm) {
     return {
       status: 'no-coverage',
       nearestName: nearest.community.name,
@@ -383,6 +383,24 @@ export async function findNearestCommunity(
     };
   }
   return { status: 'ok', value: nearest };
+}
+
+/**
+ * The closest community, or a no-coverage result past the cutoff.
+ *
+ * The cutoff defaults to MAX_COMMUNITY_DISTANCE_KM, the rule the rating
+ * model lives by. A caller may widen it for context it will label as such —
+ * the Map does — but the reading it gets back is then not one the model
+ * should see; the provider keeps the two apart.
+ */
+export async function findNearestCommunity(
+  latitude: number,
+  longitude: number,
+  maxDistanceKm: number = MAX_COMMUNITY_DISTANCE_KM,
+): Promise<AqhiResult<NearestCommunity>> {
+  const communities = await fetchCommunities();
+  if (communities.status === 'error') return communities;
+  return withinRange(nearestCommunity(communities.value, latitude, longitude), maxDistanceKm);
 }
 
 /* ── Readings ────────────────────────────────────────────────────────────── */
@@ -496,8 +514,13 @@ export async function fetchForecast(nearest: NearestCommunity): Promise<Fetched<
 export async function fetchAqhi(
   latitude: number,
   longitude: number,
+  options: { maxDistanceKm?: number } = {},
 ): Promise<AqhiResult<AqhiSnapshot>> {
-  const nearest = await findNearestCommunity(latitude, longitude);
+  const nearest = await findNearestCommunity(
+    latitude,
+    longitude,
+    options.maxDistanceKm ?? MAX_COMMUNITY_DISTANCE_KM,
+  );
   if (nearest.status !== 'ok') return nearest;
 
   const [observation, forecast] = await Promise.all([

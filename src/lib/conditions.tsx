@@ -31,8 +31,13 @@ import {
   type ReactNode,
 } from 'react';
 
-import { clearAqhiCache, fetchAqhi, type AqhiSnapshot } from '@/lib/aqhi';
-import { COORDINATE_OVERRIDE, joinLive, type LiveHour } from '@/lib/live';
+import {
+  MAX_COMMUNITY_DISTANCE_KM,
+  clearAqhiCache,
+  fetchAqhi,
+  type AqhiSnapshot,
+} from '@/lib/aqhi';
+import { COORDINATE_OVERRIDE, MAP_COMMUNITY_DISTANCE_KM, joinLive, type LiveHour } from '@/lib/live';
 import { locate } from '@/lib/location';
 import {
   clearConditionsCache,
@@ -61,12 +66,16 @@ export interface ConditionsValue {
   aqhi: AqhiSnapshot | null;
   /**
    * Null while loading or on error. 'none' means ECCC has no community within
-   * range — the weather still loaded and the screens still render, with every
-   * AQHI field unavailable.
+   * the model's range — the weather still loaded and the screens still
+   * render, with the AQHI coming from the estimate.
    */
   aqhiCoverage: 'ok' | 'none' | null;
-  /** How far the nearest community is when coverage is 'none'. */
-  aqhiNearest: { name: string | null; km: number | null } | null;
+  /**
+   * A community beyond the model's range but within the Map's (see
+   * MAP_COMMUNITY_DISTANCE_KM), with its readings. Context only: nothing
+   * that feeds a verdict reads this. Null whenever `aqhi` is set.
+   */
+  aqhiFar: AqhiSnapshot | null;
   failure: ConditionsFailure | null;
   /** The two snapshots joined by instant. Empty until ready. */
   live: LiveHour[];
@@ -105,7 +114,7 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
   const [weather, setWeather] = useState<ConditionsSnapshot | null>(null);
   const [aqhi, setAqhi] = useState<AqhiSnapshot | null>(null);
   const [aqhiCoverage, setAqhiCoverage] = useState<'ok' | 'none' | null>(null);
-  const [aqhiNearest, setAqhiNearest] = useState<ConditionsValue['aqhiNearest']>(null);
+  const [aqhiFar, setAqhiFar] = useState<AqhiSnapshot | null>(null);
   const [failure, setFailure] = useState<ConditionsFailure | null>(null);
   const [fetchedAt, setFetchedAt] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -137,9 +146,11 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
       const resolved = resolvePlace({ ...inputs, location });
 
       const { latitude, longitude } = resolved.coordinate;
+      // AQHI is fetched at the Map's wider range in one go; the split by
+      // distance happens below so the model only ever sees the near one.
       const [w, a] = await Promise.all([
         fetchConditions(latitude, longitude),
-        fetchAqhi(latitude, longitude),
+        fetchAqhi(latitude, longitude, { maxDistanceKm: MAP_COMMUNITY_DISTANCE_KM }),
       ]);
 
       if (options.initial) {
@@ -167,20 +178,20 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
         setWeather(null);
         setAqhi(null);
         setAqhiCoverage(null);
-        setAqhiNearest(null);
+        setAqhiFar(null);
         setStatus('error');
         return;
       }
 
       setWeather(w.value);
-      if (a.status === 'ok') {
+      if (a.status === 'ok' && a.value.distanceKm <= MAX_COMMUNITY_DISTANCE_KM) {
         setAqhi(a.value);
         setAqhiCoverage('ok');
-        setAqhiNearest(null);
+        setAqhiFar(null);
       } else {
         setAqhi(null);
         setAqhiCoverage('none');
-        setAqhiNearest({ name: a.nearestName, km: a.nearestKm });
+        setAqhiFar(a.status === 'ok' ? a.value : null);
       }
       setFailure(null);
       const done = Date.now();
@@ -231,7 +242,7 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
       weather,
       aqhi,
       aqhiCoverage,
-      aqhiNearest,
+      aqhiFar,
       failure,
       live,
       fetchedAt,
@@ -239,7 +250,7 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
       now,
       refresh,
     }),
-    [status, place, weather, aqhi, aqhiCoverage, aqhiNearest, failure, live, fetchedAt, refreshing, now, refresh],
+    [status, place, weather, aqhi, aqhiCoverage, aqhiFar, failure, live, fetchedAt, refreshing, now, refresh],
   );
 
   return <ConditionsContext.Provider value={value}>{children}</ConditionsContext.Provider>;

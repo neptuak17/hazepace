@@ -447,3 +447,10 @@ export function formatValue(value: number | null, digits: number, unit = ''): st
 
 /** Beyond this the reading describes somewhere else and the UI must say so. */
 export const FAR_COMMUNITY_KM = 25;
+
+/**
+ * How far the Map will look for a community to show as context. Wider than
+ * the model's 100 km cutoff on purpose: a reading from 150 km away is worth
+ * seeing next to the model's number, but never worth feeding to the model.
+ */
+export const MAP_COMMUNITY_DISTANCE_KM = 200;

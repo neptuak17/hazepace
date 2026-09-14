@@ -17,6 +17,7 @@ import {
   isAboveTen,
   nearestCommunity,
   publishedValue,
+  withinRange,
   type AqhiCommunity,
 } from './aqhi.ts';
 
@@ -145,6 +146,37 @@ describe('nearestCommunity', () => {
 
   test('returns null for an empty list rather than throwing', () => {
     assert.equal(nearestCommunity([], VERNON.lat, VERNON.lon), null);
+  });
+});
+
+describe('withinRange — the distance cutoff', () => {
+  const at = (km: number) => ({ community: NORTH_OKANAGAN, distanceKm: km });
+
+  test('inside the cutoff is ok', () => {
+    const r = withinRange(at(99.9), MAX_COMMUNITY_DISTANCE_KM);
+    assert.equal(r.status, 'ok');
+  });
+
+  test('exactly at the cutoff is still ok; just past it is not', () => {
+    assert.equal(withinRange(at(100), 100).status, 'ok');
+    const past = withinRange(at(100.1), 100);
+    assert.equal(past.status, 'no-coverage');
+    assert.ok(past.status === 'no-coverage' && past.nearestName === 'North Okanagan');
+    assert.ok(past.status === 'no-coverage' && past.nearestKm === 100.1);
+  });
+
+  test('a wider cutoff admits a community the default refuses', () => {
+    assert.equal(withinRange(at(150), MAX_COMMUNITY_DISTANCE_KM).status, 'no-coverage');
+    assert.equal(withinRange(at(150), 200).status, 'ok');
+    assert.equal(withinRange(at(250), 200).status, 'no-coverage');
+  });
+
+  test('no community at all is no-coverage with nothing to name', () => {
+    assert.deepEqual(withinRange(null, 100), {
+      status: 'no-coverage',
+      nearestName: null,
+      nearestKm: null,
+    });
   });
 });
 

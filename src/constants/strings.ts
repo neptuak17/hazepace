@@ -41,6 +41,11 @@ export const DataStrings = {
     `${name} · ${km < 1 ? '<1' : Math.round(km)} km`,
   /** The far-away form, for the reading's headline rather than its footnote. */
   communityFar: (name: string, km: number) => `${name}, ${Math.round(km)} km away`,
+  /** The distance on its own, for a line beneath the community's name. */
+  distance: (km: number) => `${km < 1 ? '<1' : Math.round(km)} km`,
+  distanceFar: (km: number) => `${Math.round(km)} km away`,
+  /** In the distance's place for the model, which is for the coordinate itself. */
+  thisLocation: 'this location',
   observedAge: (age: string) => `observed ${age}`,
   /** Both the clock time and the age: "observed 06:00 · 37 min ago". */
   observedAt: (clock: string, age: string) => `observed ${clock} · ${age}`,
