@@ -29,7 +29,7 @@ export interface Settings {
   sensitivity: Sensitivity;
   /** Index into RAIN_TOL. 0-3. */
   rainTol: number;
-  /** km/h, 8-40 in steps of 4. */
+  /** km/h, 8-36 in steps of 4; 40 is the slider's "no limit" position. */
   windTol: number;
   /** °C, 22-38 in steps of 2. */
   heatTol: number;
@@ -46,7 +46,7 @@ const DEFAULTS: Settings = {
   sensitivity: 'Normal',
   rainTol: 1,
   windTol: 32,
-  heatTol: 30,
+  heatTol: 32,
   timeFmt: '24-hour',
   manualPlace: null,
 };

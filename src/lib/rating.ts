@@ -37,17 +37,29 @@ export interface Reading {
   windKmh: number;
 }
 
-/** Everything the user controls. Changing any of it re-derives every verdict. */
+/**
+ * Everything the user controls. Changing any of it re-derives every verdict.
+ *
+ * The three weather values are the user's limits. Amber is a band centred
+ * on each — see decision-rules.md §3.2 and the margins below.
+ */
 export interface Prefs {
   activity: Activity;
   sensitivity: Sensitivity;
   /** Index into RAIN_TOL. 0–3. */
   rainTol: number;
-  /** km/h, 8–40 in steps of 4. */
+  /** km/h, 8–36 in steps of 4; WIND_NO_LIMIT means wind never sets the level. */
   windTol: number;
   /** °C, 22–38 in steps of 2. */
   heatTol: number;
 }
+
+/** Half-width of the amber band either side of the heat limit. */
+export const HEAT_MARGIN_C = 2;
+/** Half-width of the amber band either side of the wind limit. */
+export const WIND_MARGIN_KMH = 6;
+/** The wind slider's top position: no limit, wind is always level 0. */
+export const WIND_NO_LIMIT = 40;
 
 /**
  * Whether ECCC's guidance would call the activity strenuous. Its AQHI
@@ -77,11 +89,19 @@ const AIR_LEVEL: Record<AqhiCategory, Record<Sensitivity, { strenuous: Level; ot
   'Very High': { Normal: { strenuous: 2, other: 2 }, Reactive: { strenuous: 2, other: 2 } },
 };
 
+/**
+ * The rain limits, each with the edges of its amber band written out.
+ *
+ * The band is a ratio either side of the limit (÷ 1.6 below, × 1.6 above)
+ * because the limits span 0.2 to 8 mm/h. The edges are literals rather than
+ * computed so no floating-point product can land a hair past a reading that
+ * should tie with it; decision-rules.md §1.2 lists the same numbers.
+ */
 export const RAIN_TOL = [
-  { name: 'None', mm: 0.2, note: 'only dry weather' },
-  { name: 'Light', mm: 1.5, note: 'drizzle is fine' },
-  { name: 'Moderate', mm: 3.5, note: 'steady rain is fine' },
-  { name: 'Heavy', mm: 8, note: 'only a downpour stops you' },
+  { name: 'None', mm: 0.2, amberFrom: 0.13, redFrom: 0.32, note: 'only dry weather' },
+  { name: 'Light', mm: 1.5, amberFrom: 0.94, redFrom: 2.4, note: 'drizzle is fine' },
+  { name: 'Moderate', mm: 3.5, amberFrom: 2.19, redFrom: 5.6, note: 'steady rain is fine' },
+  { name: 'Heavy', mm: 8, amberFrom: 5, redFrom: 12.8, note: 'only a downpour stops you' },
 ] as const;
 
 /**
@@ -120,12 +140,23 @@ export interface FactorLevels {
  * `judge` is the same numbers reduced to their worst.
  */
 export function factorLevels(r: Reading, prefs: Prefs): FactorLevels {
-  const rainAt = RAIN_TOL[prefs.rainTol].mm;
+  const rain = RAIN_TOL[prefs.rainTol];
+  const heatRed = prefs.heatTol + HEAT_MARGIN_C;
+  const heatAmber = prefs.heatTol - HEAT_MARGIN_C;
+  const windRed = prefs.windTol + WIND_MARGIN_KMH;
+  const windAmber = prefs.windTol - WIND_MARGIN_KMH;
   return {
     air: band(r.aqhi, prefs),
-    rain: r.rainMmH >= rainAt * 2.6 ? 2 : r.rainMmH >= rainAt ? 1 : 0,
-    heat: r.tempC >= prefs.heatTol + 4 ? 2 : r.tempC >= prefs.heatTol ? 1 : 0,
-    wind: r.windKmh >= prefs.windTol + 14 ? 2 : r.windKmh >= prefs.windTol ? 1 : 0,
+    rain: r.rainMmH >= rain.redFrom ? 2 : r.rainMmH >= rain.amberFrom ? 1 : 0,
+    heat: r.tempC >= heatRed ? 2 : r.tempC >= heatAmber ? 1 : 0,
+    wind:
+      prefs.windTol >= WIND_NO_LIMIT
+        ? 0
+        : r.windKmh >= windRed
+          ? 2
+          : r.windKmh >= windAmber
+            ? 1
+            : 0,
   };
 }
 

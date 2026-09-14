@@ -13,8 +13,12 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
 import {
+  HEAT_MARGIN_C,
+  RAIN_TOL,
   SLOTS,
   STRENUOUS,
+  WIND_MARGIN_KMH,
+  WIND_NO_LIMIT,
   band,
   bestWindow,
   factorLevels,
@@ -32,13 +36,13 @@ import {
   type Sensitivity,
 } from './rating.ts';
 
-/** The app's defaults: Cycling, Normal sensitivity, Light rain, 32 km/h, 30 °C. */
+/** The app's defaults: Cycling, Normal sensitivity, Light rain, 32 km/h, 32 °C. */
 const DEFAULTS: Prefs = {
   activity: 'Cycling',
   sensitivity: 'Normal',
   rainTol: 1,
   windTol: 32,
-  heatTol: 30,
+  heatTol: 32,
 };
 
 const prefs = (over: Partial<Prefs> = {}): Prefs => ({ ...DEFAULTS, ...over });
@@ -139,42 +143,68 @@ describe('judge', () => {
     assert.equal(j.driver, null);
   });
 
-  test('rain thresholds key off the tolerance', () => {
-    // rainTol 1 is Light: 1.5 mm/h, and 2.6x that is the red threshold.
-    assert.equal(judge(calm({ rainMmH: 1.4 }), prefs()).level, 0);
-    assert.equal(judge(calm({ rainMmH: 1.5 }), prefs()).level, 1);
-    assert.equal(judge(calm({ rainMmH: 4 }), prefs()).level, 2);
-    // Heavy tolerance shrugs off what stops a Light one.
-    assert.equal(judge(calm({ rainMmH: 4 }), prefs({ rainTol: 3 })).level, 0);
+  // Rain, heat and wind: the limit is the middle of the amber band
+  // (decision-rules.md §3.2). Each test walks below the band, onto its
+  // lower edge, just under its upper edge, and onto the upper edge.
+
+  test('rain: amber and red edges are the literals in RAIN_TOL', () => {
+    // Light: amber from 0.94, red from 2.4.
+    assert.equal(judge(calm({ rainMmH: 0.93 }), prefs()).level, 0);
+    assert.equal(judge(calm({ rainMmH: 0.94 }), prefs()).level, 1);
+    assert.equal(judge(calm({ rainMmH: 2.39 }), prefs()).level, 1);
+    assert.equal(judge(calm({ rainMmH: 2.4 }), prefs()).level, 2);
+    // Heavy shrugs off what stops Light: amber from 5, red from 12.8.
+    assert.equal(judge(calm({ rainMmH: 2.4 }), prefs({ rainTol: 3 })).level, 0);
+    assert.equal(judge(calm({ rainMmH: 5 }), prefs({ rainTol: 3 })).level, 1);
+    assert.equal(judge(calm({ rainMmH: 12.8 }), prefs({ rainTol: 3 })).level, 2);
+    // None: any measurable rain is at least amber.
+    assert.equal(judge(calm({ rainMmH: 0.1 }), prefs({ rainTol: 0 })).level, 0);
+    assert.equal(judge(calm({ rainMmH: 0.2 }), prefs({ rainTol: 0 })).level, 1);
+    assert.equal(judge(calm({ rainMmH: 0.4 }), prefs({ rainTol: 0 })).level, 2);
   });
 
-  test('the red rain threshold is computed in floating point', () => {
-    // 1.5 * 2.6 is 3.9000000000000004, not 3.9, so a reading of exactly 3.9
-    // stays amber. This is inherited from the prototype and is asserted here
-    // so the behaviour is deliberate rather than accidental; the products
-    // differ per tolerance, so the boundary is not uniformly off by one ulp.
-    assert.ok(1.5 * 2.6 > 3.9);
-    assert.equal(judge(calm({ rainMmH: 3.9 }), prefs()).level, 1);
-    // Moderate, by contrast, lands exactly: 3.5 * 2.6 is 9.1.
-    assert.equal(3.5 * 2.6, 9.1);
-    assert.equal(judge(calm({ rainMmH: 9.1 }), prefs({ rainTol: 2 })).level, 2);
+  test('rain: a reading exactly on an edge is on the higher side, with no float drift', () => {
+    // The edges are stored, not multiplied, so 1.5 × 1.6 = 2.4000000000000004
+    // cannot push a reading of exactly 2.4 back to amber.
+    for (const [i, t] of RAIN_TOL.entries()) {
+      assert.equal(judge(calm({ rainMmH: t.amberFrom }), prefs({ rainTol: i })).level, 1, t.name);
+      assert.equal(judge(calm({ rainMmH: t.redFrom }), prefs({ rainTol: i })).level, 2, t.name);
+    }
   });
 
-  test('heat thresholds key off the tolerance', () => {
+  test('heat: amber from limit − 2, red from limit + 2', () => {
+    // Default 32 reproduces the prototype's fixed 30 / 34.
     assert.equal(judge(calm({ tempC: 29 }), prefs()).level, 0);
     assert.equal(judge(calm({ tempC: 30 }), prefs()).level, 1);
     assert.equal(judge(calm({ tempC: 33 }), prefs()).level, 1);
     assert.equal(judge(calm({ tempC: 34 }), prefs()).level, 2);
-    // A higher tolerance moves both lines together.
-    assert.equal(judge(calm({ tempC: 34 }), prefs({ heatTol: 36 })).level, 0);
-    assert.equal(judge(calm({ tempC: 36 }), prefs({ heatTol: 36 })).level, 1);
-    assert.equal(judge(calm({ tempC: 40 }), prefs({ heatTol: 36 })).level, 2);
+    // The band moves with the limit.
+    assert.equal(judge(calm({ tempC: 34 }), prefs({ heatTol: 38 })).level, 0);
+    assert.equal(judge(calm({ tempC: 36 }), prefs({ heatTol: 38 })).level, 1);
+    assert.equal(judge(calm({ tempC: 40 }), prefs({ heatTol: 38 })).level, 2);
+    assert.equal(HEAT_MARGIN_C, 2);
   });
 
-  test('wind thresholds key off the tolerance', () => {
-    assert.equal(judge(calm({ windKmh: 31 }), prefs()).level, 0);
-    assert.equal(judge(calm({ windKmh: 32 }), prefs()).level, 1);
-    assert.equal(judge(calm({ windKmh: 46 }), prefs()).level, 2);
+  test('wind: amber from limit − 6, red from limit + 6', () => {
+    assert.equal(judge(calm({ windKmh: 25 }), prefs()).level, 0);
+    assert.equal(judge(calm({ windKmh: 26 }), prefs()).level, 1);
+    assert.equal(judge(calm({ windKmh: 37 }), prefs()).level, 1);
+    assert.equal(judge(calm({ windKmh: 38 }), prefs()).level, 2);
+    assert.equal(judge(calm({ windKmh: 38 }), prefs({ windTol: 8 })).level, 2);
+    assert.equal(judge(calm({ windKmh: 1 }), prefs({ windTol: 8 })).level, 0);
+    assert.equal(judge(calm({ windKmh: 2 }), prefs({ windTol: 8 })).level, 1);
+    assert.equal(WIND_MARGIN_KMH, 6);
+  });
+
+  test('wind: the top of the slider is no limit and never raises the level', () => {
+    assert.equal(WIND_NO_LIMIT, 40);
+    for (const windKmh of [0, 34, 46, 90]) {
+      const f = factorLevels(calm({ windKmh }), prefs({ windTol: WIND_NO_LIMIT }));
+      assert.equal(f.wind, 0, `${windKmh} km/h`);
+    }
+    // Everything else still judges as normal.
+    assert.equal(judge(calm({ tempC: 34, windKmh: 90 }), prefs({ windTol: WIND_NO_LIMIT })).level, 2);
+    assert.equal(judge(calm({ tempC: 34, windKmh: 90 }), prefs({ windTol: WIND_NO_LIMIT })).driver, 'heat');
   });
 
   test('the worst factor sets the level', () => {

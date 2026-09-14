@@ -31,7 +31,7 @@ const PREFS: Prefs = {
   sensitivity: 'Normal',
   rainTol: 1,
   windTol: 32,
-  heatTol: 30,
+  heatTol: 32,
 };
 
 const weather = (over: Partial<HourlyConditions> = {}): HourlyConditions => ({

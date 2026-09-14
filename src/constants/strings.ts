@@ -220,24 +220,27 @@ export const ThresholdsStrings = {
   sensitivityLabel: 'Air quality sensitivity',
 
   weatherCardTitle: 'Weather limits',
-  weatherCardCaption: 'How much rain, wind and heat you will train in.',
+  /** The one place the amber band is explained; the margins are not shown. */
+  weatherCardCaption:
+    'Your limits for rain, wind and heat. Conditions near a limit read amber; past it, red.',
   rainLabel: 'Rain',
-  rainSliderLabel: 'Rain tolerance',
+  rainSliderLabel: 'Rain limit',
   windLabel: 'Wind',
-  windSliderLabel: 'Wind tolerance',
-  windValue: (windTol: number) => (windTol >= 40 ? 'any wind' : `${windTol} km/h`),
+  windSliderLabel: 'Wind limit',
+  windValue: (windTol: number) => (windTol >= 40 ? 'no limit' : `${windTol} km/h`),
   windNote: (windTol: number): string => {
-    if (windTol <= 16) return 'a breeze turns it amber';
-    if (windTol >= 36) return 'only a gale stops you';
-    return 'typical tolerance';
+    if (windTol >= 40) return 'wind never sets the verdict';
+    if (windTol <= 16) return 'a breeze reads amber';
+    if (windTol >= 36) return 'only a gale reads red';
+    return 'typical limit';
   },
   heatLabel: 'Heat',
-  heatSliderLabel: 'Heat tolerance',
+  heatSliderLabel: 'Heat limit',
   heatValue: (heatTol: number) => `${heatTol} °C`,
   heatNote: (heatTol: number): string => {
-    if (heatTol <= 24) return 'a warm afternoon turns it amber';
-    if (heatTol >= 36) return 'only a heatwave stops you';
-    return 'typical tolerance';
+    if (heatTol <= 24) return 'a warm afternoon reads amber';
+    if (heatTol >= 36) return 'only a heatwave reads red';
+    return 'typical limit';
   },
 } as const;
 

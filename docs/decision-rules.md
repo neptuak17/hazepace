@@ -5,12 +5,11 @@ what is written here, and the tests in `src/lib/rating.test.ts` pin the
 worked examples in section 5. When the rules change, change this file first;
 the code and tests follow it.
 
-**Status:** the **air** rule (section 3.1) was decided on 2026-09-13: it
-follows Environment and Climate Change Canada's published AQHI guidance and
-has no user-set ceiling. The rain, heat and wind rules are still the design
-prototype's placeholders; the intent is for the user's settings to become the
-limits above which they will not train, with a caution band derived below
-each — the size of that band is not yet decided.
+**Status:** all four rules are decided. The **air** rule (3.1) was set on
+2026-09-13: it follows Environment and Climate Change Canada's published AQHI
+guidance and has no user-set ceiling. The **rain, heat and wind** rules (3.2)
+were set on 2026-09-14: each slider is the user's limit, and amber is a band
+centred on it — conditions near the limit read amber, past it red.
 
 Air is judged by relaying ECCC's guidance for the user's sport and
 sensitivity; rain, heat and wind are measured against limits the user set
@@ -65,9 +64,12 @@ treat an estimate differently from a measurement, say so here.
 | --- | --- | --- |
 | Activity | Running · Cycling · Hiking / Walking | Cycling |
 | Sensitivity | Normal · Reactive | Normal |
-| Rain tolerance | None · Light · Moderate · Heavy | Light |
-| Wind tolerance | 8–40 km/h, in steps of 4 | 32 |
-| Heat tolerance | 22–38 °C, in steps of 2 | 30 |
+| Rain limit | None · Light · Moderate · Heavy | Light |
+| Wind limit | 8–36 km/h in steps of 4, then *no limit* | 32 |
+| Heat limit | 22–38 °C, in steps of 2 | 32 |
+
+The wind slider's top position (stored as 40) means *no limit*: wind never
+sets the level. There is no equivalent for rain or heat.
 
 There is no air-quality ceiling. The air rule is ECCC's, keyed by the two
 settings above; see 3.1.
@@ -90,14 +92,19 @@ for, and the activities onto whether ECCC would call them strenuous:
 baseline activity. If hiking should count as strenuous, split the activity
 or move it — this table is the only place the classification lives.
 
-Rain tolerance names map to rates:
+Rain limit names map to rates, and each carries the edges of its amber band
+(see 3.2). The edges are listed here as the numbers the code compares
+against — they are not recomputed at run time, so no floating-point
+boundary can drift.
 
-| Name | mm/h |
-| --- | --- |
-| None | 0.2 |
-| Light | 1.5 |
-| Moderate | 3.5 |
-| Heavy | 8 |
+| Name | Limit mm/h | Amber from | Red from |
+| --- | --- | --- | --- |
+| None | 0.2 | 0.13 | 0.32 |
+| Light | 1.5 | 0.94 | 2.4 |
+| Moderate | 3.5 | 2.19 | 5.6 |
+| Heavy | 8 | 5 | 12.8 |
+
+(Amber from ≈ limit ÷ 1.6, red from = limit × 1.6, rounded to two decimals.)
 
 ---
 
@@ -107,9 +114,9 @@ Every factor, every hour and every day resolves to one of three levels.
 
 | Level | Word | Meaning — air | Meaning — rain, heat, wind |
 | --- | --- | --- | --- |
-| 0 | GREEN | ECCC guidance does not mention this activity at this AQHI | within the user's limits |
-| 1 | AMBER | ECCC guidance says *consider reducing or rescheduling* | past a limit |
-| 2 | RED | ECCC guidance says *reduce or reschedule* / *avoid* | well past a limit |
+| 0 | GREEN | ECCC guidance does not mention this activity at this AQHI | clear of the user's limit |
+| 1 | AMBER | ECCC guidance says *consider reducing or rescheduling* | near the user's limit, either side |
+| 2 | RED | ECCC guidance says *reduce or reschedule* / *avoid* | past the user's limit |
 
 ---
 
@@ -161,12 +168,22 @@ band a reading for display, so the two cannot drift apart.
 Each factor is rated on its own. Boundaries are stated exactly — `>` and `≥`
 are different, and the worked examples pin which is which.
 
-| Factor | Level 2 if | Level 1 if | Otherwise |
-| --- | --- | --- | --- |
-| **Air** | lookup in 3.1 gives 2 | lookup in 3.1 gives 1 | 0 |
-| **Rain** | rain **≥** tolerance × 2.6 | rain **≥** tolerance | 0 |
-| **Heat** | temp **≥** tolerance + 4 | temp **≥** tolerance | 0 |
-| **Wind** | wind **≥** tolerance + 14 | wind **≥** tolerance | 0 |
+For rain, heat and wind the slider value is the user's **limit**, and amber
+is a band centred on it: a fixed margin below the limit up to the same
+margin above. Below the band is green; from the top of the band up is red.
+
+```
+green                amber                 red
+──────────┤═══════════╪═══════════├──────────
+       limit − m    limit     limit + m
+```
+
+| Factor | Margin m | Level 2 if | Level 1 if | Otherwise |
+| --- | --- | --- | --- | --- |
+| **Air** | — | lookup in 3.1 gives 2 | lookup in 3.1 gives 1 | 0 |
+| **Rain** | ÷ / × 1.6 | rain **≥** red-from (table in 1.2) | rain **≥** amber-from | 0 |
+| **Heat** | 2 °C | temp **≥** limit + 2 | temp **≥** limit − 2 | 0 |
+| **Wind** | 6 km/h | wind **≥** limit + 6 | wind **≥** limit − 6 | 0 |
 
 Notes:
 
@@ -174,14 +191,13 @@ Notes:
   to 3 (Low) and 3.5 to 4 (Moderate); 10.4 rounds to 10 (High) and 10.5 to
   11 (Very High). The model's estimate (1.1) is unrounded and goes through
   the same rounding.
-- The heat and wind red margins (+4 °C, +14 km/h) and the rain red multiplier
-  (× 2.6) are fixed and not shown to the user. The heat default of 30 °C with
-  a +4 margin reproduces the prototype's fixed 30 / 34 lines, so a user who
-  never touches the slider sees what they saw before it existed.
-- The rain level-2 threshold is computed in floating point. Light tolerance is
-  1.5, and 1.5 × 2.6 is 3.9000000000000004, so a reading of exactly 3.9 mm/h
-  is level 1, not 2. Moderate (3.5 × 2.6 = 9.1) lands exactly. This is
-  inherited from the prototype; decide whether to keep it.
+- The margins are fixed and not shown to the user; the Thresholds screen
+  explains the band once in its caption. Rain's margin is a ratio rather
+  than a difference because the four rain limits span 0.2 to 8 mm/h.
+- Wind at *no limit* (the slider's top position) is always level 0.
+- The heat default of 32 °C with ± 2 reproduces the prototype's fixed 30 / 34
+  lines exactly. The wind default of 32 with ± 6 gives amber from 26 and red
+  from 38, where the prototype had amber from 32 and red from 46.
 
 ### 3.3 Worst factor wins
 
@@ -267,40 +283,46 @@ and `src/lib/rating.test.ts` asserts them. Add rows for any boundary a new rule
 introduces — the value exactly at the threshold and one just below — and the
 tests will be written from them.
 
-Unless a cell says otherwise: **Cycling · Normal · Light · 32 km/h · 30 °C**.
-Base readings are AQHI 2, 20 °C, 10 km/h, 0 mm/h. The "Wind tol" column
-reads "wind · heat" where heat is not the default.
+Unless a cell says otherwise: **Cycling · Normal · Light · 32 km/h · 32 °C**.
+Base readings are AQHI 2, 20 °C, 10 km/h, 0 mm/h. The "Limits" column reads
+"rain · wind · heat".
 
-| # | Case | AQHI | Temp | Wind | Rain | Activity | Sens | Rain tol | Wind tol | Category | Level | Driver |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | Clean hour, defaults | 2 | 20 | 10 | 0 | Cycling | Normal | Light | 32 | Low | **0** | — |
-| 2 | Air: Moderate (AQHI 5) — general strenuous stays 0 | 5 | 20 | 10 | 0 | Cycling | Normal | Light | 32 | Moderate | **0** | — |
-| 3 | Air: Moderate (AQHI 5) — at-risk strenuous is 1 | 5 | 20 | 10 | 0 | Cycling | Reactive | Light | 32 | Moderate | **1** | smoke |
-| 4 | Air: Moderate (AQHI 5) — at-risk walking is 0 | 5 | 20 | 10 | 0 | Hiking / Walking | Reactive | Light | 32 | Moderate | **0** | — |
-| 5 | Air: High (AQHI 8) — general strenuous is 1 | 8 | 20 | 10 | 0 | Cycling | Normal | Light | 32 | High | **1** | smoke |
-| 6 | Air: High (AQHI 8) — general walking is 0 | 8 | 20 | 10 | 0 | Hiking / Walking | Normal | Light | 32 | High | **0** | — |
-| 7 | Air: High (AQHI 8) — at-risk strenuous is 2 | 8 | 20 | 10 | 0 | Cycling | Reactive | Light | 32 | High | **2** | smoke |
-| 8 | Air: High (AQHI 8) — at-risk walking is 1 | 8 | 20 | 10 | 0 | Hiking / Walking | Reactive | Light | 32 | High | **1** | smoke |
-| 9 | Air: Very High (AQHI 11) — general walking is 2 (the override) | 11 | 20 | 10 | 0 | Hiking / Walking | Normal | Light | 32 | Very High | **2** | smoke |
-| 10 | Air: boundary 6.4 rounds to 6, Moderate | 6.4 | 20 | 10 | 0 | Cycling | Normal | Light | 32 | Moderate | **0** | — |
-| 11 | Air: boundary 6.5 rounds to 7, High | 6.5 | 20 | 10 | 0 | Cycling | Normal | Light | 32 | High | **1** | smoke |
-| 12 | Air: boundary 10.4 rounds to 10, High — at-risk walking | 10.4 | 20 | 10 | 0 | Hiking / Walking | Reactive | Light | 32 | High | **1** | smoke |
-| 13 | Air: boundary 10.5 rounds to 11, Very High | 10.5 | 20 | 10 | 0 | Hiking / Walking | Reactive | Light | 32 | Very High | **2** | smoke |
-| 14 | Rain: just under Light tolerance (1.4 < 1.5) | 2 | 20 | 10 | 1.4 | Cycling | Normal | Light | 32 | Low | **0** | — |
-| 15 | Rain: exactly at Light tolerance | 2 | 20 | 10 | 1.5 | Cycling | Normal | Light | 32 | Low | **1** | rainfall |
-| 16 | Rain: past 2.6 × Light tolerance | 2 | 20 | 10 | 4 | Cycling | Normal | Light | 32 | Low | **2** | rainfall |
-| 17 | Rain: 4.0 mm/h with Heavy tolerance | 2 | 20 | 10 | 4 | Cycling | Normal | Heavy | 32 | Low | **0** | — |
-| 18 | Heat: 29 °C, tolerance 30 | 2 | 29 | 10 | 0 | Cycling | Normal | Light | 32 · 30 | Low | **0** | — |
-| 19 | Heat: exactly at tolerance | 2 | 30 | 10 | 0 | Cycling | Normal | Light | 32 · 30 | Low | **1** | heat |
-| 20 | Heat: tolerance + 4 | 2 | 34 | 10 | 0 | Cycling | Normal | Light | 32 · 30 | Low | **2** | heat |
-| 20a | Heat: 34 °C with tolerance 36 | 2 | 34 | 10 | 0 | Cycling | Normal | Light | 32 · 36 | Low | **0** | — |
-| 21 | Wind: 31 km/h, tolerance 32 | 2 | 20 | 31 | 0 | Cycling | Normal | Light | 32 | Low | **0** | — |
-| 22 | Wind: exactly at tolerance | 2 | 20 | 32 | 0 | Cycling | Normal | Light | 32 | Low | **1** | wind |
-| 23 | Wind: tolerance + 14 | 2 | 20 | 46 | 0 | Cycling | Normal | Light | 32 | Low | **2** | wind |
-| 24 | Worst wins: heat 1, wind 2 | 2 | 30 | 46 | 0 | Cycling | Normal | Light | 32 | Low | **2** | wind |
-| 25 | Tie at 1: all four amber — air named first | 7 | 30 | 32 | 1.5 | Cycling | Normal | Light | 32 | High | **1** | smoke |
-| 26 | Tie at 1: rain and heat, clean air — rain named | 2 | 30 | 10 | 1.5 | Cycling | Normal | Light | 32 | Low | **1** | rainfall |
-| 27 | Tie at 1: heat and wind, clean air — heat named | 2 | 30 | 32 | 0 | Cycling | Normal | Light | 32 | Low | **1** | heat |
+| # | Case | AQHI | Temp | Wind | Rain | Activity | Sens | Limits | Category | Level | Driver |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | Clean hour, defaults | 2 | 20 | 10 | 0 | Cycling | Normal | Light · 32 · 32 | Low | **0** | — |
+| 2 | Air: Moderate (AQHI 5) — general strenuous stays 0 | 5 | 20 | 10 | 0 | Cycling | Normal | Light · 32 · 32 | Moderate | **0** | — |
+| 3 | Air: Moderate (AQHI 5) — at-risk strenuous is 1 | 5 | 20 | 10 | 0 | Cycling | Reactive | Light · 32 · 32 | Moderate | **1** | smoke |
+| 4 | Air: Moderate (AQHI 5) — at-risk walking is 0 | 5 | 20 | 10 | 0 | Hiking / Walking | Reactive | Light · 32 · 32 | Moderate | **0** | — |
+| 5 | Air: High (AQHI 8) — general strenuous is 1 | 8 | 20 | 10 | 0 | Cycling | Normal | Light · 32 · 32 | High | **1** | smoke |
+| 6 | Air: High (AQHI 8) — general walking is 0 | 8 | 20 | 10 | 0 | Hiking / Walking | Normal | Light · 32 · 32 | High | **0** | — |
+| 7 | Air: High (AQHI 8) — at-risk strenuous is 2 | 8 | 20 | 10 | 0 | Cycling | Reactive | Light · 32 · 32 | High | **2** | smoke |
+| 8 | Air: High (AQHI 8) — at-risk walking is 1 | 8 | 20 | 10 | 0 | Hiking / Walking | Reactive | Light · 32 · 32 | High | **1** | smoke |
+| 9 | Air: Very High (AQHI 11) — general walking is 2 (the override) | 11 | 20 | 10 | 0 | Hiking / Walking | Normal | Light · 32 · 32 | Very High | **2** | smoke |
+| 10 | Air: boundary 6.4 rounds to 6, Moderate | 6.4 | 20 | 10 | 0 | Cycling | Normal | Light · 32 · 32 | Moderate | **0** | — |
+| 11 | Air: boundary 6.5 rounds to 7, High | 6.5 | 20 | 10 | 0 | Cycling | Normal | Light · 32 · 32 | High | **1** | smoke |
+| 12 | Air: boundary 10.4 rounds to 10, High — at-risk walking | 10.4 | 20 | 10 | 0 | Hiking / Walking | Reactive | Light · 32 · 32 | High | **1** | smoke |
+| 13 | Air: boundary 10.5 rounds to 11, Very High | 10.5 | 20 | 10 | 0 | Hiking / Walking | Reactive | Light · 32 · 32 | Very High | **2** | smoke |
+| 14 | Rain: just under the Light amber edge (0.93 < 0.94) | 2 | 20 | 10 | 0.93 | Cycling | Normal | Light · 32 · 32 | Low | **0** | — |
+| 15 | Rain: on the Light amber edge | 2 | 20 | 10 | 0.94 | Cycling | Normal | Light · 32 · 32 | Low | **1** | rainfall |
+| 16 | Rain: the Light limit itself (1.5) is mid-band | 2 | 20 | 10 | 1.5 | Cycling | Normal | Light · 32 · 32 | Low | **1** | rainfall |
+| 17 | Rain: just under the Light red edge (2.39 < 2.4) | 2 | 20 | 10 | 2.39 | Cycling | Normal | Light · 32 · 32 | Low | **1** | rainfall |
+| 18 | Rain: on the Light red edge | 2 | 20 | 10 | 2.4 | Cycling | Normal | Light · 32 · 32 | Low | **2** | rainfall |
+| 19 | Rain: 2.4 mm/h with the Heavy limit (amber from 5) | 2 | 20 | 10 | 2.4 | Cycling | Normal | Heavy · 32 · 32 | Low | **0** | — |
+| 20 | Rain: None — 0.2 mm/h is amber, 0.4 is red | 2 | 20 | 10 | 0.4 | Cycling | Normal | None · 32 · 32 | Low | **2** | rainfall |
+| 21 | Heat: 29 °C, limit 32 (below the band) | 2 | 29 | 10 | 0 | Cycling | Normal | Light · 32 · 32 | Low | **0** | — |
+| 22 | Heat: 30 °C — on the amber edge (limit − 2) | 2 | 30 | 10 | 0 | Cycling | Normal | Light · 32 · 32 | Low | **1** | heat |
+| 23 | Heat: 33 °C — top of the band | 2 | 33 | 10 | 0 | Cycling | Normal | Light · 32 · 32 | Low | **1** | heat |
+| 24 | Heat: 34 °C — on the red edge (limit + 2) | 2 | 34 | 10 | 0 | Cycling | Normal | Light · 32 · 32 | Low | **2** | heat |
+| 25 | Heat: 34 °C with limit 38 | 2 | 34 | 10 | 0 | Cycling | Normal | Light · 32 · 38 | Low | **0** | — |
+| 26 | Wind: 25 km/h, limit 32 (below the band) | 2 | 20 | 25 | 0 | Cycling | Normal | Light · 32 · 32 | Low | **0** | — |
+| 27 | Wind: 26 km/h — on the amber edge (limit − 6) | 2 | 20 | 26 | 0 | Cycling | Normal | Light · 32 · 32 | Low | **1** | wind |
+| 28 | Wind: 37 km/h — top of the band | 2 | 20 | 37 | 0 | Cycling | Normal | Light · 32 · 32 | Low | **1** | wind |
+| 29 | Wind: 38 km/h — on the red edge (limit + 6) | 2 | 20 | 38 | 0 | Cycling | Normal | Light · 32 · 32 | Low | **2** | wind |
+| 30 | Wind: 90 km/h with no limit | 2 | 20 | 90 | 0 | Cycling | Normal | Light · no limit · 32 | Low | **0** | — |
+| 31 | Worst wins: heat 1, wind 2 | 2 | 30 | 38 | 0 | Cycling | Normal | Light · 32 · 32 | Low | **2** | wind |
+| 32 | Tie at 1: all four amber — air named first | 7 | 30 | 32 | 1.5 | Cycling | Normal | Light · 32 · 32 | High | **1** | smoke |
+| 33 | Tie at 1: rain and heat, clean air — rain named | 2 | 30 | 10 | 1.5 | Cycling | Normal | Light · 32 · 32 | Low | **1** | rainfall |
+| 34 | Tie at 1: heat and wind, clean air — heat named | 2 | 30 | 32 | 0 | Cycling | Normal | Light · 32 · 32 | Low | **1** | heat |
 
 ### 5.1 Day verdict examples
 

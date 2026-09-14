@@ -42,7 +42,7 @@ interface SliderProps {
   max: number;
   step: number;
   onChange: (value: number) => void;
-  /** Spoken description, e.g. "Wind tolerance". */
+  /** Spoken description, e.g. "Wind limit". */
   label: string;
   /** Spoken form of the current value, when the bare number is unhelpful. */
   valueLabel?: string;
