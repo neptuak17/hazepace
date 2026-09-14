@@ -12,7 +12,6 @@ import { AppHeader } from '@/components/app-header';
 import { Slider } from '@/components/slider';
 import {
   Accent,
-  Accent2,
   Card,
   Neutral,
   Palette,
@@ -22,10 +21,8 @@ import {
   tracking,
 } from '@/constants/design-tokens';
 import { Common, ThresholdsStrings } from '@/constants/strings';
-import { RAIN_TOL, type Sensitivity } from '@/lib/rating';
+import { RAIN_TOL } from '@/lib/rating';
 import { useSettings } from '@/lib/settings';
-
-const SENSITIVITIES: Sensitivity[] = ['Normal', 'Reactive'];
 
 export default function ThresholdsScreen() {
   const router = useRouter();
@@ -41,25 +38,6 @@ export default function ThresholdsScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{ThresholdsStrings.airCardTitle}</Text>
           <Text style={styles.caption}>{ThresholdsStrings.airCardCaption}</Text>
-
-          <Text style={styles.subLabel}>{ThresholdsStrings.sensitivityLabel}</Text>
-          <View style={styles.chipRow}>
-            {SENSITIVITIES.map((s) => {
-              const on = s === settings.sensitivity;
-              return (
-                <Pressable
-                  key={s}
-                  onPress={() => update({ sensitivity: s })}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: on }}
-                  style={[styles.chip, on ? styles.chipOn : styles.chipOff]}>
-                  <Text style={[styles.chipText, { color: on ? Neutral[100] : Neutral[800] }]}>
-                    {s}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
         </View>
 
         <View style={styles.card}>
@@ -148,29 +126,6 @@ const styles = StyleSheet.create({
   },
 
   sliderTight: { marginTop: 6 },
-
-  subLabel: {
-    ...Type.caption,
-    fontFamily: Type.rowLabel.fontFamily,
-    letterSpacing: tracking(12, 0.08),
-    textTransform: 'uppercase',
-    color: Neutral[600],
-    marginTop: Space.four,
-  },
-
-  chipRow: { flexDirection: 'row', gap: 7, marginTop: 8 },
-  chip: {
-    flex: 1,
-    minHeight: 44,
-    borderRadius: Radius.pill,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  // Sensitivity uses the sage voice, not the terracotta one.
-  chipOn: { backgroundColor: Accent2[600], borderColor: Accent2[600] },
-  chipOff: { backgroundColor: 'transparent', borderColor: Neutral[300] },
-  chipText: { ...Type.pillLabel },
 
   limitRow: {
     flexDirection: 'row',

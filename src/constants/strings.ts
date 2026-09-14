@@ -220,9 +220,7 @@ export const ThresholdsStrings = {
    * §3.1), so this card only holds the sensitivity.
    */
   airCardCaption:
-    "Air levels follow Environment and Climate Change Canada's AQHI guidance for your sensitivity and sport. Always follow local advisories.",
-
-  sensitivityLabel: 'Air quality sensitivity',
+    "Air levels follow Environment and Climate Change Canada's AQHI guidance for your sensitivity and sport — set those in About yourself. Always follow local advisories.",
 
   weatherCardTitle: 'Weather limits',
   /** The one place the amber band is explained; the margins are not shown. */
