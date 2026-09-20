@@ -12,10 +12,12 @@
  * different thing from a low number, and only the caller can decide how to
  * present that difference.
  *
- * This module deliberately has no imports. That keeps it runnable directly
- * under Node (see `scripts/check-conditions.mjs`) without a bundler, which is
- * how the verification script exercises it against the live API.
+ * This module's only import is the User-Agent string, itself import-free, so
+ * it stays runnable directly under Node (see `scripts/check-conditions.mjs`)
+ * without a bundler, which is how the verification script exercises it
+ * against the live API.
  */
+import { USER_AGENT } from './user-agent.ts';
 
 /* ── Attribution ─────────────────────────────────────────────────────────── */
 
@@ -221,7 +223,11 @@ async function getJson(
     const response = await fetch(bustCache(url), {
       signal: controller.signal,
       cache: 'no-store',
-      headers: { accept: 'application/json', 'cache-control': 'no-cache' },
+      headers: {
+        accept: 'application/json',
+        'cache-control': 'no-cache',
+        'user-agent': USER_AGENT,
+      },
     });
 
     if (!response.ok) {

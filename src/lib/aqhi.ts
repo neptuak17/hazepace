@@ -18,9 +18,11 @@
  *     observations carry decimals (2.46) while forecasts are whole numbers.
  *   - There is no category field in either collection. See `AqhiCategory`.
  *
- * This module has no imports so it can be run directly under Node without a
- * bundler, which is how `scripts/check-conditions.mjs` exercises it live.
+ * This module's only import is the User-Agent string, itself import-free,
+ * so it can be run directly under Node without a bundler, which is how
+ * `scripts/check-conditions.mjs` exercises it live.
  */
+import { USER_AGENT } from './user-agent.ts';
 
 /* ── Attribution ─────────────────────────────────────────────────────────── */
 
@@ -214,7 +216,11 @@ async function getJson(url: string): Promise<Fetched<unknown>> {
     const response = await fetch(bustCache(url), {
       signal: controller.signal,
       cache: 'no-store',
-      headers: { accept: 'application/json', 'cache-control': 'no-cache' },
+      headers: {
+        accept: 'application/json',
+        'cache-control': 'no-cache',
+        'user-agent': USER_AGENT,
+      },
     });
     if (!response.ok) {
       return {

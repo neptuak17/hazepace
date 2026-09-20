@@ -13,6 +13,7 @@
  */
 import { roundCoordinate } from './open-meteo.ts';
 import type { ManualPlace } from './place.ts';
+import { USER_AGENT } from './user-agent.ts';
 
 const SEARCH_URL = 'https://geocoding-api.open-meteo.com/v1/search';
 /** The endpoint returns nothing for a single character. */
@@ -113,7 +114,7 @@ export async function searchPlaces(query: string, signal?: AbortSignal): Promise
   try {
     const response = await fetch(buildSearchUrl(q), {
       signal: controller.signal,
-      headers: { accept: 'application/json' },
+      headers: { accept: 'application/json', 'user-agent': USER_AGENT },
     });
     if (!response.ok) {
       return {
