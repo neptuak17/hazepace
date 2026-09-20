@@ -8,6 +8,20 @@ heat, and against Environment and Climate Change Canada's AQHI guidance for
 air. The rules are specified in [`docs/decision-rules.md`](docs/decision-rules.md);
 the code follows that file.
 
+## About this repository
+
+HazePace is a personal, non-commercial project by one person. It is
+published so that the data providers it calls can see what is calling them.
+
+- **Not licensed.** All rights reserved. The code is here to read, not to
+  reuse, and contributions are not being accepted.
+- **Contact:** through the GitHub profile, [@neptuak17](https://github.com/neptuak17).
+- **If you operate one of the APIs below** and see this repository's URL in
+  a `User-Agent` header, that traffic is this app. It fetches once per app
+  open and on manual refresh, caches results, sends no personal data, and
+  rounds every coordinate to two decimal places before requesting. Please
+  get in touch if it is causing you trouble.
+
 ## Run
 
 ```bash
