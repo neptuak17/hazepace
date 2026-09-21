@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     textTransform: 'none',
     letterSpacing: 0,
     color: Neutral[700],
-    backgroundColor: 'rgba(249,244,237,0.8)',
+    backgroundColor: Palette.veil,
     borderRadius: Radius.pill,
     paddingHorizontal: 11,
     paddingVertical: 5,

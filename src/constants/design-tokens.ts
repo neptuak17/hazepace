@@ -1,77 +1,135 @@
 /**
  * "Organic" design system tokens, ported from the HazePace design handoff.
  *
- * These are transcribed from the design, not derived — do not recompute or
- * round them. The design is a single warm light palette; it has no dark
- * variant, so these are flat values rather than the light/dark pairs in
- * `theme.ts`.
+ * The light values are transcribed from the design, not derived — do not
+ * recompute or round them. The dark values are the same two accent ramps
+ * walked from the other end (tints become fills, deep inks become text,
+ * inks brighten a step) plus three near-black neutrals the design did not
+ * have; DESIGN_SYSTEM.md §2 records each pair with its contrast ratio.
+ *
+ * Every colour is a `DynamicColorIOS` pair on iOS, resolved by UIKit for
+ * the current appearance, so styles created once at module scope follow
+ * the system setting with no hook and no re-render. Other platforms get
+ * the light value. `Appearance.setColorScheme()` overrides it in-app.
  */
-import { Platform, type TextStyle, type ViewStyle } from 'react-native';
+import { DynamicColorIOS, Platform, type ColorValue, type TextStyle, type ViewStyle } from 'react-native';
+
+/** A colour with a light and a dark rendering. */
+function dyn(light: string, dark: string): ColorValue {
+  return Platform.OS === 'ios' ? DynamicColorIOS({ light, dark }) : light;
+}
+
+/**
+ * The three near-black surfaces dark mode needs below `Neutral[900]`. Named
+ * here rather than in the ramp so the ramp stays the design's nine steps.
+ */
+const Dark = {
+  page: '#181613',
+  raised: '#1f1c18',
+  card: '#24211c',
+} as const;
 
 export const Palette = {
-  bg: '#f5ead8',
-  surface: '#ebddc5',
-  text: '#201e1d',
-  divider: 'rgba(32,30,29,0.16)',
-} as const;
+  bg: dyn('#f5ead8', Dark.page),
+  surface: dyn('#ebddc5', Dark.card),
+  text: dyn('#201e1d', '#f5ead8'),
+  divider: dyn('rgba(32,30,29,0.16)', 'rgba(245,234,216,0.14)'),
+  /** Behind a sheet. */
+  scrim: dyn('rgba(46,43,37,0.42)', 'rgba(24,22,19,0.62)'),
+  /** A translucent pill over the map plate. */
+  veil: dyn('rgba(249,244,237,0.8)', 'rgba(46,43,37,0.8)'),
+} as const satisfies Record<string, ColorValue>;
 
-/** Terracotta. 100 (lightest) → 900 (darkest). */
+/**
+ * Terracotta. 100 (lightest) → 900 (darkest). The dark column is by the
+ * role each step plays, not by index: 700 is link text and the selected
+ * tab's ink, so it becomes 300; 600 is the selected chip, so 500.
+ */
 export const Accent = {
-  base: '#c67139',
-  100: '#fff2eb',
-  200: '#ffe1d0',
-  300: '#ffc6a5',
-  400: '#f6a06b',
-  500: '#d67f48',
-  600: '#b2622d',
-  700: '#8c491a',
-  800: '#643312',
-  900: '#402310',
-} as const;
+  base: dyn('#c67139', '#c67139'),
+  100: dyn('#fff2eb', '#fff2eb'),
+  200: dyn('#ffe1d0', '#643312'),
+  300: dyn('#ffc6a5', '#ffc6a5'),
+  400: dyn('#f6a06b', '#f6a06b'),
+  500: dyn('#d67f48', '#d67f48'),
+  600: dyn('#b2622d', '#d67f48'),
+  700: dyn('#8c491a', '#ffc6a5'),
+  800: dyn('#643312', '#643312'),
+  900: dyn('#402310', '#402310'),
+} as const satisfies Record<string | number, ColorValue>;
 
-/** Sage — the second voice, not just a highlight. */
+/** Sage — the second voice, not just a highlight. Dark column by role. */
 export const Accent2 = {
-  base: '#7a8a5e',
-  100: '#f0fae1',
-  200: '#e1eecc',
-  300: '#ccdbb2',
-  400: '#aebf92',
-  500: '#8fa073',
-  600: '#728157',
-  700: '#56633f',
-  800: '#3d472b',
-  900: '#272e1b',
-} as const;
+  base: dyn('#7a8a5e', '#7a8a5e'),
+  100: dyn('#f0fae1', '#f0fae1'),
+  200: dyn('#e1eecc', '#3d472b'),
+  300: dyn('#ccdbb2', '#56633f'),
+  400: dyn('#aebf92', '#aebf92'),
+  500: dyn('#8fa073', '#8fa073'),
+  600: dyn('#728157', '#8fa073'),
+  700: dyn('#56633f', '#56633f'),
+  800: dyn('#3d472b', '#e1eecc'),
+  900: dyn('#272e1b', '#f0fae1'),
+} as const satisfies Record<string | number, ColorValue>;
 
+/**
+ * Warm grey. Dark column by role: 100 is the raised surface and the text on
+ * fills; 200 the inset panel; 300 the track; 400 the "—" pill; 600 tertiary
+ * text; 700 secondary text; 800 off-chip text.
+ */
 export const Neutral = {
-  100: '#f9f4ed',
-  200: '#eee7db',
-  300: '#dcd3c4',
-  400: '#c0b6a5',
-  500: '#a19786',
-  600: '#82796a',
-  700: '#645c50',
-  800: '#474238',
-  900: '#2e2b25',
-} as const;
+  100: dyn('#f9f4ed', Dark.raised),
+  200: dyn('#eee7db', '#2e2b25'),
+  300: dyn('#dcd3c4', '#645c50'),
+  400: dyn('#c0b6a5', '#82796a'),
+  500: dyn('#a19786', '#a19786'),
+  600: dyn('#82796a', '#c0b6a5'),
+  700: dyn('#645c50', '#dcd3c4'),
+  800: dyn('#474238', '#eee7db'),
+  900: dyn('#2e2b25', '#2e2b25'),
+} as const satisfies Record<number, ColorValue>;
 
 /** The three-level scale used on every screen. Index is the level. */
 export type Level = 0 | 1 | 2;
 
+/**
+ * The verdict ramp: three steps drawn from the two accent ramps. Green is
+ * a different hue; red is amber one step deeper in every column. In dark
+ * mode the columns swap polarity — tints become dark fills, deep inks
+ * become pale text, inks brighten — while the code that applies them does
+ * not change.
+ */
 export const Verdict = {
   word: { 0: 'GREEN', 1: 'AMBER', 2: 'RED' },
   /** Line/figure colour. */
-  ink: { 0: '#728157', 1: '#d67f48', 2: '#8c491a' },
+  ink: {
+    0: dyn('#728157', '#aebf92'),
+    1: dyn('#d67f48', '#f6a06b'),
+    2: dyn('#8c491a', '#d67f48'),
+  },
   /** Card and pill fills. */
-  tint: { 0: '#e1eecc', 1: '#ffe1d0', 2: '#ffc6a5' },
+  tint: {
+    0: dyn('#e1eecc', '#3d472b'),
+    1: dyn('#ffe1d0', '#643312'),
+    2: dyn('#ffc6a5', '#402310'),
+  },
   /** Text sitting on a tint fill. */
-  deepInk: { 0: '#3d472b', 1: '#8c491a', 2: '#643312' },
-} as const satisfies Record<string, Record<Level, string>>;
+  deepInk: {
+    0: dyn('#3d472b', '#e1eecc'),
+    1: dyn('#8c491a', '#ffe1d0'),
+    2: dyn('#643312', '#fff2eb'),
+  },
+} as const satisfies {
+  word: Record<Level, string>;
+  ink: Record<Level, ColorValue>;
+  tint: Record<Level, ColorValue>;
+  deepInk: Record<Level, ColorValue>;
+};
 
 /**
  * The design's 4.4px-based scale, rounded to integers as the handoff permits.
- * Kept separate from `Spacing` in `theme.ts`, which the Expo template screens
- * still use.
+ * Kept separate from `Spacing` in `theme.ts`, which only the Expo template's
+ * reference screens use.
  */
 export const Space = {
   one: 4,

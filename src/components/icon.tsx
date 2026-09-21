@@ -9,6 +9,7 @@
  * Every glyph is drawn on a 24x24 viewBox and inherits `color`, so an icon
  * takes its colour from the caller the way the prototype's `currentColor` did.
  */
+import type { ColorValue } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 type Glyph = {
@@ -78,7 +79,7 @@ export type IconName = keyof typeof GLYPHS;
 interface IconProps {
   name: IconName;
   size?: number;
-  color: string;
+  color: ColorValue;
   /** Overrides the glyph's own stroke width. */
   strokeWidth?: number;
 }

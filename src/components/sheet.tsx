@@ -105,7 +105,7 @@ export function Sheet({ visible, title, onClose, children }: SheetProps) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
-  scrim: { flex: 1, backgroundColor: 'rgba(46,43,37,0.42)' },
+  scrim: { flex: 1, backgroundColor: Palette.scrim },
   panel: {
     backgroundColor: Neutral[100],
     borderTopLeftRadius: Radius.lg,

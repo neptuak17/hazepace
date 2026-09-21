@@ -73,9 +73,9 @@ export default function RootLayout() {
               <Shell />
             </View>
           </PlacesSheetProvider>
-          {/* The design is a single warm light palette, so the status bar is
-              always dark-on-light. */}
-          <StatusBar style="dark" />
+          {/* Follows the appearance: dark content on the light page, light
+              content on the dark one. */}
+          <StatusBar style="auto" />
         </ConditionsProvider>
       </SettingsProvider>
     </SafeAreaProvider>
