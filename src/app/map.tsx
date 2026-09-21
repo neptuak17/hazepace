@@ -26,10 +26,9 @@ import {
   tracking,
 } from '@/constants/design-tokens';
 import { Common, DataStrings, HeaderStrings, MapStrings } from '@/constants/strings';
-import { ECCC_ATTRIBUTION, type AqhiSnapshot } from '@/lib/aqhi';
+import type { AqhiSnapshot } from '@/lib/aqhi';
 import { useConditions } from '@/lib/conditions';
 import { FAR_COMMUNITY_KM, currentHour, formatAge, formatAqhi, formatClock } from '@/lib/live';
-import { OPEN_METEO_ATTRIBUTION } from '@/lib/open-meteo';
 import { band, type Level, type Prefs, type TimeFormat } from '@/lib/rating';
 import { useSettings } from '@/lib/settings';
 
@@ -171,11 +170,6 @@ export default function MapScreen() {
             ))}
           </View>
         </View>
-
-        <View style={styles.attributionBlock}>
-          <Text style={styles.attribution}>{OPEN_METEO_ATTRIBUTION}</Text>
-          <Text style={styles.attribution}>{ECCC_ATTRIBUTION}</Text>
-        </View>
       </ScrollView>
     </View>
   );
@@ -258,6 +252,4 @@ const styles = StyleSheet.create({
   zoneMeta: { ...Type.caption, color: Neutral[600], marginTop: 2 },
   zoneWord: { ...Type.caption, fontFamily: Type.rowLabel.fontFamily, letterSpacing: tracking(12, 0.04) },
 
-  attributionBlock: { gap: 4 },
-  attribution: { ...Type.caption, color: Neutral[600], lineHeight: 12 * 1.4 },
 });
