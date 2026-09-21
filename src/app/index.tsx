@@ -31,14 +31,13 @@ import {
   tracking,
 } from '@/constants/design-tokens';
 import {
-  Attribution,
   Common,
   DataStrings,
   HowItWorksStrings,
   SheetStrings,
   TodayStrings,
 } from '@/constants/strings';
-import { ECCC_ATTRIBUTION, categoryFor } from '@/lib/aqhi';
+import { categoryFor } from '@/lib/aqhi';
 import { useConditions } from '@/lib/conditions';
 import {
   aqhiOf,
@@ -53,7 +52,6 @@ import {
   todayHours,
   type LiveHour,
 } from '@/lib/live';
-import { OPEN_METEO_ATTRIBUTION } from '@/lib/open-meteo';
 import {
   bestWindow,
   factorLevels,
@@ -301,10 +299,7 @@ export default function TodayScreen() {
         </View>
 
         <View style={styles.card}>
-          <View style={styles.cardHead}>
-            <Text style={styles.cardTitle}>{TodayStrings.chartTitle}</Text>
-            <Text style={styles.cardHint}>{TodayStrings.chartHint}</Text>
-          </View>
+          <Text style={styles.cardTitle}>{TodayStrings.chartTitle}</Text>
 
           <View style={styles.chart}>
             {hours.map((hr) => {
@@ -438,16 +433,12 @@ export default function TodayScreen() {
           </View>
         </View>
 
-        <View style={styles.attributionBlock}>
-          <Text style={styles.attribution}>{Attribution.today}</Text>
-          <Text style={styles.attribution}>{OPEN_METEO_ATTRIBUTION}</Text>
-          <Text style={styles.attribution}>{ECCC_ATTRIBUTION}</Text>
-          {fetchedAt !== null && (
-            <Text style={styles.attribution}>
-              {DataStrings.fetchedAge(formatAge(fetchedAt, nowMs))}
-            </Text>
-          )}
-        </View>
+        {/* Sources are credited on the How it works page; only the
+            freshness line stays here so a stale fetch is never mistaken
+            for a current one. */}
+        {fetchedAt !== null && (
+          <Text style={styles.fetched}>{DataStrings.fetchedAge(formatAge(fetchedAt, nowMs))}</Text>
+        )}
       </ScrollView>
 
       <Sheet
@@ -527,14 +518,7 @@ const styles = StyleSheet.create({
   windowText: { ...Type.pillLabel, flex: 1, color: Accent2[800] },
 
   card: Card,
-  cardHead: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
   cardTitle: { ...Type.dayRow, color: Palette.text },
-  cardHint: { ...Type.caption, color: Neutral[600] },
   cardNote: { ...Type.bodySmall, color: Neutral[700], lineHeight: 13 * 1.4, marginTop: 3 },
   cardAction: { alignSelf: 'flex-start', marginTop: Space.two, minHeight: 32, justifyContent: 'center' },
   cardActionText: { ...Type.rowLabel, color: Accent.base },
@@ -591,6 +575,5 @@ const styles = StyleSheet.create({
     color: Accent[700],
   },
 
-  attributionBlock: { gap: 4 },
-  attribution: { ...Type.caption, color: Neutral[600], lineHeight: 12 * 1.4 },
+  fetched: { ...Type.caption, color: Neutral[600], lineHeight: 12 * 1.4 },
 });

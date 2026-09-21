@@ -147,7 +147,6 @@ export const TodayStrings = {
   windowSpan: (from: string, to: string, hours: number) => `${from} – ${to} · ${hours} h`,
 
   chartTitle: 'Hour by hour',
-  chartHint: 'taller is better',
   barLabel: (time: string, aqhi: number) => `${time}, AQHI ${aqhi}`,
   now: ' · now',
   /** The verdict pill in the readout names the driver: "AMBER · wind". */
@@ -405,7 +404,6 @@ export const LaunchStrings = {
  * Two sources only; nothing else feeds the app.
  */
 export const Attribution = {
-  today: 'Air quality follows the Canadian AQHI.',
   sources: [
     {
       name: 'Environment and Climate Change Canada',
