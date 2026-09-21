@@ -28,10 +28,8 @@ import {
   tracking,
 } from '@/constants/design-tokens';
 import { DataStrings, ForecastStrings } from '@/constants/strings';
-import { ECCC_ATTRIBUTION } from '@/lib/aqhi';
 import { useConditions } from '@/lib/conditions';
 import { DAY_SLOTS, formatDayName, formatShortDate, liveDays } from '@/lib/live';
-import { OPEN_METEO_ATTRIBUTION } from '@/lib/open-meteo';
 import { formatHour } from '@/lib/rating';
 import { useSettings } from '@/lib/settings';
 
@@ -135,11 +133,6 @@ export default function ForecastScreen() {
             );
           })}
         </View>
-
-        <View style={styles.attributionBlock}>
-          <Text style={styles.attribution}>{OPEN_METEO_ATTRIBUTION}</Text>
-          <Text style={styles.attribution}>{ECCC_ATTRIBUTION}</Text>
-        </View>
       </ScrollView>
     </View>
   );
@@ -193,6 +186,4 @@ const styles = StyleSheet.create({
   window: { ...Type.pillLabel, color: Palette.text },
   meta: { ...Type.caption, color: Neutral[600] },
 
-  attributionBlock: { gap: 4 },
-  attribution: { ...Type.caption, color: Neutral[600], lineHeight: 12 * 1.4 },
 });
