@@ -1,7 +1,6 @@
 # HazePace design system
 
-What is actually in the code, as of commit `ec9b9fe` plus the appearance
-override (2026-09-20). Every value
+What is actually in the code, as of 2026-09-21. Every value
 below is copied from a file in this repo and cited. Nothing is aspirational.
 Where the code is inconsistent, every variant is listed and the dominant one
 named. Where something is not determinable from the repo, it says **TODO**.
@@ -1152,19 +1151,27 @@ row; there is no baseline alignment.
 (`icon.tsx:23–25`). Used only in the launch core. **The brand mark does not
 appear on the app icon or splash** (see 11.3).
 
-### 11.3 App icon and splash — TODO
+### 11.3 App icon and splash
 
-All three are the create-expo-app defaults and are placeholders:
+Own artwork, supplied 2026-09-21 (`assets/images/`):
 
-- `assets/images/icon.png` 1024 × 1024 and `assets/images/splash-icon.png`
-  228 × 213 were added in the initial commit and never replaced; the splash
-  shows the Expo mark on `#f5ead8` at 76 px wide (`app.json:33–37`).
-- `assets/expo.icon/icon.json` (iOS Icon Composer) is the Expo symbol on a
-  blue automatic gradient (`0.000, 0.478, 1.000`) with a neutral shadow.
-- Android adaptive icon background is `#E6F4FE` (`app.json:16`), a blue
-  outside the palette.
+- `icon-light.png`, `icon-dark.png`, `icon-tinted.png` — 1024 × 1024 PNG,
+  wired as `ios.icon: { light, dark, tinted }` in `app.json`; the light file
+  is also the top-level `icon` (Android/web fallback). The light icon is
+  fully opaque, as Apple requires. **The dark and tinted files are also
+  fully opaque** — Apple's guidance is a transparent background on both
+  (iOS draws its own dark backing; the tint is applied only to opaque
+  pixels), so a tinted icon that is opaque edge-to-edge renders as a solid
+  tinted square. Re-export those two with transparent backgrounds; no config
+  change is needed.
+- `splash-mark.png` — 1024 × 1024 PNG on a transparent background, shown at
+  76 pt over `#f5ead8` (light) or `#181613` (dark) via the
+  `expo-splash-screen` plugin. One image serves both appearances.
+- Android adaptive icon assets are still the template's (`#E6F4FE`
+  background, Expo foreground) — **TODO if Android becomes a target.**
+- `favicon.png` 48 × 48 is the template's — **TODO for the web target.**
 
-Only the splash *background* is on-system. **TODO: icon and splash artwork.**
+None of this is visible in Expo Go; it is baked in by EAS Build.
 
 ### 11.4 Other imagery
 

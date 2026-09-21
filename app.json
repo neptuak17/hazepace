@@ -4,11 +4,15 @@
     "slug": "hazepace",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/icon-light.png",
     "scheme": "hazepace",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": {
+        "light": "./assets/images/icon-light.png",
+        "dark": "./assets/images/icon-dark.png",
+        "tinted": "./assets/images/icon-tinted.png"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -29,7 +33,7 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#f5ead8",
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/splash-mark.png",
           "imageWidth": 76,
           "dark": {
             "backgroundColor": "#181613"
