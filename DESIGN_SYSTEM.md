@@ -1,6 +1,7 @@
 # HazePace design system
 
-What is actually in the code, as of commit `449753b` (2026-09-15). Every value
+What is actually in the code, as of commit `ec9b9fe` plus the appearance
+override (2026-09-20). Every value
 below is copied from a file in this repo and cited. Nothing is aspirational.
 Where the code is inconsistent, every variant is listed and the dominant one
 named. Where something is not determinable from the repo, it says **TODO**.
@@ -37,20 +38,32 @@ actions and the two caution levels, sage for "clear" and for anything about
 the user's own settings. Display type is a single soft slab (Caprasimo) used
 for every number and title; everything else is Figtree. Corners are large
 (16–32) and pills are everywhere. Motion is confined to the launch overlay and
-the sheet; the screens themselves do not animate. There is no dark mode, no
-haptics, and no imagery beyond seventeen stroked line icons.
-(`design-tokens.ts:1–8`, `app.json:10`.)
+the sheet; the screens themselves do not animate. A dark appearance mirrors
+the same palette from the other end of its ramps and follows the system (or
+an in-app choice). There are no haptics, and no imagery beyond seventeen
+stroked line icons. (`design-tokens.ts:1–15`, `app.json:10`.)
 
 ---
 
 ## 2. Color
 
-The app has **one theme**. `app.json:10` sets `"userInterfaceStyle": "light"`,
-`_layout.tsx:78–80` forces the status bar to `dark` content, and the token
-file's header says "the design is a single warm light palette; it has no dark
-variant" (`design-tokens.ts:5–7`). **Dark-mode column below is therefore
-"none" throughout. TODO: a sibling app wanting dark mode has no dark tokens
-to start from.**
+The app has a light theme and a dark theme, and **one token layer serves
+both**. Every colour in `design-tokens.ts` is built by `dyn(light, dark)`
+(`design-tokens.ts:19–21`), which returns a `DynamicColorIOS` pair on iOS
+and the light value on other platforms. UIKit resolves the pair at paint
+time, so styles created once at module scope follow the appearance with no
+hook, no context and no re-render — no screen or component file knows dark
+mode exists. `app.json:10` sets `"userInterfaceStyle": "automatic"`, the
+status bar is `"auto"` (`_layout.tsx`), and the splash has a `dark`
+background (`app.json`). The user can pin the scheme on About yourself;
+`SettingsProvider` applies it with `Appearance.setColorScheme()`
+(`settings.tsx`), which dynamic colours respect.
+
+**The light values are the design's. The dark values are derived, not
+designed** (see 2.6): the same two accent ramps read from the other end,
+plus three near-black neutrals. Sections 2.1–2.5 describe the light theme;
+2.6 gives the dark value and contrast for every role. Android and web
+currently render light only — a **TODO** if either becomes a target.
 
 ### 2.1 Raw palettes (`design-tokens.ts:11–56`)
 
@@ -84,39 +97,40 @@ screen or component.
 
 ### 2.2 Semantic roles
 
-Roles are not named in code; they are inferred from consistent use. Light
-value is the only value.
+Roles are not named in code; they are inferred from consistent use. The
+"Dark" column points to 2.6, where each role's dark value and ratio are
+tabulated.
 
 | Role | Token | Value | Dark | Where used |
 | --- | --- | --- | --- | --- |
-| Page background | `Palette.bg` | `#f5ead8` | none | every screen's `screen` style (`index.tsx:471`, `map.tsx:185`, `forecast.tsx:149`, `thresholds.tsx:108`, `about.tsx:147`, `how-it-works.tsx:181`), root view (`_layout.tsx:93`), launch overlay (`launch-overlay.tsx:241`), splash (`app.json:35`) |
-| Card surface | `Palette.surface` via `Card` | `#ebddc5` | none | every `styles.card = Card` (`design-tokens.ts:139–143`); the verdict card when no verdict (`index.tsx:121`) |
-| Inset surface (a panel inside a card, sheet tiles, tab bar) | `Neutral[200]` | `#eee7db` | none | Today readout (`index.tsx:566`), Forecast detail (`forecast.tsx:180`), Map plate (`map.tsx:201`), launch step pills (`launch-overlay.tsx:287`), sheet search box and tiles (`sheets.tsx:337,356,366`), HIW vent tiles (`how-it-works.tsx:254`), unjudged factor tile (`how-it-works.tsx:111`) |
-| Raised surface (sheet panel, tab bar) | `Neutral[100]` | `#f9f4ed` | none | sheet panel (`sheet.tsx:106`), tab bar (`tab-bar.tsx:91`); also **text on filled pills/chips** (see below) |
-| Track / empty / unjudged | `Neutral[300]` | `#dcd3c4` | none | chart bar with no reading (`index.tsx:318`), forecast block with no level (`forecast.tsx:83`), slider track (`slider.tsx:161`), launch progress track (`launch-overlay.tsx:299`), off-chip border (`index.tsx:514`, `about.tsx:195`), Map plate border (`map.tsx:200`) |
-| Unavailable pill fill | `Neutral[400]` | `#c0b6a5` | none | verdict pill when no verdict (`index.tsx:378`, `forecast.tsx:111`) |
-| Primary text | `Palette.text` | `#201e1d` | none | titles, card titles, values, hour labels, day names (everywhere) |
-| Secondary text | `Neutral[700]` | `#645c50` | none | card notes and captions that explain (`index.tsx:538`, `thresholds.tsx:123`, `how-it-works.tsx:193–194`, `about.tsx:198–199`, `sheets.tsx:331,387`) |
-| Tertiary text (metadata, ticks, attribution, unselected tab) | `Neutral[600]` | `#82796a` | none | every `caption`-role line: attribution (`index.tsx:595`), provenance (`index.tsx:579`), ticks (`index.tsx:359`), stat keys (`index.tsx:584`), kickers (`map.tsx:234`), tab label unselected (`tab-bar.tsx:30`), header meta (`app-header.tsx:133`) |
-| Text on tinted/filled chips | `Neutral[100]` | `#f9f4ed` | none | on-chip text (`index.tsx:290`, `about.tsx:66`), verdict pill text (`index.tsx:493,576`, `forecast.tsx:190`, `how-it-works.tsx:222`) |
-| Chip text, off state | `Neutral[800]` | `#474238` | none | `index.tsx:290`, `about.tsx:66`, launch step label (`launch-overlay.tsx:293`), closing line (`how-it-works.tsx:276`), AQHI category in sheet (`sheets.tsx:361`) |
-| Divider | `Palette.divider` | `rgba(32,30,29,0.16)` | none | row rules at 1.5 px (`map.tsx:243`, `forecast.tsx:164`, `sheets.tsx:318,385`), tab bar top rule (`tab-bar.tsx:93`) |
-| Primary action fill | `Accent.base` | `#c67139` | none | Done / Retry buttons (`thresholds.tsx:150`, `about.tsx:223`, `how-it-works.tsx:283`, `error-panel.tsx:64`), slider fill and thumb (`slider.tsx:167,174`), launch core and progress fill (`launch-overlay.tsx:267,302`), header icon buttons (`app-header.tsx:86,93,100`), sheet close (`sheet.tsx:88`), pull-to-refresh spinner (`index.tsx:230`) |
-| Primary action, pressed | `Accent[700]` | `#8c491a` | none | `donePressed` / `retryPressed` (`thresholds.tsx:155`, `about.tsx:228`, `how-it-works.tsx:288`, `error-panel.tsx:69`) |
-| Text on primary action | `Palette.bg` | `#f5ead8` | none | `doneText`, `retryText` (`thresholds.tsx:159`, `error-panel.tsx:71`) |
-| Selected chip (activity, on Today) | `Accent[600]` fill + border | `#b2622d` | none | `index.tsx:513` |
-| Selected chip (settings, on About) | `Accent2[600]` fill + border | `#728157` | none | `about.tsx:194` — the code comment says "all three groups here use the sage voice" |
-| Selected tab | `Accent[200]` fill, `Accent[700]` icon+label | `#ffe1d0` / `#8c491a` | none | `tab-bar.tsx:109,30` |
-| Link / emphasised value | `Accent[700]` | `#8c491a` | none | "What's in the air" link (`index.tsx:591`), limit values on Thresholds (`thresholds.tsx:144`), HIW vent tile value (`how-it-works.tsx:258`) |
-| Inline text action | `Accent.base` | `#c67139` | none | "Choose a place" on the location card (`index.tsx:540`) — **the only place `Accent.base` is used as text; contrast 2.69:1 on the card** |
-| "Your settings" accent fill | `Accent2[200]` | `#e1eecc` | none | best-window pill (`index.tsx:521`), About tiles (`about.tsx:208`), HIW page badge (`how-it-works.tsx:202`) |
-| "Your settings" accent ink | `Accent2[800]` | `#3d472b` | none | best-window text + icon (`index.tsx:299,527`), tile icons + labels (`about.tsx:127,217`), page-badge icons (`how-it-works.tsx:78`) |
-| "Your settings" accent ink, strongest | `Accent2[900]` | `#272e1b` | none | tile value (`about.tsx:213`) — single use |
-| Place / location marker | `Accent2[600]` | `#728157` | none | header pin badge (`app-header.tsx:127`), device row circle in places sheet (`sheets.tsx:183`), source-list dots (`how-it-works.tsx:267`), launch step dots (`launch-overlay.tsx:292`) |
-| Launch halo | `Accent2[300]` | `#ccdbb2` | none | expanding rings (`launch-overlay.tsx:261`) — single use |
-| Scrim | literal `rgba(46,43,37,0.42)` | = `Neutral[900]` at 42% | none | `sheet.tsx:108` — **hardcoded** |
-| Legend pill | literal `rgba(249,244,237,0.8)` | = `Neutral[100]` at 80% | none | `map.tsx:221` — **hardcoded** |
-| Shadow colour | literal `#2e2b25` | = `Neutral[900]` | none | all three `Shadow` presets (`design-tokens.ts:101,105,109`) |
+| Page background | `Palette.bg` | `#f5ead8` | §2.6 | every screen's `screen` style (`index.tsx:471`, `map.tsx:185`, `forecast.tsx:149`, `thresholds.tsx:108`, `about.tsx:147`, `how-it-works.tsx:181`), root view (`_layout.tsx:93`), launch overlay (`launch-overlay.tsx:241`), splash (`app.json:35`) |
+| Card surface | `Palette.surface` via `Card` | `#ebddc5` | §2.6 | every `styles.card = Card` (`design-tokens.ts:139–143`); the verdict card when no verdict (`index.tsx:121`) |
+| Inset surface (a panel inside a card, sheet tiles, tab bar) | `Neutral[200]` | `#eee7db` | §2.6 | Today readout (`index.tsx:566`), Forecast detail (`forecast.tsx:180`), Map plate (`map.tsx:201`), launch step pills (`launch-overlay.tsx:287`), sheet search box and tiles (`sheets.tsx:337,356,366`), HIW vent tiles (`how-it-works.tsx:254`), unjudged factor tile (`how-it-works.tsx:111`) |
+| Raised surface (sheet panel, tab bar) | `Neutral[100]` | `#f9f4ed` | §2.6 | sheet panel (`sheet.tsx:106`), tab bar (`tab-bar.tsx:91`); also **text on filled pills/chips** (see below) |
+| Track / empty / unjudged | `Neutral[300]` | `#dcd3c4` | §2.6 | chart bar with no reading (`index.tsx:318`), forecast block with no level (`forecast.tsx:83`), slider track (`slider.tsx:161`), launch progress track (`launch-overlay.tsx:299`), off-chip border (`index.tsx:514`, `about.tsx:195`), Map plate border (`map.tsx:200`) |
+| Unavailable pill fill | `Neutral[400]` | `#c0b6a5` | §2.6 | verdict pill when no verdict (`index.tsx:378`, `forecast.tsx:111`) |
+| Primary text | `Palette.text` | `#201e1d` | §2.6 | titles, card titles, values, hour labels, day names (everywhere) |
+| Secondary text | `Neutral[700]` | `#645c50` | §2.6 | card notes and captions that explain (`index.tsx:538`, `thresholds.tsx:123`, `how-it-works.tsx:193–194`, `about.tsx:198–199`, `sheets.tsx:331,387`) |
+| Tertiary text (metadata, ticks, attribution, unselected tab) | `Neutral[600]` | `#82796a` | §2.6 | every `caption`-role line: attribution (`index.tsx:595`), provenance (`index.tsx:579`), ticks (`index.tsx:359`), stat keys (`index.tsx:584`), kickers (`map.tsx:234`), tab label unselected (`tab-bar.tsx:30`), header meta (`app-header.tsx:133`) |
+| Text on tinted/filled chips | `Neutral[100]` | `#f9f4ed` | §2.6 | on-chip text (`index.tsx:290`, `about.tsx:66`), verdict pill text (`index.tsx:493,576`, `forecast.tsx:190`, `how-it-works.tsx:222`) |
+| Chip text, off state | `Neutral[800]` | `#474238` | §2.6 | `index.tsx:290`, `about.tsx:66`, launch step label (`launch-overlay.tsx:293`), closing line (`how-it-works.tsx:276`), AQHI category in sheet (`sheets.tsx:361`) |
+| Divider | `Palette.divider` | `rgba(32,30,29,0.16)` | §2.6 | row rules at 1.5 px (`map.tsx:243`, `forecast.tsx:164`, `sheets.tsx:318,385`), tab bar top rule (`tab-bar.tsx:93`) |
+| Primary action fill | `Accent.base` | `#c67139` | §2.6 | Done / Retry buttons (`thresholds.tsx:150`, `about.tsx:223`, `how-it-works.tsx:283`, `error-panel.tsx:64`), slider fill and thumb (`slider.tsx:167,174`), launch core and progress fill (`launch-overlay.tsx:267,302`), header icon buttons (`app-header.tsx:86,93,100`), sheet close (`sheet.tsx:88`), pull-to-refresh spinner (`index.tsx:230`) |
+| Primary action, pressed | `Accent[700]` | `#8c491a` | §2.6 | `donePressed` / `retryPressed` (`thresholds.tsx:155`, `about.tsx:228`, `how-it-works.tsx:288`, `error-panel.tsx:69`) |
+| Text on primary action | `Palette.bg` | `#f5ead8` | §2.6 | `doneText`, `retryText` (`thresholds.tsx:159`, `error-panel.tsx:71`) |
+| Selected chip (activity, on Today) | `Accent[600]` fill + border | `#b2622d` | §2.6 | `index.tsx:513` |
+| Selected chip (settings, on About) | `Accent2[600]` fill + border | `#728157` | §2.6 | `about.tsx:194` — the code comment says "all three groups here use the sage voice" |
+| Selected tab | `Accent[200]` fill, `Accent[700]` icon+label | `#ffe1d0` / `#8c491a` | §2.6 | `tab-bar.tsx:109,30` |
+| Link / emphasised value | `Accent[700]` | `#8c491a` | §2.6 | "What's in the air" link (`index.tsx:591`), limit values on Thresholds (`thresholds.tsx:144`), HIW vent tile value (`how-it-works.tsx:258`) |
+| Inline text action | `Accent.base` | `#c67139` | §2.6 | "Choose a place" on the location card (`index.tsx:540`) — **the only place `Accent.base` is used as text; contrast 2.69:1 on the card** |
+| "Your settings" accent fill | `Accent2[200]` | `#e1eecc` | §2.6 | best-window pill (`index.tsx:521`), About tiles (`about.tsx:208`), HIW page badge (`how-it-works.tsx:202`) |
+| "Your settings" accent ink | `Accent2[800]` | `#3d472b` | §2.6 | best-window text + icon (`index.tsx:299,527`), tile icons + labels (`about.tsx:127,217`), page-badge icons (`how-it-works.tsx:78`) |
+| "Your settings" accent ink, strongest | `Accent2[900]` | `#272e1b` | §2.6 | tile value (`about.tsx:213`) — single use |
+| Place / location marker | `Accent2[600]` | `#728157` | §2.6 | header pin badge (`app-header.tsx:127`), device row circle in places sheet (`sheets.tsx:183`), source-list dots (`how-it-works.tsx:267`), launch step dots (`launch-overlay.tsx:292`) |
+| Launch halo | `Accent2[300]` | `#ccdbb2` | §2.6 | expanding rings (`launch-overlay.tsx:261`) — single use |
+| Scrim | `Palette.scrim` | `rgba(46,43,37,0.42)` (= `Neutral[900]` at 42%) | §2.6 | `sheet.tsx:108` |
+| Legend pill | `Palette.veil` | `rgba(249,244,237,0.8)` (= `Neutral[100]` at 80%) | §2.6 | `map.tsx:221` |
+| Shadow colour | literal `#2e2b25` | = `Neutral[900]` | §2.6 | all three `Shadow` presets (`design-tokens.ts:101,105,109`) |
 
 State colours beyond the verdict ramp: there are none. No error red, no
 success green, no warning yellow outside the ramp. The error panel uses the
@@ -265,6 +279,97 @@ metadata colour everywhere and sits at 3.2–3.9:1 on every surface;
 (b) `Neutral[100]` text on `ink[0]`/`ink[1]`/`Accent[600]`/`Accent2[600]`
 fills is 2.75–4.1:1; (c) `ink` used as text on its own `tint` is 2.4–3.5:1
 for levels 0 and 1; (d) the amber bar against the page is 2.52:1.
+
+---
+
+### 2.6 The dark theme (`design-tokens.ts`, `dyn()` pairs)
+
+Three new surfaces (`Dark` in `design-tokens.ts:26–30`); everything else is
+an existing ramp entry re-assigned by role. The mapping is **by role, not by
+index**: `Neutral[600]` is tertiary text, so its dark value is what tertiary
+text needs (`#c0b6a5`), not "the 600 of a dark ramp". Where one index plays
+two roles, one dark value serves both (noted below).
+
+**Surfaces**
+
+| Role | Light | Dark | L* |
+| --- | --- | --- | --- |
+| Page (`Palette.bg`) | `#f5ead8` | `#181613` new | 7.4 |
+| Raised — sheet panel, tab bar (`Neutral[100]`) | `#f9f4ed` | `#1f1c18` new | 10.5 |
+| Card (`Palette.surface`) | `#ebddc5` | `#24211c` new | 12.9 |
+| Inset panel (`Neutral[200]`) | `#eee7db` | `#2e2b25` (= light `Neutral[900]`) | 17.7 |
+
+Order in dark is page < raised < card < inset — each nested surface steps
+*up*, mirroring light where each steps down. Adjacent pairs are ≥ 3 L* apart.
+
+**Text, lines, empties**
+
+| Role (token) | Light | Dark | Dark ratio on card |
+| --- | --- | --- | --- |
+| Primary text (`Palette.text`) | `#201e1d` | `#f5ead8` | 13.5 |
+| Secondary (`Neutral[700]`) | `#645c50` | `#dcd3c4` | 10.8 |
+| Tertiary (`Neutral[600]`) | `#82796a` | `#c0b6a5` | **8.0** (light: 3.2, a fail) |
+| Off-chip / step text (`Neutral[800]`) | `#474238` | `#eee7db` | ~12 |
+| Text on filled chips & pills (`Neutral[100]`) | `#f9f4ed` | `#1f1c18` — shares the raised-surface value; see note | — |
+| Text on primary button (`Palette.bg`) | `#f5ead8` | `#181613` | 5.0 on `Accent.base` (light: 3.0) |
+| Divider (`Palette.divider`) | ink @ 16% | `rgba(245,234,216,0.14)` | — |
+| Track / empty / off-chip border (`Neutral[300]`) | `#dcd3c4` | `#645c50` | 2.7 vs page (non-text) |
+| "—" pill fill (`Neutral[400]`) | `#c0b6a5` | `#82796a` | 4.2 with page text (light: 1.8) |
+| Unjudged tile ink (`Neutral[500]`) | `#a19786` | `#a19786` | 4.9 on inset |
+| Scrim (`Palette.scrim`) | `rgba(46,43,37,.42)` | `rgba(24,22,19,.62)` | — |
+| Legend pill (`Palette.veil`) | `Neutral[100]` @ 80% | `Neutral[900]` @ 80% | — |
+
+Note on `Neutral[100]`: in light it is both the raised surface and the text
+on filled controls. Dark keeps one value for both (`#1f1c18`, L* 10.5), so
+chip text in dark is very-dark-grey rather than the page's black; the
+difference is not visible. Splitting the role would need a new token.
+
+**Actions and the settings accent**
+
+| Role (token) | Light | Dark | Dark ratio |
+| --- | --- | --- | --- |
+| Primary fill (`Accent.base`) | `#c67139` | `#c67139` unchanged | 5.0 vs page |
+| Primary pressed (`Accent[700]` as fill) | `#8c491a` darker | `#ffc6a5` lighter, page text | 11.9 |
+| Link / limit value / tab ink (`Accent[700]` as text) | `#8c491a` | `#ffc6a5` | 10.6 on card |
+| Selected tab fill (`Accent[200]`) | `#ffe1d0` | `#643312` | 6.9 with `Accent[700]`-dark ink |
+| Selected chip, Today (`Accent[600]`) | `#b2622d` | `#d67f48`, page text | 6.0 (light: 4.1) |
+| Selected chip, About; place markers (`Accent2[600]`) | `#728157` | `#8fa073`, page text | 6.4 (light: 3.8) |
+| Settings fill (`Accent2[200]`) | `#e1eecc` | `#3d472b` | — |
+| Settings ink (`Accent2[800]`) | `#3d472b` | `#e1eecc` | 8.1 on settings fill |
+| Settings ink, strongest (`Accent2[900]`) | `#272e1b` | `#f0fae1` | 9.1 |
+| Launch halo (`Accent2[300]`) | `#ccdbb2` | `#56633f` | decorative |
+| Launch core glyph | `Neutral[100]` on `Accent.base` | `#1f1c18` on `Accent.base` | decorative |
+
+`Accent[700]` plays two roles (pressed fill, link text); both take `#ffc6a5`.
+Unused ramp entries keep their light value in both modes.
+
+**The verdict ramp in dark**
+
+| Level | Light `ink` / `tint` / `deepInk` | Dark `ink` / `tint` / `deepInk` |
+| --- | --- | --- |
+| 0 GREEN | `Accent2` 600 / 200 / 800 | `Accent2` **400** `#aebf92` / **800** `#3d472b` / **200** `#e1eecc` |
+| 1 AMBER | `Accent` 500 / 200 / 700 | `Accent` **400** `#f6a06b` / **800** `#643312` / **200** `#ffe1d0` |
+| 2 RED | `Accent` 700 / 300 / 800 | `Accent` **500** `#d67f48` / **900** `#402310` / **100** `#fff2eb` |
+
+The structure survives the flip: green differs by hue; red is amber's hue one
+step deeper in every column; the red ink (L* 61.6) is darker than the amber
+ink (L* 74.4) so "more severe = deeper" holds. The columns swap polarity —
+tints are now dark fills, deep inks pale text, inks bright — and the code
+that applies them is unchanged. One visible consequence: the Today hero pill,
+which is filled with `deepInk`, is a *pale* pill with dark text in dark mode.
+
+**Dark contrast — the pairings the light audit flagged**
+
+| Pair | Green | Amber | Red |
+| --- | --- | --- | --- |
+| `ink` bar vs page | 9.2 | 8.7 | 6.0 |
+| `deepInk` text on `tint` (verdict card, stat chips) | 8.1 | 8.4 | 13.1 |
+| page text on `ink` (small pills; light: `Neutral[100]` on ink) | 9.2 | 8.7 | 6.0 |
+| `ink` text on own `tint` (HIW band rows, zone numbers) | 5.0 | 5.0 | 4.8 |
+
+Every pairing that fails AA in light (§2.5) passes in dark. Remaining
+non-text: track `#645c50` vs page 2.7:1 (an "empty" indicator, distinct from
+the green ink at 3.4:1).
 
 ---
 
@@ -461,8 +566,8 @@ Screen content does not read insets; it relies on the header above and the
 | Place row (sheet) | 12 | 1.5 px top, divider | 2 | `sheets.tsx:312–319` |
 | Key/value row (sheet) | 8 | 1.5 px top, divider | 2 | `sheets.tsx:379–386` |
 | Forecast day row | 13 | 1.5 px top, divider (transparent on first) | 0 | `forecast.tsx:162–164` |
-| Source row (HIW) | — | none | 12 | `how-it-works.tsx:261` |
-| Page row (HIW) | — | none | 18 | `how-it-works.tsx:196` |
+| Source row (HIW) | — | §2.6 | 12 | `how-it-works.tsx:261` |
+| Page row (HIW) | — | §2.6 | 18 | `how-it-works.tsx:196` |
 
 Row minimum height where set: 44 (`map.tsx:244`). Circle-to-text gap in rows:
 13 (`Space.three`).
@@ -543,9 +648,8 @@ Nothing else in the app casts one.
 
 ### 5.4 Blur and materials
 
-None. The scrim is a flat `rgba(46,43,37,0.42)` (`sheet.tsx:108`); the Map
-legend pill is `Neutral[100]` at 80% (`map.tsx:221`). No `BlurView`, no
-`backdropFilter`.
+None. The scrim is a flat `Palette.scrim` (`sheet.tsx:108`); the Map legend
+pill is `Palette.veil` (`map.tsx:221`). No `BlurView`, no `backdropFilter`.
 
 ### 5.5 Dividers
 
@@ -872,9 +976,11 @@ absent.
 
 ### 7.5 About yourself (`src/app/about.tsx`) — "settings groups + summary tile card"
 
-Order: title → card with three chip groups (sports wrap; sensitivity and time
-format equal-flex), each under an uppercase group label → tappable card with a
-link row and a three-up tile row → Done.
+Order: title → card with four chip groups (sports wrap; sensitivity, time
+format and appearance equal-flex), each under an uppercase group label →
+tappable card with a link row and a three-up tile row → Done. The appearance
+group (System / Light / Dark) writes `settings.appearance`, applied by the
+settings provider via `Appearance.setColorScheme`.
 
 - Generalised: *chip groups for enumerated settings; a summary card that
   doubles as a link.*
@@ -911,7 +1017,7 @@ like conditions; this cannot be mistaken for them" (`error-panel.tsx:10–11`).
   (`thresholds.tsx:96`, `about.tsx:136`, `how-it-works.tsx:170`). There is no
   back chevron and no swipe-back; the tab bar also works from those screens.
 - **Header:** custom `AppHeader` on every screen (§6.2); no native navigation
-  bar. Status bar content is `dark` (`_layout.tsx:80`).
+  bar. Status bar content is `"auto"` (`_layout.tsx`), following the appearance.
 - **Tab bar styling:** §6.3.
 - **Modals:** only the custom `Sheet` (§6.4); presented over the current
   screen, dismissed by scrim tap or the close button, `onRequestClose` wired
@@ -1134,9 +1240,9 @@ Forecast rows (full width, ≥ 52 tall — fine).
 
 | File | What it carries |
 | --- | --- |
-| `src/constants/design-tokens.ts` | every colour, ramp, spacing, radius, shadow, font name, type step |
+| `src/constants/design-tokens.ts` | every colour (light *and* dark, via `dyn()`), ramp, spacing, radius, shadow, font name, type step |
 | `assets/fonts/*.ttf` and the `useFonts` map in `src/app/_layout.tsx:50–56` | the typefaces (names in `Font` must match the loaded keys) |
-| `app.json` — `splash.backgroundColor`, `icon`, `ios.icon`, `android.adaptiveIcon.*`, `web.favicon`, `name`, `slug`, `scheme` | launch colour and artwork |
+| `app.json` — `splash.backgroundColor` and `splash.dark.backgroundColor`, `icon`, `ios.icon`, `android.adaptiveIcon.*`, `web.favicon`, `name`, `slug`, `scheme` | launch colours and artwork |
 | `assets/images/icon.png`, `splash-icon.png`, `android-icon-*.png`, `favicon.png`, `assets/expo.icon/` | artwork |
 | `src/components/icon.tsx` — `GLYPHS.haze`, `hazeLarge` | the brand mark; the other fifteen glyphs are generic |
 | `src/constants/strings.ts` | every word; `Verdict.word` lives in the token file |
@@ -1153,11 +1259,12 @@ tokens, so a clean re-skin is not currently possible without touching them.
 Colour (every one used by a screen; unused entries can be any value but must
 exist because the ramps are typed as complete):
 
-- [ ] `Palette.bg`, `Palette.surface`, `Palette.text`, `Palette.divider`
+- [ ] `Palette.bg`, `Palette.surface`, `Palette.text`, `Palette.divider`, `Palette.scrim`, `Palette.veil` — each as a light/dark pair
+- [ ] `Dark.page`, `Dark.raised`, `Dark.card` — the three near-black surfaces
 - [ ] `Accent.base`, `Accent[200]`, `[300]`, `[500]`, `[600]`, `[700]`, `[800]` (+ 100, 400, 900 defined)
 - [ ] `Accent2[200]`, `[300]`, `[600]`, `[800]`, `[900]` (+ base, 100, 400, 500, 700 defined)
 - [ ] `Neutral[100]`–`[800]` all used; `[900]` defined
-- [ ] `Verdict.ink[0..2]`, `Verdict.tint[0..2]`, `Verdict.deepInk[0..2]`, `Verdict.word[0..2]`
+- [ ] `Verdict.ink[0..2]`, `Verdict.tint[0..2]`, `Verdict.deepInk[0..2]` — light and dark each; `Verdict.word[0..2]`
 - [ ] shadow colour (currently `#2e2b25` × 3 inside `Shadow`)
 
 Type and layout:
@@ -1171,8 +1278,8 @@ Type and layout:
 
 App shell:
 
-- [ ] `app.json` splash background (must equal `Palette.bg` — it is a
-      separate literal)
+- [ ] `app.json` splash background and `splash.dark.backgroundColor` (must
+      equal the light and dark `Palette.bg` — they are separate literals)
 - [ ] icon, splash image, adaptive icon background
 
 ### 13.3 Hardcoded values outside the token layer — the blockers
@@ -1185,9 +1292,7 @@ exactly `size / 2` are listed once, as a pattern.)
 
 | File:line | Literal | Should be |
 | --- | --- | --- |
-| `src/components/sheet.tsx:108` | `'rgba(46,43,37,0.42)'` scrim | a `Palette.scrim` token (= `Neutral[900]` @ 42%) |
-| `src/app/map.tsx:221` | `'rgba(249,244,237,0.8)'` legend pill | a token (= `Neutral[100]` @ 80%) |
-| `app.json:35` | `"#f5ead8"` splash | must be kept equal to `Palette.bg` by hand |
+| `app.json` | `"#f5ead8"` and `"#181613"` splash backgrounds | must be kept equal to the two `Palette.bg` values by hand |
 | `app.json:16` | `"#E6F4FE"` Android icon background | off-palette; placeholder |
 | `assets/expo.icon/icon.json` | blue gradient `0,0.478,1` | placeholder |
 
@@ -1288,12 +1393,14 @@ Not just recolouring:
 
 Derived from what the current one does, so the sibling reads as a sibling:
 
-1. **One light theme, warm neutrals.** Every neutral shares one hue (here
-   35–40°) with saturation falling from ~50% to ~10% down the ramp, and
-   L* spaced ~8–12 apart: 96 · 92 · 85 · 74 · 63 · 51 · 40 · 28 · 18. Page,
-   surface and inset surface must be three *distinguishable* lightnesses
-   (currently L* 93.1 / 88.6 / 91.9 — note the inset panel is lighter than
-   the card it sits in and darker than the page).
+1. **Warm neutrals, one hue.** Every neutral shares one hue (here 35–40°)
+   with saturation falling from ~50% to ~10% down the ramp, and L* spaced
+   ~8–12 apart: 96 · 92 · 85 · 74 · 63 · 51 · 40 · 28 · 18. Page, surface
+   and inset surface must be three *distinguishable* lightnesses (light:
+   L* 93.1 / 88.6 / 91.9 — the inset panel is lighter than the card and
+   darker than the page; dark: 7.4 / 12.9 / 17.7, stepping the other way).
+   A dark theme needs three surfaces *below* the ramp's darkest step; supply
+   them as a separate `Dark` object rather than lengthening the ramp.
 2. **Two accents, each a 9-step ramp plus `base`**, where `base` sits between
    500 and 600. Accent 1 is the action/caution hue; Accent 2 is the
    clear/settings hue. They must be far apart in hue (here 23° vs 81°).
@@ -1302,8 +1409,10 @@ Derived from what the current one does, so the sibling reads as a sibling:
    at (200 / 500 / 700) and (300 / 700 / 800). Keep: 0 differs by *hue*, 1→2
    differs by *lightness only* (~23 L* darker ink, ~7 L* darker tint). Keep
    `deepInk` ≥ 4.5:1 on its tint (currently 5.5–8.1). If you want the GREEN
-   and AMBER small pills and the `ink`-on-`tint` text to pass AA — they do
-   not today — choose inks with L* ≤ ~45.
+   and AMBER small pills and the `ink`-on-`tint` text to pass AA in light —
+   they do not today — choose inks with L* ≤ ~45. **In dark, mirror the
+   ramp** (tint 800–900, ink 400–500, deep ink 100–200) rather than inventing
+   a second palette; §2.6 shows every pairing then clears AA.
 4. **Contrast targets actually met today** (the floor a sibling should not go
    below): primary text ≥ 12:1 on every surface; secondary text
    (`Neutral[700]`) ≥ 4.9:1; `Accent[700]` ≥ 5:1 on all surfaces and on
