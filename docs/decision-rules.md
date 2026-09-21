@@ -1,4 +1,4 @@
-# HazePace decision rules
+# Hazepace decision rules
 
 This file is the specification for `src/lib/rating.ts`. The code implements
 what is written here, and the tests in `src/lib/rating.test.ts` pin the

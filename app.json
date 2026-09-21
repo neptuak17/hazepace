@@ -43,7 +43,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "HazePace uses your location to find the nearest air quality community and local weather.",
+          "locationWhenInUsePermission": "Hazepace uses your location to find the nearest air quality community and local weather.",
           "isIosBackgroundLocationEnabled": false
         }
       ]

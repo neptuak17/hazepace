@@ -1,4 +1,4 @@
-# HazePace
+# Hazepace
 
 Mobile app combining weather and wildfire smoke forecasts so athletes can
 decide when to train outdoors. Solo hobby project. iOS first.

@@ -9,4 +9,4 @@
  * No imports, so the data modules that use it stay runnable under plain
  * Node. Keep the version in step with `version` in app.json.
  */
-export const USER_AGENT = 'HazePace/1.0 (+https://github.com/neptuak17/hazepace)';
+export const USER_AGENT = 'Hazepace/1.0 (+https://github.com/neptuak17/hazepace)';

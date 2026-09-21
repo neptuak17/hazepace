@@ -344,7 +344,7 @@ export const HowItWorksStrings = {
 
   sourcesTitle: 'Where the data comes from',
   closing:
-    'Air data follows the Canadian AQHI. HazePace is guidance for training decisions — always follow local advisories.',
+    'Air data follows the Canadian AQHI. Hazepace is guidance for training decisions — always follow local advisories.',
 } as const;
 
 /* ── Sheets ──────────────────────────────────────────────────────────────── */

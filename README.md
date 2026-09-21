@@ -1,4 +1,4 @@
-# HazePace
+# Hazepace
 
 Weather and wildfire-smoke conditions for deciding when to train outdoors.
 Expo / React Native, iOS first.
@@ -10,7 +10,7 @@ the code follows that file.
 
 ## About this repository
 
-HazePace is a personal, non-commercial project by one person. It is
+Hazepace is a personal, non-commercial project by one person. It is
 published so that the data providers it calls can see what is calling them.
 
 - **Not licensed.** All rights reserved. The code is here to read, not to

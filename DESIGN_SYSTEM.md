@@ -1,4 +1,4 @@
-# HazePace design system
+# Hazepace design system
 
 What is actually in the code, as of 2026-09-21. Every value
 below is copied from a file in this repo and cited. Nothing is aspirational.

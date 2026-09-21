@@ -1,5 +1,5 @@
 /**
- * "Organic" design system tokens, ported from the HazePace design handoff.
+ * "Organic" design system tokens, ported from the Hazepace design handoff.
  *
  * The light values are transcribed from the design, not derived — do not
  * recompute or round them. The dark values are the same two accent ramps
