@@ -24,7 +24,6 @@ import {
   type Level,
 } from '@/constants/design-tokens';
 import { Attribution, Common, DataStrings, HowItWorksStrings } from '@/constants/strings';
-import { ECCC_ATTRIBUTION } from '@/lib/aqhi';
 import { useConditions } from '@/lib/conditions';
 import { currentHour, readingOf } from '@/lib/live';
 import { OPEN_METEO_ATTRIBUTION } from '@/lib/open-meteo';
@@ -160,11 +159,12 @@ export default function HowItWorksScreen() {
               </View>
             ))}
           </View>
+          {/* The CC BY 4.0 credit Open-Meteo's licence requires; ECCC is
+              already named in its row. */}
+          <Text style={styles.licence}>{OPEN_METEO_ATTRIBUTION}</Text>
         </View>
 
         <Text style={styles.closing}>{HowItWorksStrings.closing}</Text>
-        <Text style={styles.attribution}>{OPEN_METEO_ATTRIBUTION}</Text>
-        <Text style={styles.attribution}>{ECCC_ATTRIBUTION}</Text>
 
         <Pressable
           onPress={() => router.navigate('/')}
@@ -269,7 +269,12 @@ const styles = StyleSheet.create({
   },
   sourceName: { ...Type.pillLabel, color: Palette.text },
 
-  attribution: { ...Type.caption, color: Neutral[600], lineHeight: 12 * 1.4 },
+  licence: {
+    ...Type.caption,
+    color: Neutral[600],
+    lineHeight: 12 * 1.4,
+    marginTop: Space.three,
+  },
   closing: {
     ...Type.bodySmall,
     fontFamily: Type.rowLabel.fontFamily,
