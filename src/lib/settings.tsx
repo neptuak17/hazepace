@@ -19,9 +19,13 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { Appearance } from 'react-native';
 
 import type { ManualPlace } from '@/lib/place';
 import type { Activity, Prefs, Sensitivity, TimeFormat } from '@/lib/rating';
+
+/** System follows the device; the other two pin the app regardless. */
+export type AppearanceChoice = 'system' | 'light' | 'dark';
 
 export interface Settings {
   /** Every activity the user does. Drives which chips appear on Today. */
@@ -34,6 +38,7 @@ export interface Settings {
   /** °C, 22-38 in steps of 2. */
   heatTol: number;
   timeFmt: TimeFormat;
+  appearance: AppearanceChoice;
   /**
    * A place the user chose instead of the device's location. Null means
    * "use my location". Wins over the device while set — see place.ts.
@@ -48,6 +53,7 @@ const DEFAULTS: Settings = {
   windTol: 32,
   heatTol: 32,
   timeFmt: '24-hour',
+  appearance: 'system',
   manualPlace: null,
 };
 
@@ -98,6 +104,8 @@ function merge(stored: unknown): Settings {
     windTol: typeof s.windTol === 'number' ? s.windTol : DEFAULTS.windTol,
     heatTol: typeof s.heatTol === 'number' ? s.heatTol : DEFAULTS.heatTol,
     timeFmt: s.timeFmt ?? DEFAULTS.timeFmt,
+    appearance:
+      s.appearance === 'light' || s.appearance === 'dark' ? s.appearance : DEFAULTS.appearance,
     manualPlace: manualPlaceOf(s.manualPlace),
   };
 }
@@ -156,6 +164,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!settings.sports.includes(activity)) setActivity(settings.sports[0]);
   }, [settings.sports, activity]);
+
+  // The appearance override. Every colour token is a light/dark pair the
+  // OS resolves, so pinning the scheme here repaints the whole app;
+  // 'unspecified' hands control back to the device setting.
+  useEffect(() => {
+    Appearance.setColorScheme(
+      settings.appearance === 'system' ? 'unspecified' : settings.appearance,
+    );
+  }, [settings.appearance]);
 
   const value = useMemo<SettingsValue>(
     () => ({

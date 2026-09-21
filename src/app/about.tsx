@@ -24,11 +24,12 @@ import {
 } from '@/constants/design-tokens';
 import { AboutStrings, Common, ThresholdsStrings } from '@/constants/strings';
 import { RAIN_TOL, type Activity, type Sensitivity, type TimeFormat } from '@/lib/rating';
-import { useSettings } from '@/lib/settings';
+import { useSettings, type AppearanceChoice } from '@/lib/settings';
 
 const ACTIVITIES: Activity[] = ['Running', 'Cycling', 'Hiking / Walking'];
 const SENSITIVITIES: Sensitivity[] = ['Normal', 'Reactive'];
 const TIME_FORMATS: TimeFormat[] = ['24-hour', '12-hour'];
+const APPEARANCES: AppearanceChoice[] = ['system', 'light', 'dark'];
 
 export default function AboutScreen() {
   const router = useRouter();
@@ -105,6 +106,25 @@ export default function AboutScreen() {
                   style={[styles.chip, on ? styles.chipOn : styles.chipOff]}>
                   <Text style={[styles.chipText, { color: on ? Neutral[100] : Neutral[800] }]}>
                     {f}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={styles.groupLabelSpaced}>{AboutStrings.appearanceLabel}</Text>
+          <View style={styles.chipRow}>
+            {APPEARANCES.map((a) => {
+              const on = a === settings.appearance;
+              return (
+                <Pressable
+                  key={a}
+                  onPress={() => update({ appearance: a })}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: on }}
+                  style={[styles.chip, on ? styles.chipOn : styles.chipOff]}>
+                  <Text style={[styles.chipText, { color: on ? Neutral[100] : Neutral[800] }]}>
+                    {AboutStrings.appearanceNames[a]}
                   </Text>
                 </Pressable>
               );

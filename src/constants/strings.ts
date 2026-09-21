@@ -18,6 +18,7 @@
  * here in one piece rather than being assembled at the call site.
  */
 import type { Activity, Driver, Level, Sensitivity } from '@/lib/rating';
+import type { AppearanceChoice } from '@/lib/settings';
 
 /* ── Shared ──────────────────────────────────────────────────────────────── */
 
@@ -255,6 +256,12 @@ export const AboutStrings = {
   sensitivityLabel: 'How smoke affects you',
   advisory: 'Always follow local government advisories.',
   timeFormatLabel: 'Preferred time format',
+  appearanceLabel: 'Appearance',
+  appearanceNames: {
+    system: 'System',
+    light: 'Light',
+    dark: 'Dark',
+  } as Record<AppearanceChoice, string>,
   thresholdsLink: 'Activity thresholds',
 
   /**
