@@ -15,6 +15,8 @@ published so that the data providers it calls can see what is calling them.
 
 - **Not licensed.** All rights reserved. The code is here to read, not to
   reuse, and contributions are not being accepted.
+- **Privacy:** what the app sends and keeps is set out in the
+  [privacy policy](docs/privacy.md).
 - **Contact:** clifford.smith@gmail.com, or the GitHub profile [@neptuak17](https://github.com/neptuak17).
 - **If you operate one of the APIs below** and see this repository's URL in
   a `User-Agent` header, that traffic is this app. It fetches once per app

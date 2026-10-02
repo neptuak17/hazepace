@@ -989,7 +989,9 @@ settings provider via `Appearance.setColorScheme`.
 Order: title → pages card (icon badge + title + body rows) → verdict card
 (three tinted band rows) → factors card (four tiles with 8 px bars at
 14/27/40 px by level + winner pill) → vent card (three tiles) → sources card
-(dot + name + body rows) → closing line → attribution → Done.
+(dot + name + body rows, Open-Meteo licence caption) → privacy policy link
+row (About's link-row pattern; opens the GitHub page in Safari) → closing
+line → Done.
 
 - Generalised: *stacked explainer cards; the live data appears only in the
   factors card so the page doubles as a legend.*

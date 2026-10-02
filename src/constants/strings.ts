@@ -342,6 +342,7 @@ export const HowItWorksStrings = {
   ],
 
   sourcesTitle: 'Where the data comes from',
+  privacyLink: 'Privacy policy',
   closing:
     'Air data follows the Canadian AQHI. Hazepace is guidance for training decisions — always follow local advisories.',
 } as const;

@@ -6,7 +6,7 @@
  * the rule's current outcome at the same time.
  */
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/app-header';
 import { Icon, type IconName } from '@/components/icon';
@@ -23,6 +23,7 @@ import {
   tracking,
   type Level,
 } from '@/constants/design-tokens';
+import { PRIVACY_POLICY_URL } from '@/constants/links';
 import { Attribution, Common, DataStrings, HowItWorksStrings } from '@/constants/strings';
 import { useConditions } from '@/lib/conditions';
 import { currentHour, readingOf } from '@/lib/live';
@@ -164,6 +165,19 @@ export default function HowItWorksScreen() {
           <Text style={styles.licence}>{OPEN_METEO_ATTRIBUTION}</Text>
         </View>
 
+        {/* Opens in Safari: the policy is a public page, the same one App
+            Store Connect links to, so there is one copy to keep current. */}
+        <Pressable
+          onPress={() => Linking.openURL(PRIVACY_POLICY_URL).catch(() => {})}
+          accessibilityRole="link"
+          accessibilityLabel={HowItWorksStrings.privacyLink}
+          style={styles.card}>
+          <View style={styles.linkRow}>
+            <Text style={styles.linkLabel}>{HowItWorksStrings.privacyLink}</Text>
+            <Icon name="chevronRight" size={17} color={Neutral[600]} />
+          </View>
+        </Pressable>
+
         <Text style={styles.closing}>{HowItWorksStrings.closing}</Text>
 
         <Pressable
@@ -275,6 +289,9 @@ const styles = StyleSheet.create({
     lineHeight: 12 * 1.4,
     marginTop: Space.three,
   },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  linkLabel: { ...Type.rowLabel, flex: 1, color: Palette.text },
+
   closing: {
     ...Type.bodySmall,
     fontFamily: Type.rowLabel.fontFamily,
