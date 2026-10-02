@@ -1,3 +1,4 @@
+import type { Href } from 'expo-router';
 import {
   Tabs,
   TabList,
@@ -24,7 +25,9 @@ export default function AppTabs() {
           <TabTrigger name="home" href="/" asChild>
             <TabButton>Home</TabButton>
           </TabTrigger>
-          <TabTrigger name="explore" href="/explore" asChild>
+          {/* Reference only: the explore screen lives in src/reference/,
+              outside the routes, so this href is no longer a typed route. */}
+          <TabTrigger name="explore" href={'/explore' as Href} asChild>
             <TabButton>Explore</TabButton>
           </TabTrigger>
         </CustomTabList>

@@ -22,7 +22,7 @@ Files that matter most:
 The Expo template's own components (`src/components/animated-icon.*`,
 `app-tabs.*`, `themed-*`, `web-badge`, `hint-row`, `ui/collapsible`,
 `external-link`, `src/hooks/*`, `src/constants/theme.ts`, `src/global.css`,
-`src/app/explore.tsx`) are kept in the repo as reference for a future web
+`src/reference/explore.tsx`) are kept in the repo as reference for a future web
 target and are **not part of this design system**. Nothing the app renders
 imports them. They are not documented here.
 
@@ -1022,8 +1022,8 @@ like conditions; this cannot be mistaken for them" (`error-panel.tsx:10–11`).
   screen, dismissed by scrim tap or the close button, `onRequestClose` wired
   for Android back.
 - **Typed routes** are on (`app.json:53`).
-- `explore.tsx` (template) remains a routable file but is not linked from the
-  bar or any button.
+- The template's explore screen sits in `src/reference/`, outside
+  `src/app/`, so it is not a route and is not bundled.
 
 ---
 
