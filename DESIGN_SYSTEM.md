@@ -407,7 +407,7 @@ No system font is used anywhere in the app's own screens.
 | `verdictHeadline` | display | 30 | — | — | — | **unused** |
 | `sectionTitle` | display | 24 | — | — | — | screen titles (Map, Forecast, Thresholds, About, HIW), error title |
 | `tile` | display | 20 | — | — | — | About tile value, HIW vent value |
-| `dayRow` | display | 19 | — | — | — | Today chart card title, Map plate title |
+| `dayRow` | display | 19 | — | — | — | Today chart card title |
 | `zoneNumber` | display | 18 | (overridden to 18) | — | — | zone / place circle number |
 | `hourLabel` | display | 17 | — | — | — | readout hour, Today verdict pill |
 | `body` | Figtree 400 | 15 | — | — | — | search input, error body |
@@ -441,7 +441,7 @@ Every distinct family/size/line-height combination in `src/app` and
 | 24 | default | screen titles ×5, error title | token, **dominant title size** |
 | 21 | default | sheet title (`sheet.tsx:120`) | inline |
 | 20 | 20 / 22 | About tile value (lineHeight 20, `about.tsx:213`); air-sheet pollutant value (lineHeight 22, `sheets.tsx:370–374`); HIW vent value (default) | token + two inline line-heights |
-| 19 | default | Today card title, Map plate title | token |
+| 19 | default | Today card title | token |
 | 18 | 18 | circle numbers (`map.tsx:254`, `sheets.tsx:328`) | token |
 | 17 | default | readout hour; **Today verdict pill text** (`index.tsx:492`) with 0.68 px tracking | token |
 | 14 | default | Done / Retry button label ×4 (`thresholds.tsx:157`, `about.tsx:230`, `how-it-works.tsx:289`, `error-panel.tsx:71`) | inline, same four times — **a de-facto `button` step with no token** |
@@ -943,9 +943,30 @@ Order: optional location card (fallback only) → verdict card → activity chip
 
 ### 7.2 Map / Local conditions (`src/app/map.tsx`) — "plate + list"
 
-Order: title → 340 px plate (placeholder: `Neutral[200]`, 1.5 px `Neutral[300]`
-border, `Radius.lg`, centred title + note) → legend pill (caption, `Neutral[100]`
-80%, pill) → card with kicker + zone rows → attribution.
+Order: title → 340 px plate (`Neutral[200]` under the map, 1.5 px
+`Neutral[300]` border, `Radius.lg`, `overflow: hidden` to clip the map) →
+legend pill (caption, `Neutral[100]` 80%, pill) → card with kicker + zone
+rows.
+
+The plate holds Apple Maps (`src/components/air-map.tsx`), `mutedStandard`
+on iOS so the pins carry the colour, no rotation, pitch, compass, points of
+interest or user-location dot. It is centred on the place and opens wide
+enough for every community within 200 km (`nearPins`, `regionFor`,
+`src/lib/map-pins.ts`; minimum 1.2° of latitude). Every community in the
+country has a pin; only those in or within a quarter-view of the visible
+region are drawn (`inView`), so panning fills in as it goes.
+
+- **Community pin:** 32 px circle (wider for "10+"), `Verdict.tint[level]`
+  fill, value in Caprasimo 15 in `Verdict.ink[level]`, 2 px `Palette.bg`
+  ring, `Shadow.sm`. No current reading, or older than 3 h
+  (`PIN_MAX_AGE_HOURS`): `Neutral[200]` fill, "—" in `Neutral[600]` — the
+  same treatment as the zone circle's null state. Tap opens the native
+  callout: community name, then "observed 14:00 · 12 min ago" or "No current
+  reading".
+- **Place dot:** 16 px `Accent.base` with a 3 px `Palette.bg` ring and
+  `Shadow.sm`, drawn above the pins; callout is the place name.
+- **Area unavailable:** a veil pill at the top of the plate, same style as
+  the legend, when the area request fails. The list below is unaffected.
 
 - Generalised: *a fixed-height visual plate, a legend chip, a ruled list of
   circle-stat rows beneath.*
@@ -1177,8 +1198,8 @@ None of this is visible in Expo Go; it is baked in by EAS Build.
 
 ### 11.4 Other imagery
 
-None in the app's own screens. The Map plate is a labelled placeholder
-(`map.tsx:157–160`).
+None in the app's own screens. The Map plate is Apple Maps tiles, drawn
+by the OS (§7.2).
 
 ---
 

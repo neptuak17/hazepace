@@ -175,10 +175,14 @@ export const MapStrings = {
   legend: (community: string, time: string) => `${community} · ${time}`,
   communityKicker: 'AQHI community',
 
-  /** Shown in place of the plate. States why, rather than drawing nothing. */
-  plateTitle: 'Map unavailable',
-  plateNote:
-    'The plume view needs a tile layer and the BlueSky Canada smoke raster. Neither is wired up yet, so nothing is drawn here.',
+  /** A pin's callout when its community has no current observation. */
+  pinNoReading: 'No current reading',
+  /** Over the plate when the area request failed; the list still loads. */
+  areaUnavailable: 'Community readings unavailable',
+  mapLabel: (place: string, communities: number) =>
+    communities === 1
+      ? `Map around ${place} with 1 AQHI community`
+      : `Map around ${place} with ${communities} AQHI communities`,
 } as const;
 
 /* ── Forecast ────────────────────────────────────────────────────────────── */

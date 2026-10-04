@@ -1,19 +1,20 @@
 /**
- * Map — where the smoke is.
+ * Map — the air around the place, right now.
  *
- * The map plate itself is not built. The design's plate is a CSS stand-in and
- * production needs a real tile layer plus the BlueSky Canada plume raster;
- * until both exist the area is left as a labelled placeholder rather than
- * approximated, because a fake plume would be a fake reading.
+ * The plate is Apple Maps with one pin per ECCC community within the Map's
+ * range, each showing its latest observation (see air-map.tsx). There is no
+ * smoke plume layer: no plume raster source is wired up, and drawing one
+ * from anything else would be a fake reading.
  *
  * The design had three sub-community zones and a plume time scrubber. AQHI
- * is one value per community and no finer source exists, and there is no
- * plume to scrub, so the page shows current conditions only: a card with
- * the AQHI the verdict is using, and — when that is the model's number — the
- * nearest ECCC community within the Map's wider range, for context.
+ * is one value per community and there is no plume to scrub, so the page
+ * shows current conditions only: the map, then a card with the AQHI the
+ * verdict is using and — when that is the model's number — the nearest ECCC
+ * community within the Map's wider range, for context.
  */
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { AirMap, type AirMapPin } from '@/components/air-map';
 import { AppHeader } from '@/components/app-header';
 import {
   Card,
@@ -29,6 +30,7 @@ import { Common, DataStrings, HeaderStrings, MapStrings } from '@/constants/stri
 import type { AqhiSnapshot } from '@/lib/aqhi';
 import { useConditions } from '@/lib/conditions';
 import { FAR_COMMUNITY_KM, currentHour, formatAge, formatAqhi, formatClock } from '@/lib/live';
+import { mapPins, nearPins, regionFor } from '@/lib/map-pins';
 import { band, type Level, type Prefs, type TimeFormat } from '@/lib/rating';
 import { useSettings } from '@/lib/settings';
 
@@ -109,7 +111,7 @@ function communityRow(
 
 export default function MapScreen() {
   const { settings, prefs } = useSettings();
-  const { aqhi, aqhiCoverage, aqhiFar, live, now: nowMs, place } = useConditions();
+  const { aqhi, aqhiCoverage, aqhiFar, communities, live, now: nowMs, place } = useConditions();
 
   // The rows, in order: the AQHI the verdict is using first, then the
   // nearest community for context when that is not the same thing.
@@ -140,11 +142,30 @@ export default function MapScreen() {
     rows.push({ key: 'community', ...communityRow(community, prefs, settings.timeFmt, nowMs) });
   }
 
+  // The pins. The community in the list below lends its observation to its
+  // own pin, so the two always show the same number.
+  const pins: AirMapPin[] = mapPins(
+    communities ?? [],
+    prefs,
+    nowMs,
+    community ? { locationId: community.community.locationId, observation: community.observation } : null,
+  ).map((p) => ({
+    ...p,
+    detail: p.observation
+      ? DataStrings.observedAt(
+          formatClock(Date.parse(p.observation.timestamp), settings.timeFmt),
+          formatAge(Date.parse(p.observation.timestamp), nowMs),
+        )
+      : MapStrings.pinNoReading,
+  }));
+  const near = nearPins(pins);
+  const placeLabel = place?.label ?? HeaderStrings.deviceHeadline;
+
   const legendTime = formatClock(nowMs, settings.timeFmt);
   // The legend names where the air reading is for: the ECCC community when
   // there is one in the model's range, otherwise the place itself — the
   // same rule as the header.
-  const legendPlace = aqhi?.community.name ?? place?.label ?? HeaderStrings.deviceHeadline;
+  const legendPlace = aqhi?.community.name ?? placeLabel;
 
   return (
     <View style={styles.screen}>
@@ -154,8 +175,24 @@ export default function MapScreen() {
         <Text style={styles.title}>{MapStrings.title}</Text>
 
         <View style={styles.plate}>
-          <Text style={styles.plateTitle}>{MapStrings.plateTitle}</Text>
-          <Text style={styles.plateNote}>{MapStrings.plateNote}</Text>
+          {place && (
+            <AirMap
+              // A new place is a new map: remounting re-centres it rather
+              // than leaving the view wherever the user last dragged it.
+              key={`${place.coordinate.latitude},${place.coordinate.longitude}`}
+              region={regionFor(place.coordinate, near)}
+              place={{ ...place.coordinate, label: placeLabel }}
+              pins={pins}
+              accessibilityLabel={MapStrings.mapLabel(placeLabel, near.length)}
+            />
+          )}
+          {/* The list below still has the reading the verdict uses; only the
+              wider picture is missing, and the plate says so. */}
+          {communities === null && (
+            <View style={styles.plateNotice} pointerEvents="none">
+              <Text style={styles.plateNoticeText}>{MapStrings.areaUnavailable}</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.legendRow}>
@@ -193,17 +230,23 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: Neutral[300],
     backgroundColor: Neutral[200],
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Space.five,
-    gap: Space.two,
+    // Clips the map's square corners to the plate's radius.
+    overflow: 'hidden',
   },
-  plateTitle: { ...Type.dayRow, color: Neutral[700] },
-  plateNote: {
-    ...Type.bodySmall,
-    color: Neutral[600],
-    textAlign: 'center',
-    lineHeight: 13 * 1.4,
+  plateNotice: {
+    position: 'absolute',
+    top: Space.three,
+    alignSelf: 'center',
+    backgroundColor: Palette.veil,
+    borderRadius: Radius.pill,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+  },
+  plateNoticeText: {
+    ...Type.capsLabel,
+    textTransform: 'none',
+    letterSpacing: 0,
+    color: Neutral[700],
   },
 
   legendRow: { flexDirection: 'row' },
