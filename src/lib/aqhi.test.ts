@@ -13,8 +13,10 @@ import {
   ECCC_ATTRIBUTION,
   MAX_COMMUNITY_DISTANCE_KM,
   categoryFor,
+  communitiesWithin,
   distanceKm,
   isAboveTen,
+  latestByLocation,
   nearestCommunity,
   publishedValue,
   withinRange,
@@ -186,5 +188,48 @@ describe('attribution', () => {
       ECCC_ATTRIBUTION,
       'Air Quality Health Index data provided by Environment and Climate Change Canada.',
     );
+  });
+});
+
+describe('communitiesWithin — the Map area', () => {
+  test('keeps every community inside the radius, nearest first', () => {
+    const near = communitiesWithin(ALL, VERNON.lat, VERNON.lon, 100);
+    assert.deepEqual(
+      near.map((c) => c.community.locationId),
+      ['JBOAP', 'JAFUV', 'JAFNW'],
+    );
+  });
+
+  test('drops communities past the radius', () => {
+    const near = communitiesWithin(ALL, VERNON.lat, VERNON.lon, 60);
+    assert.deepEqual(
+      near.map((c) => c.community.locationId),
+      ['JBOAP', 'JAFUV'],
+    );
+  });
+
+  test('an empty area is an empty list, not an error', () => {
+    assert.deepEqual(communitiesWithin(ALL, 60, -135, 200), []);
+  });
+});
+
+describe('latestByLocation', () => {
+  test('indexes rows by location_id and keeps the first of a repeat', () => {
+    const byId = latestByLocation([
+      { properties: { location_id: 'JBOAP', aqhi: 2 } },
+      { properties: { location_id: 'JBOAP', aqhi: 9 } },
+      { properties: { location_id: 'JAFNW', aqhi: 3 } },
+    ]);
+    assert.equal(byId.size, 2);
+    assert.equal(byId.get('JBOAP')?.aqhi, 2);
+  });
+
+  test('drops rows with no properties or no id', () => {
+    const byId = latestByLocation([
+      { properties: null },
+      { properties: { location_id: '  ', aqhi: 2 } },
+      { properties: { aqhi: 2 } },
+    ]);
+    assert.equal(byId.size, 0);
   });
 });

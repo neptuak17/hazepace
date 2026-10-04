@@ -23,8 +23,10 @@ and the place search. It receives:
 
 **Environment and Climate Change Canada** (api.weather.gc.ca) supplies air
 quality readings and forecasts. It does not receive your location. Hazepace
-downloads ECCC's public list of reporting communities, picks the nearest one
-on the phone, and then asks for that community's data by its identifier.
+downloads ECCC's public list of reporting communities and the latest reading
+for every one of them across Canada, picks the ones near you on the phone,
+and then asks for the nearest community's reading and forecast by its
+identifier.
 
 Like any web request, each one also carries your phone's IP address and a
 short line naming the app (`Hazepace/1.0`), which lets the services see that

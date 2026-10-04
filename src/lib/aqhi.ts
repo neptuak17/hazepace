@@ -196,7 +196,7 @@ export function distanceKm(
 
 /* ── HTTP ────────────────────────────────────────────────────────────────── */
 
-type Fetched<T> = { status: 'ok'; value: T } | { status: 'error'; error: AqhiError };
+export type Fetched<T> = { status: 'ok'; value: T } | { status: 'error'; error: AqhiError };
 
 /**
  * Unlike open-meteo.ts, this cannot append a throwaway query value: an OGC
@@ -292,12 +292,19 @@ function stringOrNull(raw: unknown): string | null {
 /* ── Communities ─────────────────────────────────────────────────────────── */
 
 let communitiesCache: { expiresAt: number; value: AqhiCommunity[] } | null = null;
+/**
+ * The request in progress, if any. The verdict's lookup and the Map's area
+ * lookup both start from the list at the same moment on a cold launch; this
+ * makes them share one request instead of sending two.
+ */
+let communitiesInFlight: Promise<Fetched<AqhiCommunity[]>> | null = null;
 
 /** Drops every cached response. Used by a manual refresh, and by tests. */
 export function clearAqhiCache(): void {
   communitiesCache = null;
   observationCache.clear();
   forecastCache.clear();
+  latestCache = null;
 }
 
 /**
@@ -312,7 +319,15 @@ export async function fetchCommunities(): Promise<Fetched<AqhiCommunity[]>> {
   if (communitiesCache && communitiesCache.expiresAt > Date.now()) {
     return { status: 'ok', value: communitiesCache.value };
   }
+  if (!communitiesInFlight) {
+    communitiesInFlight = loadCommunities().finally(() => {
+      communitiesInFlight = null;
+    });
+  }
+  return communitiesInFlight;
+}
 
+async function loadCommunities(): Promise<Fetched<AqhiCommunity[]>> {
   const body = await getJsonWithRetry(`${STATIONS}?f=json&limit=500`);
   if (body.status === 'error') return body;
 
@@ -407,6 +422,22 @@ export async function findNearestCommunity(
   const communities = await fetchCommunities();
   if (communities.status === 'error') return communities;
   return withinRange(nearestCommunity(communities.value, latitude, longitude), maxDistanceKm);
+}
+
+/** Every community within `maxDistanceKm`, nearest first. */
+export function communitiesWithin(
+  communities: AqhiCommunity[],
+  latitude: number,
+  longitude: number,
+  maxDistanceKm: number,
+): NearestCommunity[] {
+  return communities
+    .map((community) => ({
+      community,
+      distanceKm: distanceKm(latitude, longitude, community.latitude, community.longitude),
+    }))
+    .filter((c) => c.distanceKm <= maxDistanceKm)
+    .sort((a, b) => a.distanceKm - b.distanceKm);
 }
 
 /* ── Readings ────────────────────────────────────────────────────────────── */
@@ -505,6 +536,86 @@ export async function fetchForecast(nearest: NearestCommunity): Promise<Fetched<
 
   forecastCache.set(key, { expiresAt: Date.now() + FORECAST_TTL_MS, value: forecast });
   return { status: 'ok', value: forecast };
+}
+
+/* ── Area ──────────────────────────────────────────────────────────────── */
+
+/**
+ * Every community's newest observation, keyed by `location_id`, as raw rows.
+ *
+ * One request for the whole country rather than one per community, and
+ * rather than a bounding box: a box drawn around the user would tell ECCC
+ * roughly where they are, and the privacy policy says it never learns that.
+ * The response is about 70 KB for ~120 rows and is cached like a single
+ * observation.
+ */
+let latestCache: { expiresAt: number; value: Map<string, Record<string, unknown>> } | null = null;
+
+/**
+ * Indexes `latest=true` rows by community. A community that appears twice
+ * keeps its first row; one with no usable id is dropped.
+ */
+export function latestByLocation(features: Feature[]): Map<string, Record<string, unknown>> {
+  const byId = new Map<string, Record<string, unknown>>();
+  for (const f of features) {
+    const p = f.properties;
+    if (!p) continue;
+    const id = stringOrNull(p['location_id']);
+    if (id === null || byId.has(id)) continue;
+    byId.set(id, p);
+  }
+  return byId;
+}
+
+async function fetchLatestObservations(): Promise<Fetched<Map<string, Record<string, unknown>>>> {
+  if (latestCache && latestCache.expiresAt > Date.now()) {
+    return { status: 'ok', value: latestCache.value };
+  }
+  const body = await getJsonWithRetry(`${OBSERVATIONS}?f=json&latest=true&limit=500`);
+  if (body.status === 'error') return body;
+
+  const features = featuresOf(body.value);
+  if (features.status === 'error') return features;
+
+  const value = latestByLocation(features.value);
+  latestCache = { expiresAt: Date.now() + OBSERVATION_TTL_MS, value };
+  return { status: 'ok', value };
+}
+
+/** A community near the place and its newest observation, if it has one. */
+export interface AreaReading {
+  community: AqhiCommunity;
+  distanceKm: number;
+  /** Null when ECCC published no current row for this community. */
+  observation: AqhiReading | null;
+}
+
+/**
+ * The newest observation for every community within `maxDistanceKm` —
+ * every community in the country when no limit is given — nearest first.
+ * A community with no row comes back with a null observation rather than
+ * being dropped, so the Map can show it as "—".
+ */
+export async function fetchAreaObservations(
+  latitude: number,
+  longitude: number,
+  maxDistanceKm: number = Infinity,
+): Promise<Fetched<AreaReading[]>> {
+  const [communities, latest] = await Promise.all([fetchCommunities(), fetchLatestObservations()]);
+  if (communities.status === 'error') return communities;
+  if (latest.status === 'error') return latest;
+
+  const area = communitiesWithin(communities.value, latitude, longitude, maxDistanceKm).map(
+    (near) => {
+      const row = latest.value.get(near.community.locationId);
+      return {
+        community: near.community,
+        distanceKm: near.distanceKm,
+        observation: row ? toReading('observation', row, 'observation_datetime', near) : null,
+      };
+    },
+  );
+  return { status: 'ok', value: area };
 }
 
 /* ── Public API ──────────────────────────────────────────────────────────── */

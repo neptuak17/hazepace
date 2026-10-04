@@ -35,7 +35,9 @@ import {
   MAX_COMMUNITY_DISTANCE_KM,
   clearAqhiCache,
   fetchAqhi,
+  fetchAreaObservations,
   type AqhiSnapshot,
+  type AreaReading,
 } from '@/lib/aqhi';
 import { COORDINATE_OVERRIDE, MAP_COMMUNITY_DISTANCE_KM, joinLive, type LiveHour } from '@/lib/live';
 import { locate } from '@/lib/location';
@@ -76,6 +78,15 @@ export interface ConditionsValue {
    * that feeds a verdict reads this. Null whenever `aqhi` is set.
    */
   aqhiFar: AqhiSnapshot | null;
+  /**
+   * Every ECCC community in the country with its newest observation,
+   * nearest first — the Map plate's pins. The Map frames itself on the
+   * ones within MAP_COMMUNITY_DISTANCE_KM and draws whichever are in view
+   * as the user pans. Null while loading, on error, or when that one
+   * request failed: the pins are context, so losing them leaves the rest
+   * of the app as it was rather than showing the error panel.
+   */
+  communities: AreaReading[] | null;
   failure: ConditionsFailure | null;
   /** The two snapshots joined by instant. Empty until ready. */
   live: LiveHour[];
@@ -115,6 +126,7 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
   const [aqhi, setAqhi] = useState<AqhiSnapshot | null>(null);
   const [aqhiCoverage, setAqhiCoverage] = useState<'ok' | 'none' | null>(null);
   const [aqhiFar, setAqhiFar] = useState<AqhiSnapshot | null>(null);
+  const [communities, setCommunities] = useState<AreaReading[] | null>(null);
   const [failure, setFailure] = useState<ConditionsFailure | null>(null);
   const [fetchedAt, setFetchedAt] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -148,9 +160,12 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
       const { latitude, longitude } = resolved.coordinate;
       // AQHI is fetched at the Map's wider range in one go; the split by
       // distance happens below so the model only ever sees the near one.
-      const [w, a] = await Promise.all([
+      const [w, a, ar] = await Promise.all([
         fetchConditions(latitude, longitude),
         fetchAqhi(latitude, longitude, { maxDistanceKm: MAP_COMMUNITY_DISTANCE_KM }),
+        // All of them: the one request already carries every community, so
+        // keeping the far ones costs nothing and lets the map be panned.
+        fetchAreaObservations(latitude, longitude),
       ]);
 
       if (options.initial) {
@@ -179,6 +194,7 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
         setAqhi(null);
         setAqhiCoverage(null);
         setAqhiFar(null);
+        setCommunities(null);
         setStatus('error');
         return;
       }
@@ -193,6 +209,7 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
         setAqhiCoverage('none');
         setAqhiFar(a.status === 'ok' ? a.value : null);
       }
+      setCommunities(ar.status === 'ok' ? ar.value : null);
       setFailure(null);
       const done = Date.now();
       setFetchedAt(done);
@@ -243,6 +260,7 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
       aqhi,
       aqhiCoverage,
       aqhiFar,
+      communities,
       failure,
       live,
       fetchedAt,
@@ -250,7 +268,7 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
       now,
       refresh,
     }),
-    [status, place, weather, aqhi, aqhiCoverage, aqhiFar, failure, live, fetchedAt, refreshing, now, refresh],
+    [status, place, weather, aqhi, aqhiCoverage, aqhiFar, communities, failure, live, fetchedAt, refreshing, now, refresh],
   );
 
   return <ConditionsContext.Provider value={value}>{children}</ConditionsContext.Provider>;
