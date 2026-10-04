@@ -1,16 +1,18 @@
 /**
- * About yourself — what you do, how smoke affects you, and how you read time.
+ * About yourself — what you do, how smoke affects you, your weather limits,
+ * and how the app shows time.
  *
- * The sports selected here decide which activity chips appear on Today, and
- * the sensitivity picks which row of ECCC's AQHI guidance the air level is
- * read from, so this screen changes every verdict in the app as directly as
- * Thresholds does.
+ * Everything every verdict depends on is set here: the sports decide which
+ * activity chips appear on Today, the sensitivity picks which row of ECCC's
+ * AQHI guidance the air level is read from, and the three limits are what
+ * rain, wind and heat are measured against. A change re-rates Today, the
+ * chart, the map and all five forecast days at once; there is no apply step.
  */
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/app-header';
-import { Icon, type IconName } from '@/components/icon';
+import { Slider } from '@/components/slider';
 import {
   Accent,
   Accent2,
@@ -34,16 +36,6 @@ const APPEARANCES: AppearanceChoice[] = ['system', 'light', 'dark'];
 export default function AboutScreen() {
   const router = useRouter();
   const { settings, update, toggleSport } = useSettings();
-
-  const tiles: { icon: IconName; value: string; label: string }[] = [
-    { icon: 'wind', value: settings.sensitivity, label: AboutStrings.tileLabels.sensitivity },
-    { icon: 'droplet', value: RAIN_TOL[settings.rainTol].name, label: AboutStrings.tileLabels.rain },
-    {
-      icon: 'windAlt',
-      value: ThresholdsStrings.windValue(settings.windTol),
-      label: AboutStrings.tileLabels.wind,
-    },
-  ];
 
   return (
     <View style={styles.screen}>
@@ -132,25 +124,61 @@ export default function AboutScreen() {
           </View>
         </View>
 
-        <Pressable
-          onPress={() => router.navigate('/thresholds')}
-          accessibilityRole="button"
-          accessibilityLabel={AboutStrings.thresholdsLink}
-          style={styles.card}>
-          <View style={styles.linkRow}>
-            <Text style={styles.linkLabel}>{AboutStrings.thresholdsLink}</Text>
-            <Icon name="chevronRight" size={17} color={Neutral[600]} />
+        {/* On this page rather than one of its own, where it was easy to
+            miss: the limits sit beside the sports and sensitivity they work
+            with. */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>{ThresholdsStrings.title}</Text>
+          <Text style={styles.caption}>{ThresholdsStrings.caption}</Text>
+
+          <View style={styles.limitRow}>
+            <Text style={styles.limitLabel}>{ThresholdsStrings.rainLabel}</Text>
+            <Text style={styles.limitValue}>{RAIN_TOL[settings.rainTol].name}</Text>
           </View>
-          <View style={styles.tileRow}>
-            {tiles.map((t) => (
-              <View key={t.label} style={styles.tile}>
-                <Icon name={t.icon} size={19} color={Accent2[800]} />
-                <Text style={styles.tileValue}>{t.value}</Text>
-                <Text style={styles.tileLabel}>{t.label}</Text>
-              </View>
-            ))}
+          <Slider
+            value={settings.rainTol}
+            min={0}
+            max={3}
+            step={1}
+            onChange={(rainTol) => update({ rainTol })}
+            label={ThresholdsStrings.rainSliderLabel}
+            valueLabel={RAIN_TOL[settings.rainTol].name}
+            style={styles.sliderTight}
+          />
+          <Text style={styles.note}>{RAIN_TOL[settings.rainTol].note}</Text>
+
+          <View style={styles.limitRow}>
+            <Text style={styles.limitLabel}>{ThresholdsStrings.windLabel}</Text>
+            <Text style={styles.limitValue}>{ThresholdsStrings.windValue(settings.windTol)}</Text>
           </View>
-        </Pressable>
+          <Slider
+            value={settings.windTol}
+            min={8}
+            max={40}
+            step={4}
+            onChange={(windTol) => update({ windTol })}
+            label={ThresholdsStrings.windSliderLabel}
+            valueLabel={ThresholdsStrings.windValue(settings.windTol)}
+            style={styles.sliderTight}
+          />
+          <Text style={styles.note}>{ThresholdsStrings.windNote(settings.windTol)}</Text>
+
+          <View style={styles.limitRow}>
+            <Text style={styles.limitLabel}>{ThresholdsStrings.heatLabel}</Text>
+            <Text style={styles.limitValue}>{ThresholdsStrings.heatValue(settings.heatTol)}</Text>
+          </View>
+          <Slider
+            value={settings.heatTol}
+            min={22}
+            max={38}
+            step={2}
+            onChange={(heatTol) => update({ heatTol })}
+            label={ThresholdsStrings.heatSliderLabel}
+            valueLabel={ThresholdsStrings.heatValue(settings.heatTol)}
+            style={styles.sliderTight}
+          />
+          <Text style={styles.note}>{ThresholdsStrings.heatNote(settings.heatTol)}</Text>
+        </View>
 
         <Pressable
           onPress={() => router.navigate('/')}
@@ -175,6 +203,13 @@ const styles = StyleSheet.create({
 
   title: { ...Type.sectionTitle, color: Palette.text },
   card: Card,
+  cardTitle: { ...Type.cardTitle, color: Palette.text },
+  caption: {
+    ...Type.bodySmall,
+    color: Neutral[700],
+    lineHeight: 13 * 1.35,
+    marginTop: 3,
+  },
 
   groupLabel: {
     ...Type.caption,
@@ -218,24 +253,23 @@ const styles = StyleSheet.create({
   advisory: { ...Type.caption, color: Neutral[700], lineHeight: 12 * 1.4, marginTop: 5 },
   sensNote: { ...Type.bodySmall, color: Neutral[700], lineHeight: 13 * 1.45, marginTop: 10 },
 
-  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  linkLabel: { ...Type.rowLabel, flex: 1, color: Palette.text },
-
-  tileRow: { flexDirection: 'row', gap: 8, marginTop: Space.three },
-  tile: {
+  sliderTight: { marginTop: 6 },
+  limitRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+    marginTop: Space.four,
+  },
+  limitLabel: {
+    ...Type.caption,
+    fontFamily: Type.rowLabel.fontFamily,
+    letterSpacing: tracking(12, 0.08),
+    textTransform: 'uppercase',
+    color: Neutral[600],
     flex: 1,
-    borderRadius: Radius.md,
-    backgroundColor: Accent2[200],
-    paddingVertical: 11,
-    paddingHorizontal: 10,
-    gap: 7,
   },
-  tileValue: { ...Type.tile, lineHeight: 20, color: Accent2[900] },
-  tileLabel: {
-    ...Type.capsLabel,
-    letterSpacing: tracking(11, 0.04),
-    color: Accent2[800],
-  },
+  limitValue: { ...Type.pillLabel, color: Accent[700] },
+  note: { ...Type.caption, color: Neutral[600] },
 
   done: {
     minHeight: 46,

@@ -206,7 +206,7 @@ Notes:
   to 3 (Low) and 3.5 to 4 (Moderate); 10.4 rounds to 10 (High) and 10.5 to
   11 (Very High). The model's estimate (1.1) is unrounded and goes through
   the same rounding.
-- The margins are fixed and not shown to the user; the Thresholds screen
+- The margins are fixed and not shown to the user; the thresholds card on About yourself
   explains the band once in its caption. Rain's margin is a ratio rather
   than a difference because the four rain limits span 0.2 to 8 mm/h.
 - Wind at *no limit* (the slider's top position) is always level 0.

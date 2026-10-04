@@ -82,13 +82,6 @@ export function AppHeader() {
       <Pressable
         style={styles.iconButton}
         accessibilityRole="button"
-        accessibilityLabel={HeaderStrings.thresholds}
-        onPress={() => router.navigate('/thresholds')}>
-        <Icon name="settings" size={20} color={Accent.base} />
-      </Pressable>
-      <Pressable
-        style={styles.iconButton}
-        accessibilityRole="button"
         accessibilityLabel={HeaderStrings.about}
         onPress={() => router.navigate('/about')}>
         <Icon name="person" size={20} color={Accent.base} />

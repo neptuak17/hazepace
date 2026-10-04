@@ -75,7 +75,6 @@ export function TabNavigator() {
             has to be a direct child of TabList to register its route, so it is
             hidden rather than omitted.
           */}
-          <TabTrigger name="thresholds" href="/thresholds" style={styles.hidden} />
           <TabTrigger name="about" href="/about" style={styles.hidden} />
           <TabTrigger name="how-it-works" href="/how-it-works" style={styles.hidden} />
         </View>

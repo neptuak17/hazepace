@@ -102,25 +102,25 @@ tabulated.
 
 | Role | Token | Value | Dark | Where used |
 | --- | --- | --- | --- | --- |
-| Page background | `Palette.bg` | `#f5ead8` | §2.6 | every screen's `screen` style (`index.tsx:471`, `map.tsx:185`, `forecast.tsx:149`, `thresholds.tsx:108`, `about.tsx:147`, `how-it-works.tsx:181`), root view (`_layout.tsx:93`), launch overlay (`launch-overlay.tsx:241`), splash (`app.json:35`) |
+| Page background | `Palette.bg` | `#f5ead8` | §2.6 | every screen's `screen` style (`index.tsx:471`, `map.tsx:185`, `forecast.tsx:149`, `about.tsx:147`, `how-it-works.tsx:181`), root view (`_layout.tsx:93`), launch overlay (`launch-overlay.tsx:241`), splash (`app.json:35`) |
 | Card surface | `Palette.surface` via `Card` | `#ebddc5` | §2.6 | every `styles.card = Card` (`design-tokens.ts:139–143`); the verdict card when no verdict (`index.tsx:121`) |
 | Inset surface (a panel inside a card, sheet tiles, tab bar) | `Neutral[200]` | `#eee7db` | §2.6 | Today readout (`index.tsx:566`), Forecast detail (`forecast.tsx:180`), Map plate (`map.tsx:201`), launch step pills (`launch-overlay.tsx:287`), sheet search box and tiles (`sheets.tsx:337,356,366`), HIW vent tiles (`how-it-works.tsx:254`), unjudged factor tile (`how-it-works.tsx:111`) |
 | Raised surface (sheet panel, tab bar) | `Neutral[100]` | `#f9f4ed` | §2.6 | sheet panel (`sheet.tsx:106`), tab bar (`tab-bar.tsx:91`); also **text on filled pills/chips** (see below) |
 | Track / empty / unjudged | `Neutral[300]` | `#dcd3c4` | §2.6 | chart bar with no reading (`index.tsx:318`), forecast block with no level (`forecast.tsx:83`), slider track (`slider.tsx:161`), launch progress track (`launch-overlay.tsx:299`), off-chip border (`index.tsx:514`, `about.tsx:195`), Map plate border (`map.tsx:200`) |
 | Unavailable pill fill | `Neutral[400]` | `#c0b6a5` | §2.6 | verdict pill when no verdict (`index.tsx:378`, `forecast.tsx:111`) |
 | Primary text | `Palette.text` | `#201e1d` | §2.6 | titles, card titles, values, hour labels, day names (everywhere) |
-| Secondary text | `Neutral[700]` | `#645c50` | §2.6 | card notes and captions that explain (`index.tsx:538`, `thresholds.tsx:123`, `how-it-works.tsx:193–194`, `about.tsx:198–199`, `sheets.tsx:331,387`) |
+| Secondary text | `Neutral[700]` | `#645c50` | §2.6 | card notes and captions that explain (`index.tsx:538`, `how-it-works.tsx:193–194`, `about.tsx:198–199`, `sheets.tsx:331,387`) |
 | Tertiary text (metadata, ticks, attribution, unselected tab) | `Neutral[600]` | `#82796a` | §2.6 | every `caption`-role line: attribution (`index.tsx:595`), provenance (`index.tsx:579`), ticks (`index.tsx:359`), stat keys (`index.tsx:584`), kickers (`map.tsx:234`), tab label unselected (`tab-bar.tsx:30`), header meta (`app-header.tsx:133`) |
 | Text on tinted/filled chips | `Neutral[100]` | `#f9f4ed` | §2.6 | on-chip text (`index.tsx:290`, `about.tsx:66`), verdict pill text (`index.tsx:493,576`, `forecast.tsx:190`, `how-it-works.tsx:222`) |
 | Chip text, off state | `Neutral[800]` | `#474238` | §2.6 | `index.tsx:290`, `about.tsx:66`, launch step label (`launch-overlay.tsx:293`), closing line (`how-it-works.tsx:276`), AQHI category in sheet (`sheets.tsx:361`) |
 | Divider | `Palette.divider` | `rgba(32,30,29,0.16)` | §2.6 | row rules at 1.5 px (`map.tsx:243`, `forecast.tsx:164`, `sheets.tsx:318,385`), tab bar top rule (`tab-bar.tsx:93`) |
-| Primary action fill | `Accent.base` | `#c67139` | §2.6 | Done / Retry buttons (`thresholds.tsx:150`, `about.tsx:223`, `how-it-works.tsx:283`, `error-panel.tsx:64`), slider fill and thumb (`slider.tsx:167,174`), launch core and progress fill (`launch-overlay.tsx:267,302`), header icon buttons (`app-header.tsx:86,93,100`), sheet close (`sheet.tsx:88`), pull-to-refresh spinner (`index.tsx:230`) |
-| Primary action, pressed | `Accent[700]` | `#8c491a` | §2.6 | `donePressed` / `retryPressed` (`thresholds.tsx:155`, `about.tsx:228`, `how-it-works.tsx:288`, `error-panel.tsx:69`) |
-| Text on primary action | `Palette.bg` | `#f5ead8` | §2.6 | `doneText`, `retryText` (`thresholds.tsx:159`, `error-panel.tsx:71`) |
+| Primary action fill | `Accent.base` | `#c67139` | §2.6 | Done / Retry buttons (`about.tsx:223`, `how-it-works.tsx:283`, `error-panel.tsx:64`), slider fill and thumb (`slider.tsx:167,174`), launch core and progress fill (`launch-overlay.tsx:267,302`), header icon buttons (`app-header.tsx:86,93,100`), sheet close (`sheet.tsx:88`), pull-to-refresh spinner (`index.tsx:230`) |
+| Primary action, pressed | `Accent[700]` | `#8c491a` | §2.6 | `donePressed` / `retryPressed` (`about.tsx:228`, `how-it-works.tsx:288`, `error-panel.tsx:69`) |
+| Text on primary action | `Palette.bg` | `#f5ead8` | §2.6 | `doneText`, `retryText` (`error-panel.tsx:71`) |
 | Selected chip (activity, on Today) | `Accent[600]` fill + border | `#b2622d` | §2.6 | `index.tsx:513` |
 | Selected chip (settings, on About) | `Accent2[600]` fill + border | `#728157` | §2.6 | `about.tsx:194` — the code comment says "all three groups here use the sage voice" |
 | Selected tab | `Accent[200]` fill, `Accent[700]` icon+label | `#ffe1d0` / `#8c491a` | §2.6 | `tab-bar.tsx:109,30` |
-| Link / emphasised value | `Accent[700]` | `#8c491a` | §2.6 | "What's in the air" link (`index.tsx:591`), limit values on Thresholds (`thresholds.tsx:144`), HIW vent tile value (`how-it-works.tsx:258`) |
+| Link / emphasised value | `Accent[700]` | `#8c491a` | §2.6 | "What's in the air" link (`index.tsx:591`), limit values on About yourself (`about.tsx`), HIW vent tile value (`how-it-works.tsx:258`) |
 | Inline text action | `Accent.base` | `#c67139` | §2.6 | "Choose a place" on the location card (`index.tsx:540`) — **the only place `Accent.base` is used as text; contrast 2.69:1 on the card** |
 | "Your settings" accent fill | `Accent2[200]` | `#e1eecc` | §2.6 | best-window pill (`index.tsx:521`), About tiles (`about.tsx:208`), HIW page badge (`how-it-works.tsx:202`) |
 | "Your settings" accent ink | `Accent2[800]` | `#3d472b` | §2.6 | best-window text + icon (`index.tsx:299,527`), tile icons + labels (`about.tsx:127,217`), page-badge icons (`how-it-works.tsx:78`) |
@@ -444,7 +444,7 @@ Every distinct family/size/line-height combination in `src/app` and
 | 19 | default | Today card title | token |
 | 18 | 18 | circle numbers (`map.tsx:254`, `sheets.tsx:328`) | token |
 | 17 | default | readout hour; **Today verdict pill text** (`index.tsx:492`) with 0.68 px tracking | token |
-| 14 | default | Done / Retry button label ×4 (`thresholds.tsx:157`, `about.tsx:230`, `how-it-works.tsx:289`, `error-panel.tsx:71`) | inline, same four times — **a de-facto `button` step with no token** |
+| 14 | default | Done / Retry button label ×4 (`about.tsx:230`, `how-it-works.tsx:289`, `error-panel.tsx:71`) | inline, same four times — **a de-facto `button` step with no token** |
 | 12 | default | HIW band pill text (`how-it-works.tsx:219–221`) with 0.72 px tracking | inline |
 
 **Body (Figtree)**
@@ -459,7 +459,7 @@ Every distinct family/size/line-height combination in `src/app` and
 | 700 | 14 | default | `pillLabel` |
 | 800 | 14 | default | `kicker` |
 | 700 | 13 | default | chip text on Today (`index.tsx:515`), air link, winner text, closing line — `bodySmall` size with `rowLabel` family |
-| 400 | 13 | default / 18.2 / 17.55 / 18.85 | `bodySmall`; notes at ×1.4 (`index.tsx:538`, `how-it-works.tsx:193`), ×1.35 (`thresholds.tsx:124`), ×1.45 (`about.tsx:199`, `sheets.tsx:377`) — **three competing note line-heights; ×1.4 dominant** |
+| 400 | 13 | default / 18.2 / 17.55 / 18.85 | `bodySmall`; notes at ×1.4 (`index.tsx:538`, `how-it-works.tsx:193`), ×1.35 (`about.tsx`), ×1.45 (`about.tsx:199`, `sheets.tsx:377`) — **three competing note line-heights; ×1.4 dominant** |
 | 400 + `fontWeight: '600'` | 13 | default | HIW band description (`how-it-works.tsx:224`) — see 3.1 |
 | 700 | 12 | default | readout / forecast pill text, zone word, kickers, group labels, limit labels — `caption` size with `rowLabel` family, tracking 0.48–0.96 px |
 | 400 | 12 | default / 16.8 / 17.4 | `caption`; attribution at ×1.4; sheet source lines at ×1.45 |
@@ -476,7 +476,7 @@ Every distinct family/size/line-height combination in `src/app` and
 | Hero numeric readout | display 76 / 0.92 |
 | Secondary numeric readout (circle, tile, sheet) | display 18–26, tight line-height (1.0–1.1) |
 | Card title | Figtree 700 16 (`cardTitle`) or display 19 (`dayRow`) — **two competing card-title treatments**; Figtree 700 16 is used on 4 screens, display 19 on Today's chart card and the Map plate |
-| Section / group label | Figtree 700 12 uppercase 0.08 em, or Figtree 800 11 uppercase 0.06 em — **two competing treatments** (`about.tsx:159`, `thresholds.tsx:136`, `map.tsx:229` vs `index.tsx:584`, `sheets.tsx:349`) |
+| Section / group label | Figtree 700 12 uppercase 0.08 em, or Figtree 800 11 uppercase 0.06 em — **two competing treatments** (`about.tsx:159`, `map.tsx:229` vs `index.tsx:584`, `sheets.tsx:349`) |
 | Kicker (over a hero) | Figtree 800 14 uppercase 0.1 em |
 | Row / list item primary | Figtree 700 15 (`rowLabel`) |
 | Body | Figtree 400 15 |
@@ -579,7 +579,6 @@ Row minimum height where set: 44 (`map.tsx:244`). Circle-to-text gap in rows:
 - Stat grid (Today readout): wrapping row, `rowGap: 6`, `columnGap: 10`, each
   cell `minWidth: 62` (`index.tsx:581–583`).
 - Four-up tile rows (pollutants, factors, vent): equal-flex, gap 6–9.
-- Three-up tile row (About): equal-flex, gap 8.
 - Forecast row: fixed `dayCol` 58 · flexible strip · fixed `tempCol` 66,
   gap 10 (`forecast.tsx:166–174`).
 - Sheet panel width: full width; `maxHeight: 78%` of the window
@@ -594,7 +593,7 @@ Row minimum height where set: 44 (`map.tsx:244`). Circle-to-text gap in rows:
 | Forecast strip | 26 | `forecast.tsx:171` |
 | Map plate | 340 | `map.tsx:197` |
 | Chip / touch targets | 44 min | `index.tsx:506`, `about.tsx:177,187`, `app-header.tsx:121,134`, `sheets.tsx:340`, `slider.tsx:28` |
-| Done / Retry button | 46 min | `thresholds.tsx:148` etc. |
+| Done / Retry button | 46 min | `about.tsx` etc. |
 | Tab item | 50 min | `tab-bar.tsx:99` |
 | Circles: zone/place 46, HIW badge 34, header pin 30 | — | `map.tsx:247`, `how-it-works.tsx:199`, `app-header.tsx:124` |
 | Slider track 8, thumb 22 | — | `slider.tsx:26–27` |
@@ -691,8 +690,9 @@ Use for every icon. Do not add an icon font.
 ### 6.2 `AppHeader` — `src/components/app-header.tsx`
 
 The row above every screen: place pin + two-line place/meta text (tappable,
-opens the places sheet) and three 44 × 44 icon buttons (thresholds, about,
-how-it-works).
+opens the places sheet) and two 44 × 44 icon buttons (about, how-it-works).
+The thresholds button went with the Thresholds page; its `settings` glyph
+is unused.
 
 - Container: row, `gap: 2`, `paddingHorizontal: 16`, `paddingBottom: 10`,
   `paddingTop: insets.top + 9` (`:108–114,61`).
@@ -864,7 +864,7 @@ placeholder for a designed one".
 
 ### 6.10 Screen-level patterns (repeated inline, no shared component)
 
-**Primary button ("Done" / "Retry")** — identical in `thresholds.tsx:147–160`,
+**Primary button ("Done" / "Retry")** — identical in `about.tsx`,
 `about.tsx:220–233`, `how-it-works.tsx:280–289`, `error-panel.tsx:61–71`:
 
 ```ts
@@ -983,41 +983,37 @@ and a meta line.
 - Generalised: *a single card of ruled rows, each with a compact severity
   strip, expanding in place.*
 
-### 7.4 Your thresholds (`src/app/thresholds.tsx`) — "settings form"
+### 7.4 About yourself (`src/app/about.tsx`) — "settings groups + slider card"
 
-Order: title → air card (title + caption only) → weather card (three
-label/value rows each followed by a `Slider` and a note) → Done → attribution
-absent.
-
-- Limit row: uppercase Figtree 700 12 label, `Accent[700]` `pillLabel` value,
-  `marginTop: 18`; slider `marginTop: 6`; note `caption` `Neutral[600]`.
-- Generalised: *cards of labelled sliders with the value echoed in the accent
-  colour, a full-width primary Done at the bottom.*
-
-### 7.5 About yourself (`src/app/about.tsx`) — "settings groups + summary tile card"
+Every setting in the app is on this one page; there is no separate
+Thresholds page.
 
 Order: title → card with four chip groups (sports wrap; sensitivity, time
 format and appearance equal-flex), each under an uppercase group label →
-tappable card with a link row and a three-up tile row → Done. The appearance
-group (System / Light / Dark) writes `settings.appearance`, applied by the
-settings provider via `Appearance.setColorScheme`.
+"Activity thresholds" card (title + caption, then three label/value rows
+each followed by a `Slider` and a note: rain, wind, heat) → Done. The
+appearance group (System / Light / Dark) writes `settings.appearance`,
+applied by the settings provider via `Appearance.setColorScheme`.
 
-- Generalised: *chip groups for enumerated settings; a summary card that
-  doubles as a link.*
+- Limit row: uppercase Figtree 700 12 label, `Accent[700]` `pillLabel` value,
+  `marginTop: 18`; slider `marginTop: 6`; note `caption` `Neutral[600]`.
+- Generalised: *chip groups for enumerated settings; a card of labelled
+  sliders with the value echoed in the accent colour; a full-width primary
+  Done at the bottom.*
 
-### 7.6 How this works (`src/app/how-it-works.tsx`) — "explainer"
+### 7.5 How this works (`src/app/how-it-works.tsx`) — "explainer"
 
 Order: title → pages card (icon badge + title + body rows) → verdict card
 (three tinted band rows) → factors card (four tiles with 8 px bars at
 14/27/40 px by level + winner pill) → vent card (three tiles) → sources card
 (dot + name + body rows, Open-Meteo licence caption) → privacy policy link
-row (About's link-row pattern; opens the GitHub page in Safari) → closing
+row (label + chevron; opens the GitHub page in Safari) → closing
 line → Done.
 
 - Generalised: *stacked explainer cards; the live data appears only in the
   factors card so the page doubles as a legend.*
 
-### 7.7 Overlay and error
+### 7.6 Overlay and error
 
 Launch overlay (§6.8) covers the tab screens until the first fetch settles,
 then fades out; the screens are mounted beneath it the whole time
@@ -1031,12 +1027,12 @@ like conditions; this cannot be mistaken for them" (`error-panel.tsx:10–11`).
 
 - **Structure:** expo-router file routes under `src/app/`; one headless
   `Tabs` navigator (`tab-bar.tsx`) with three visible tabs — Today (`/`), Map
-  (`/map`), Forecast (`/forecast`) — and three hidden routes — `/thresholds`,
-  `/about`, `/how-it-works` — reached from the header buttons via
-  `router.navigate` (`app-header.tsx:85,92,99`). The tab bar stays visible on
+  (`/map`), Forecast (`/forecast`) — and two hidden routes — `/about`,
+  `/how-it-works` — reached from the header buttons via `router.navigate`
+  (`app-header.tsx`). The tab bar stays visible on
   the hidden routes with no tab selected (`tab-bar.tsx:71–76`).
 - **Back:** the settings screens end in a Done button that navigates to `/`
-  (`thresholds.tsx:96`, `about.tsx:136`, `how-it-works.tsx:170`). There is no
+  (`about.tsx`, `how-it-works.tsx`). There is no
   back chevron and no swipe-back; the tab bar also works from those screens.
 - **Header:** custom `AppHeader` on every screen (§6.2); no native navigation
   bar. Status bar content is `"auto"` (`_layout.tsx`), following the appearance.
@@ -1333,7 +1329,7 @@ exactly `size / 2` are listed once, as a pattern.)
 | --- | --- |
 | `src/app/index.tsx:497–499` | verdict sentence: `fontSize: 16, lineHeight: 16 * 1.45` |
 | `src/app/index.tsx:494` | verdict pill tracking `tracking(17, 0.04)` |
-| `src/app/thresholds.tsx:156–160`, `about.tsx:229–233`, `how-it-works.tsx:289`, `components/error-panel.tsx:71` | button label `fontSize: 14` (display) ×4 |
+| `about.tsx:229–233`, `how-it-works.tsx:289`, `components/error-panel.tsx:71` | button label `fontSize: 14` (display) ×4 |
 | `src/components/sheet.tsx:120` | sheet title `fontSize: 21` (display) |
 | `src/components/launch-overlay.tsx:274–277` | launch title `fontSize: 27, lineHeight: 27 * 1.15` (duplicates unused `Type.loaderTitle`) |
 | `src/components/sheets.tsx:370–374` | pollutant value `fontSize: 20, lineHeight: 22` |
@@ -1346,8 +1342,8 @@ exactly `size / 2` are listed once, as a pattern.)
 | `src/app/map.tsx:255`, `components/sheets.tsx:329` | circle caps `lineHeight: 10`, tracking `(9.5, 0.04)` |
 | `src/app/index.tsx:562` | tick `letterSpacing: -0.18` |
 | `src/components/tab-bar.tsx:113` | tab label `letterSpacing: 11 * 0.02` |
-| note line-heights | `13 * 1.4` (×6 files), `13 * 1.35` (`thresholds.tsx:124`), `13 * 1.45` (`about.tsx:199`, `sheets.tsx:377`), `12 * 1.4` (attribution ×5), `12 * 1.45` (`sheets.tsx:330,395`), `15 * 1.45` (`error-panel.tsx:58`) |
-| tracking overrides | `tracking(11, 0.06)` (`index.tsx:584`, `sheets.tsx:351,391`), `tracking(11, 0.04)` (`about.tsx:216`), `tracking(12, 0.08)` (`about.tsx:162,169`, `thresholds.tsx:139`), `tracking(12, 0.04)` (`index.tsx:577`, `forecast.tsx:191`, `map.tsx:259`), `tracking(12)` (`map.tsx:232`), `tracking(12, 0.06)` (`how-it-works.tsx:221`) |
+| note line-heights | `13 * 1.4` (×6 files), `13 * 1.35` (`about.tsx`), `13 * 1.45` (`about.tsx:199`, `sheets.tsx:377`), `12 * 1.4` (attribution ×5), `12 * 1.45` (`sheets.tsx:330,395`), `15 * 1.45` (`error-panel.tsx:58`) |
+| tracking overrides | `tracking(11, 0.06)` (`index.tsx:584`, `sheets.tsx:351,391`), `tracking(12, 0.08)` (`about.tsx`), `tracking(12, 0.04)` (`index.tsx:577`, `forecast.tsx:191`, `map.tsx:259`), `tracking(12)` (`map.tsx:232`), `tracking(12, 0.06)` (`how-it-works.tsx:221`) |
 
 **Spacing literals** (padding/margin/gap not from `Space`):
 
@@ -1356,7 +1352,6 @@ exactly `size / 2` are listed once, as a pattern.)
 | `src/app/index.tsx` | paddingTop 6, paddingBottom 116, gap 8 (hero row), marginTop 2, paddingBottom 10, pill padding 16/9 and 11/4, gap 7 (chips), paddingHorizontal 6, gap 10 & padding 12 (window pill), gap 10 (card head), marginTop 3, gap 3 (chart, ticks), marginTop 7, gap 8, marginTop 10 ×3, rowGap 6, columnGap 10, minWidth 62, padding 8/4 (stat), marginTop 12, gap 4 |
 | `src/app/map.tsx` | paddingTop 6, paddingBottom 116, padding 11/5 (legend), marginTop 8, paddingVertical 11, gap 1, marginTop 2, gap 4 |
 | `src/app/forecast.tsx` | paddingTop 6, paddingBottom 116, gap 10, width 58, width 66, gap 2, marginTop 10, gap 7, gap 9, padding 11/4, gap 4 |
-| `src/app/thresholds.tsx` | paddingTop 6, paddingBottom 116, marginTop 3, marginTop 6, gap 8 |
 | `src/app/about.tsx` | paddingTop 6, paddingBottom 116, gap 8, marginTop 10 ×3, gap 7, marginTop 5, gap 10, paddingVertical 11, paddingHorizontal 10, gap 7 |
 | `src/app/how-it-works.tsx` | paddingTop 6, paddingBottom 116, marginTop 3, gap 12, gap 8, gap 10, padding 8/12, padding 3/11, gap 6 ×2, padding 10/6, padding 9/13, padding 10, gap 12, gap 10, marginTop 6 |
 | `src/components/app-header.tsx` | gap 2, paddingHorizontal 16, paddingBottom 10, gap 8 |

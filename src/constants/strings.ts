@@ -99,8 +99,6 @@ export const TabStrings = {
 /* ── Header ──────────────────────────────────────────────────────────────── */
 
 export const HeaderStrings = {
-  /** Also the Thresholds screen title, so the two cannot drift apart. */
-  thresholds: 'Your thresholds',
   about: 'About yourself',
   howItWorks: 'How this works',
   changePlace: (place: string) => `Place: ${place}. Change place.`,
@@ -212,23 +210,17 @@ export const ForecastStrings = {
   },
 } as const;
 
-/* ── Thresholds ──────────────────────────────────────────────────────────── */
+/* ── Thresholds (the limits card on About yourself) ───────────────────────── */
 
+/**
+ * There is no air limit to set: the air level follows ECCC's published AQHI
+ * guidance for the user's sensitivity and sport (decision-rules.md §3.1),
+ * both chosen in the card above this one. Only the weather has limits.
+ */
 export const ThresholdsStrings = {
-  title: HeaderStrings.thresholds,
-
-  airCardTitle: 'Air quality',
-  /**
-   * There is no air limit to set. The air level follows ECCC's published
-   * AQHI guidance for the user's sensitivity and sport (decision-rules.md
-   * §3.1), so this card only holds the sensitivity.
-   */
-  airCardCaption:
-    "Air levels follow Environment and Climate Change Canada's AQHI guidance for your sensitivity and sport — set those in About yourself. Always follow local advisories.",
-
-  weatherCardTitle: 'Weather limits',
+  title: 'Activity thresholds',
   /** The one place the amber band is explained; the margins are not shown. */
-  weatherCardCaption:
+  caption:
     'Your limits for rain, wind and heat. Conditions near a limit read amber; past it, red.',
   rainLabel: 'Rain',
   rainSliderLabel: 'Rain limit',
@@ -265,7 +257,6 @@ export const AboutStrings = {
     light: 'Light',
     dark: 'Dark',
   } as Record<AppearanceChoice, string>,
-  thresholdsLink: 'Activity thresholds',
 
   /**
    * What each sensitivity means, as a description of the setting.
@@ -277,12 +268,6 @@ export const AboutStrings = {
     Normal: "Air levels follow ECCC's guidance for the general population.",
     Reactive: "Air levels follow ECCC's guidance for people more affected by smoke.",
   } as Record<Sensitivity, string>,
-
-  tileLabels: {
-    sensitivity: 'Smoke',
-    rain: 'Rain',
-    wind: 'Wind',
-  },
 } as const;
 
 /* ── How this works ──────────────────────────────────────────────────────── */
