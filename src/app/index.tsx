@@ -10,7 +10,7 @@
  * them shows "—" and takes no colour: the screen never invents a judgment to
  * fill a gap, and a gap never reads as clean air.
  */
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/app-header';
@@ -115,6 +115,49 @@ export default function TodayScreen() {
         }
       : null;
   const verdict = nowReading ? judge(nowReading, prefs) : null;
+
+  // The four factors the verdict weighs, on one line under the AQHI. Any
+  // factor at amber or red is set in bold with a dot, so the card's colour
+  // always has its reason on the card. Values render on their own even when
+  // one is missing and the model could not run; then nothing is marked.
+  const nowFactors: FactorLevels | null = nowReading ? factorLevels(nowReading, prefs) : null;
+  const factorItems: { key: string; text: string; spoken: string; level: Level | null }[] = [
+    {
+      key: 'air',
+      text: `${Common.aqhi} ${formatAqhi(heroReading)}`,
+      spoken: `${Common.aqhi} ${formatAqhi(heroReading)}`,
+      level: nowFactors?.air ?? null,
+    },
+    {
+      key: 'heat',
+      text: formatValue(nowWeather?.temperatureC ?? null, 0, ' °C'),
+      spoken: formatValue(nowWeather?.temperatureC ?? null, 0, ' °C'),
+      level: nowFactors?.heat ?? null,
+    },
+    {
+      key: 'wind',
+      text: TodayStrings.factorWind(
+        compass(nowWeather?.windDirectionDeg ?? null),
+        nowWeather?.windSpeedKmh ?? null,
+      ),
+      spoken: TodayStrings.factorWindSpoken(
+        compass(nowWeather?.windDirectionDeg ?? null),
+        nowWeather?.windSpeedKmh ?? null,
+      ),
+      level: nowFactors?.wind ?? null,
+    },
+    {
+      key: 'rain',
+      text: TodayStrings.factorRain(nowWeather?.precipitationMm ?? null),
+      spoken: TodayStrings.factorRainSpoken(nowWeather?.precipitationMm ?? null),
+      level: nowFactors?.rain ?? null,
+    },
+  ];
+  const factorLabel = factorItems
+    .map((f) =>
+      f.level !== null && f.level > 0 ? `${f.spoken}, ${Verdict.word[f.level]}` : f.spoken,
+    )
+    .join('; ');
 
   const tint = verdict ? Verdict.tint[verdict.level] : Palette.surface;
   const ink = verdict ? Verdict.deepInk[verdict.level] : Palette.text;
@@ -270,6 +313,22 @@ export default function TodayScreen() {
               </Text>
             </View>
           </View>
+          <Text
+            style={[styles.factorLine, { color: ink }]}
+            accessibilityLabel={factorLabel}>
+            {factorItems.map((f, i) => {
+              const flagged = f.level !== null && f.level > 0;
+              return (
+                <Fragment key={f.key}>
+                  {i > 0 ? '  ·  ' : ''}
+                  <Text style={flagged ? styles.factorFlagged : undefined}>
+                    {flagged ? '● ' : ''}
+                    {f.text}
+                  </Text>
+                </Fragment>
+              );
+            })}
+          </Text>
           <Text style={[styles.verdictSentence, { color: ink }]}>{sentence}</Text>
         </View>
 
@@ -482,6 +541,8 @@ const styles = StyleSheet.create({
     color: Neutral[100],
     letterSpacing: tracking(17, 0.04),
   },
+  factorLine: { ...Type.body, lineHeight: 15 * 1.4, marginTop: Space.three },
+  factorFlagged: { fontFamily: Type.rowLabel.fontFamily },
   verdictSentence: {
     fontFamily: Type.body.fontFamily,
     fontSize: 16,

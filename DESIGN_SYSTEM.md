@@ -933,8 +933,11 @@ Order: optional location card (fallback only) → verdict card → activity chip
 - Verdict card: `Radius.lg`, padding 18, fill `Verdict.tint[level]` (or
   `Palette.surface` with no verdict), all text `deepInk[level]`. Left column:
   kicker → hero number 76 with "AQHI / of 10+" caption beside it on the
-  baseline → provenance (2 lines max). Right: the large pill. Sentence
-  below in Figtree 16 / 23.2.
+  baseline → provenance (2 lines max). Right: the large pill. Below, full
+  width: the factor line (Figtree 15 / 21, `marginTop: 14`) —
+  "AQHI 2 · 18 °C · NW 12 km/h · dry" — where any factor at amber or red is
+  set in Figtree 700 with a leading "●"; then the sentence in Figtree 16 /
+  23.2, built from the driver's reading and limit (decision-rules.md §6).
 - Pull-to-refresh via `RefreshControl` tinted `Accent.base`.
 - Density: one number dominates; everything else is 12–14 px.
 - Generalised: *a full-bleed status card whose colour is the state, one giant

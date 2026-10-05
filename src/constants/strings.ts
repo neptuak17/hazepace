@@ -155,6 +155,17 @@ export const TodayStrings = {
     }
   },
 
+  /** The hero's factor line. Missing values are "—", never zero. */
+  factorWind: (direction: string | null, kmh: number | null) =>
+    kmh === null ? '— km/h' : `${direction ? `${direction} ` : ''}${Math.round(kmh)} km/h`,
+  factorWindSpoken: (direction: string | null, kmh: number | null) =>
+    kmh === null
+      ? 'wind unavailable'
+      : `wind ${direction ? `${direction} ` : ''}${Math.round(kmh)} km/h`,
+  factorRain: (mm: number | null) => (mm === null ? '— mm' : mm === 0 ? 'dry' : `${mm.toFixed(1)} mm`),
+  factorRainSpoken: (mm: number | null) =>
+    mm === null ? 'rain unavailable' : mm === 0 ? 'dry' : `rain ${mm.toFixed(1)} mm`,
+
   bestWindow: (window: string) => `Best window today · ${window}`,
   noWindow: 'nothing clean today',
   windowSpan: (from: string, to: string, hours: number) => `${from} – ${to} · ${hours} h`,
