@@ -283,11 +283,28 @@ so a run over slots 11 and 13 reads "11:00 – 15:00".
 A slot the sources did not cover breaks a run but never sets the level. A day
 with no complete slot has no level. (This lives outside the model.)
 
-### 4.3 Best window today — Today screen
+### 4.3 Green until / next green — Today screen
 
-The longest run of level-0 hours from now onward, over the hours 05:00–21:00.
-An hour counts as past once it has finished, so the hour currently underway is
-still available.
+How long green lasts, or when it next starts, over the hours 05:00–21:00.
+The hour currently underway counts, so at 15:40 the 15:00 hour is the
+starting point.
+
+1. If the current hour is level 0, the span runs from it through every
+   following level-0 hour → **"Green until {end}"**, where end is the hour
+   after the last green one. If the run reaches 21:00 →
+   **"Green for the rest of the day"**: nothing after 22:00 is judged, so
+   no end is claimed.
+2. Otherwise, the first level-0 hour after now starts the span, which runs
+   the same way → **"Next green {start} – {end}"**, or
+   **"Next green from {start}"** when it reaches 21:00.
+3. No level-0 hour from now to 21:00 → **"No green hours left today"**.
+
+An hour the model could not judge (a reading missing) is not green: it
+ends a span and cannot start one.
+
+This replaces "best window today", the longest green run ahead. The longest
+run answered a weaker question: it could already be under way, or be hours
+off while a shorter one was starting now.
 
 ---
 

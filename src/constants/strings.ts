@@ -166,9 +166,12 @@ export const TodayStrings = {
   factorRainSpoken: (mm: number | null) =>
     mm === null ? 'rain unavailable' : mm === 0 ? 'dry' : `rain ${mm.toFixed(1)} mm`,
 
-  bestWindow: (window: string) => `Best window today · ${window}`,
-  noWindow: 'nothing clean today',
-  windowSpan: (from: string, to: string, hours: number) => `${from} – ${to} · ${hours} h`,
+  /** The pill under the activity chips: decision-rules.md §4.3. */
+  greenUntil: (end: string) => `Green until ${end}`,
+  greenRestOfDay: 'Green for the rest of the day',
+  greenNext: (from: string, to: string) => `Next green ${from} – ${to}`,
+  greenNextOpen: (from: string) => `Next green from ${from}`,
+  greenNone: 'No green hours left today',
 
   chartTitle: 'Hour by hour',
   barLabel: (time: string, aqhi: number) => `${time}, AQHI ${aqhi}`,

@@ -20,7 +20,7 @@ import {
   WIND_MARGIN_KMH,
   WIND_NO_LIMIT,
   band,
-  bestWindow,
+  greenSpan,
   factorLevels,
   formatHour,
   formatTick,
@@ -345,42 +345,108 @@ describe('windowLabel', () => {
   });
 });
 
-describe('bestWindow', () => {
+describe('greenSpan', () => {
+  /** One judgeable hour per entry; AQHI 2 is green, 9 is red. */
   const hours = (spec: { hour: number; aqhi: number }[]) =>
     spec.map((s) => ({ ...calm({ aqhi: s.aqhi }), hour: s.hour }));
+  const LAST = 21;
 
-  test('ignores hours that have already finished', () => {
-    // 05:00 and 06:00 are clean but past; 08:00 onward is the only real window.
-    const w = bestWindow(
+  test('green now: runs until the first hour that is not', () => {
+    const s = greenSpan(
       hours([
-        { hour: 5, aqhi: 2 },
-        { hour: 6, aqhi: 2 },
+        { hour: 15, aqhi: 2 },
+        { hour: 16, aqhi: 2 },
+        { hour: 17, aqhi: 9 },
+        { hour: 18, aqhi: 2 },
+      ]),
+      15.4,
+      prefs(),
+      LAST,
+    );
+    assert.deepEqual(s, { kind: 'until', end: 17, toEnd: false });
+  });
+
+  test('the hour under way counts, however far into it', () => {
+    const s = greenSpan(hours([{ hour: 15, aqhi: 2 }, { hour: 16, aqhi: 9 }]), 15.95, prefs(), LAST);
+    assert.deepEqual(s, { kind: 'until', end: 16, toEnd: false });
+  });
+
+  test('green through the last hour claims no end', () => {
+    const s = greenSpan(
+      hours([
+        { hour: 20, aqhi: 2 },
+        { hour: 21, aqhi: 2 },
+      ]),
+      20.1,
+      prefs(),
+      LAST,
+    );
+    assert.deepEqual(s, { kind: 'until', end: 22, toEnd: true });
+  });
+
+  test('not green now: the next green run, start to end', () => {
+    const s = greenSpan(
+      hours([
         { hour: 7, aqhi: 9 },
-        { hour: 8, aqhi: 2 },
+        { hour: 8, aqhi: 9 },
         { hour: 9, aqhi: 2 },
+        { hour: 10, aqhi: 2 },
+        { hour: 11, aqhi: 9 },
+        { hour: 12, aqhi: 2 },
+        { hour: 13, aqhi: 2 },
+        { hour: 14, aqhi: 2 },
       ]),
       7.66,
       prefs(),
+      LAST,
     );
-    assert.deepEqual(w, { start: 8, end: 10 });
+    // The first run, not the longest: 09:00 is what the reader can act on.
+    assert.deepEqual(s, { kind: 'next', start: 9, end: 11, toEnd: false });
   });
 
-  test('returns null when nothing ahead is clear', () => {
-    const w = bestWindow(
+  test('a green hour already finished is not offered', () => {
+    const s = greenSpan(
+      hours([
+        { hour: 6, aqhi: 2 },
+        { hour: 7, aqhi: 9 },
+        { hour: 8, aqhi: 2 },
+      ]),
+      7.66,
+      prefs(),
+      LAST,
+    );
+    assert.deepEqual(s, { kind: 'next', start: 8, end: 9, toEnd: false });
+  });
+
+  test('an hour that could not be judged is not green', () => {
+    // 16:00 is missing from the readings: it ends the run.
+    const s = greenSpan(
+      hours([
+        { hour: 15, aqhi: 2 },
+        { hour: 17, aqhi: 2 },
+      ]),
+      15.2,
+      prefs(),
+      LAST,
+    );
+    assert.deepEqual(s, { kind: 'until', end: 16, toEnd: false });
+  });
+
+  test('nothing green from now to the last hour', () => {
+    const s = greenSpan(
       hours([
         { hour: 8, aqhi: 9 },
         { hour: 9, aqhi: 9 },
       ]),
       7.66,
       prefs(),
+      LAST,
     );
-    assert.equal(w, null);
+    assert.equal(s, null);
   });
 
-  test('an hour still running is not counted as past', () => {
-    // At 07:66 the 07:00 hour has not finished, so it remains available.
-    const w = bestWindow(hours([{ hour: 7, aqhi: 2 }]), 7.66, prefs());
-    assert.deepEqual(w, { start: 7, end: 8 });
+  test('after the last hour there is nothing left', () => {
+    assert.equal(greenSpan(hours([{ hour: 21, aqhi: 2 }]), 22.5, prefs(), LAST), null);
   });
 });
 

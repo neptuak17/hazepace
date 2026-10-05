@@ -122,8 +122,8 @@ tabulated.
 | Selected tab | `Accent[200]` fill, `Accent[700]` icon+label | `#ffe1d0` / `#8c491a` | §2.6 | `tab-bar.tsx:109,30` |
 | Link / emphasised value | `Accent[700]` | `#8c491a` | §2.6 | "What's in the air" link (`index.tsx:591`), limit values on About yourself (`about.tsx`), HIW vent tile value (`how-it-works.tsx:258`) |
 | Inline text action | `Accent.base` | `#c67139` | §2.6 | "Choose a place" on the location card (`index.tsx:540`) — **the only place `Accent.base` is used as text; contrast 2.69:1 on the card** |
-| "Your settings" accent fill | `Accent2[200]` | `#e1eecc` | §2.6 | best-window pill (`index.tsx:521`), About tiles (`about.tsx:208`), HIW page badge (`how-it-works.tsx:202`) |
-| "Your settings" accent ink | `Accent2[800]` | `#3d472b` | §2.6 | best-window text + icon (`index.tsx:299,527`), tile icons + labels (`about.tsx:127,217`), page-badge icons (`how-it-works.tsx:78`) |
+| "Your settings" accent fill | `Accent2[200]` | `#e1eecc` | §2.6 | green-span pill (`index.tsx`), HIW page badge (`how-it-works.tsx:202`) |
+| "Your settings" accent ink | `Accent2[800]` | `#3d472b` | §2.6 | green-span text + icon (`index.tsx`), page-badge icons (`how-it-works.tsx:78`) |
 | "Your settings" accent ink, strongest | `Accent2[900]` | `#272e1b` | §2.6 | tile value (`about.tsx:213`) — single use |
 | Place / location marker | `Accent2[600]` | `#728157` | §2.6 | header pin badge (`app-header.tsx:127`), device row circle in places sheet (`sheets.tsx:183`), source-list dots (`how-it-works.tsx:267`), launch step dots (`launch-overlay.tsx:292`) |
 | Launch halo | `Accent2[300]` | `#ccdbb2` | §2.6 | expanding rings (`launch-overlay.tsx:261`) — single use |
@@ -903,7 +903,7 @@ padding 4 / 11, text Figtree 700 12 or display 12 in `Neutral[100]`, fill
 `deepInk[level]`). **Two fills for the same concept: `ink` on the small
 pills, `deepInk` on the hero pill.**
 
-**Tinted info pill** (best window, HIW winner, HIW band row): pill, padding
+**Tinted info pill** (green span, HIW winner, HIW band row): pill, padding
 8–12 / 12–18, `Accent2[200]` or `Verdict.tint[level]` fill, ink `Accent2[800]`
 or `Verdict.ink[level]`, optional leading icon 18.
 
@@ -928,7 +928,8 @@ bottom padding, ending in the attribution block. Screen title (display 24,
 ### 7.1 Today (`src/app/index.tsx`) — "hero verdict + timeline"
 
 Order: optional location card (fallback only) → verdict card → activity chips
-→ best-window pill → chart card (bars, ticks, readout, link) → attribution.
+→ green-span pill ("Green until 5 pm", decision-rules.md §4.3) → chart card
+(bars, ticks, readout, link) → "updated" line.
 
 - Verdict card: `Radius.lg`, padding 18, fill `Verdict.tint[level]` (or
   `Palette.surface` with no verdict), all text `deepInk[level]`. Left column:
@@ -1167,7 +1168,7 @@ Sizes in use and their pairings:
 | --- | --- | --- |
 | 15 | header chevron, search clear | `caption` / input |
 | 17 | header pin (on a 30 badge), search glyph, About chevron | `rowLabel` 17 / `body` |
-| 18 | best-window `bars` | `pillLabel` 14 |
+| 18 | green-span `bars` | `pillLabel` 14 |
 | 19 | About tile icons, HIW page badges (34), sheet close | `capsLabel` / `cardTitle` |
 | 20 | header action buttons (44 targets), places device row (46) | — |
 | 21 | tab bar (default) | `tabLabel` 11 |

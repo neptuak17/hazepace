@@ -266,31 +266,36 @@ export interface HourReading extends Reading {
 }
 
 /**
- * The longest run of level-0 hours still ahead of `now`.
+ * How long green lasts, or when it next starts (decision-rules.md §4.3).
  *
- * An hour counts as past once it has finished, so the run that is currently
- * underway still offers whatever is left of it.
+ * `hours` are the judgeable hours of the day; an hour missing from them is
+ * not green. `lastHour` is the last hour the day covers — a span that
+ * reaches it is open-ended (`toEnd`), because nothing after it is judged.
+ *
+ * `now` is fractional; the hour underway counts.
  */
-export function bestWindow(
+export type GreenSpan =
+  | { kind: 'until'; end: number; toEnd: boolean }
+  | { kind: 'next'; start: number; end: number; toEnd: boolean };
+
+export function greenSpan(
   hours: HourReading[],
   now: number,
   prefs: Prefs,
-): { start: number; end: number } | null {
-  let best: { start: number; end: number } | null = null;
-  let cur: { start: number; end: number } | null = null;
+  lastHour: number,
+): GreenSpan | null {
+  const green = new Set(hours.filter((h) => judge(h, prefs).level === 0).map((h) => h.hour));
+  const current = Math.floor(now);
 
-  for (const hr of hours) {
-    if (hr.hour + 1 <= now) {
-      cur = null;
-      continue;
-    }
-    if (judge(hr, prefs).level === 0) {
-      cur = cur ? { start: cur.start, end: hr.hour + 1 } : { start: hr.hour, end: hr.hour + 1 };
-      if (!best || cur.end - cur.start > best.end - best.start) best = { ...cur };
-    } else {
-      cur = null;
-    }
-  }
+  let start = current;
+  while (start <= lastHour && !green.has(start)) start++;
+  if (start > lastHour) return null;
 
-  return best;
+  let last = start;
+  while (last + 1 <= lastHour && green.has(last + 1)) last++;
+
+  const toEnd = last === lastHour;
+  return start === current
+    ? { kind: 'until', end: last + 1, toEnd }
+    : { kind: 'next', start, end: last + 1, toEnd };
 }

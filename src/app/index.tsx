@@ -40,6 +40,7 @@ import {
 import { categoryFor } from '@/lib/aqhi';
 import { useConditions } from '@/lib/conditions';
 import {
+  CHART_LAST_HOUR,
   aqhiOf,
   compass,
   currentHour,
@@ -53,7 +54,7 @@ import {
   type LiveHour,
 } from '@/lib/live';
 import {
-  bestWindow,
+  greenSpan,
   factorLevels,
   formatHour,
   formatTick,
@@ -189,14 +190,19 @@ export default function TodayScreen() {
   }
 
   const complete = hours.map(readingOf).filter((r): r is HourReading => r !== null);
-  const window = bestWindow(complete, now, prefs);
-  const windowText = window
-    ? TodayStrings.windowSpan(
-        formatHour(window.start, settings.timeFmt),
-        formatHour(window.end, settings.timeFmt),
-        window.end - window.start,
-      )
-    : TodayStrings.noWindow;
+  const span = greenSpan(complete, now, prefs, CHART_LAST_HOUR);
+  const windowText = !span
+    ? TodayStrings.greenNone
+    : span.kind === 'until'
+      ? span.toEnd
+        ? TodayStrings.greenRestOfDay
+        : TodayStrings.greenUntil(formatHour(span.end, settings.timeFmt))
+      : span.toEnd
+        ? TodayStrings.greenNextOpen(formatHour(span.start, settings.timeFmt))
+        : TodayStrings.greenNext(
+            formatHour(span.start, settings.timeFmt),
+            formatHour(span.end, settings.timeFmt),
+          );
 
   const selected: LiveHour =
     hours.find((h) => h.hour === selectedHour) ?? hours[0];
@@ -352,7 +358,7 @@ export default function TodayScreen() {
 
         <View style={styles.windowPill}>
           <Icon name="bars" size={18} color={Accent2[800]} />
-          <Text style={styles.windowText}>{TodayStrings.bestWindow(windowText)}</Text>
+          <Text style={styles.windowText}>{windowText}</Text>
         </View>
 
         <View style={styles.card}>
