@@ -20,7 +20,6 @@ import { Sheet } from '@/components/sheet';
 import { AirSheetBody } from '@/components/sheets';
 import {
   Accent,
-  Accent2,
   Card,
   Neutral,
   Palette,
@@ -350,9 +349,25 @@ export default function TodayScreen() {
           })}
         </View>
 
-        <View style={styles.windowPill}>
-          <Icon name="bars" size={18} color={Accent2[800]} />
-          <Text style={styles.windowText}>{windowText}</Text>
+        {/* Coloured by the verdict now, so "No green hours left today" is
+            never printed on green. With no verdict it is neutral. */}
+        <View
+          style={[
+            styles.windowPill,
+            { backgroundColor: verdict ? Verdict.tint[verdict.level] : Neutral[200] },
+          ]}>
+          <Icon
+            name="bars"
+            size={18}
+            color={verdict ? Verdict.deepInk[verdict.level] : Neutral[700]}
+          />
+          <Text
+            style={[
+              styles.windowText,
+              { color: verdict ? Verdict.deepInk[verdict.level] : Neutral[700] },
+            ]}>
+            {windowText}
+          </Text>
         </View>
 
         <View style={styles.card}>
@@ -572,13 +587,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: Accent2[200],
     borderRadius: Radius.pill,
     paddingVertical: 12,
     paddingHorizontal: Space.four,
     minHeight: 44,
   },
-  windowText: { ...Type.pillLabel, flex: 1, color: Accent2[800] },
+  windowText: { ...Type.pillLabel, flex: 1 },
 
   card: Card,
   cardTitle: { ...Type.dayRow, color: Palette.text },
