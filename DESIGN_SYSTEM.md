@@ -15,7 +15,7 @@ Files that matter most:
 | `src/constants/design-tokens.ts` | every palette, ramp, spacing, radius, shadow, font and type token |
 | `src/constants/strings.ts` | every user-facing string |
 | `src/components/*.tsx` | the nine shared components |
-| `src/app/*.tsx` | the six screens and the root layout |
+| `src/app/*.tsx` | the five screens and the root layout |
 | `app.json` | splash colour, icon, orientation, `userInterfaceStyle` |
 | `assets/fonts/` | the two typefaces, five files |
 
@@ -521,7 +521,7 @@ lists them by file.
 
 ### 4.2 Screen frame
 
-Identical on all six screens (`index.tsx:471–478` and the same block in each
+Identical on all five screens (`index.tsx:471–478` and the same block in each
 screen file):
 
 ```ts
@@ -717,7 +717,7 @@ is unused.
 </Pressable>
 ```
 
-Rule: present on all six screens, above the scroll pane, never inside it.
+Rule: present on all five screens, above the scroll pane, never inside it.
 
 ### 6.3 `TabNavigator` — `src/components/tab-bar.tsx`
 
@@ -922,7 +922,7 @@ every scroll pane.
 
 ## 7. Screen archetypes
 
-All six screens share the frame in §4.2: `AppHeader`, then a `ScrollView`
+All five screens share the frame in §4.2: `AppHeader`, then a `ScrollView`
 whose content is a vertical stack with 13 px gaps, 18 px side margins, 116 px
 bottom padding, ending in the attribution block. Screen title (display 24,
 `Palette.text`) is the first child on every screen except Today.
