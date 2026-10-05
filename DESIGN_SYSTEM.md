@@ -491,7 +491,7 @@ Every distinct family/size/line-height combination in `src/app` and
 No `Text` in the app sets `allowFontScaling`, `maxFontSizeMultiplier` or
 `adjustsFontSizeToFit` (grep of `src/app`, `src/components`: no matches). React
 Native's default therefore applies: every `Text` scales with the iOS text-size
-setting, with no cap, and every fixed-height container around text (chart 140,
+setting, with no cap, and every fixed-height container around text (chart 56,
 tab item 50, chip 44, plate 340, circles 46) does not. **TODO: behaviour at
 accessibility text sizes has not been tested on device; expect clipping in
 the tab bar, chips and circles.**
@@ -588,7 +588,7 @@ Row minimum height where set: 44 (`map.tsx:244`). Circle-to-text gap in rows:
 
 | What | Height | Source |
 | --- | --- | --- |
-| Chart | 140 | `index.tsx:74` |
+| Chart | 56 | `index.tsx` (`CHART_HEIGHT`) |
 | Chart bar minimum | 16 | `index.tsx:75` |
 | Forecast strip | 26 | `forecast.tsx:171` |
 | Map plate | 340 | `map.tsx:197` |
@@ -1113,12 +1113,12 @@ Not consulted anywhere (no `AccessibilityInfo`). **TODO.**
 
 Hand-built with `View`s; no chart library.
 
-- Container 140 px tall, row, `alignItems: 'flex-end'`, gap 3, `marginTop: 13`.
+- Container 56 px tall, row, `alignItems: 'flex-end'`, gap 3, `marginTop: 13`.
 - One `Pressable` column per hour 05:00–21:00 (`todayHours`), flex 1.
-- Bar: pill; height `16 + quality × 1.16` px where `quality` is the model's
-  6–100 score (so 23–132 px), or 16 px with no reading; fill
-  `Verdict.ink[level]` or `Neutral[300]` with no reading; past hours at
-  opacity 0.28.
+- Bar: pill; every judged hour the full 56 px — height carries nothing,
+  colour is the reading (decision-rules.md §4.1); a 16 px stub with no
+  reading. Fill `Verdict.ink[level]` or `Neutral[300]` with no reading;
+  past hours at opacity 0.28.
 - Selected bar: a 2.5 px `Palette.text` ring on a sibling view offset 2.5 px
   outside the bar on all sides.
 - **No axes, no gridlines.** Ticks: a row under the chart, gap 3,
@@ -1264,7 +1264,7 @@ Not handled. The launch overlay's three loops run regardless. **TODO.**
 
 44 px minimum is respected by chips, header buttons, the slider, search box
 and the place rows; Done/Retry are 46; tab items 50. Below 44: the chart
-bars (width = (screen − 36 − 16 × 3) / 17 ≈ 17–20 px, 140 px tall), the
+bars (width = (screen − 36 − 16 × 3) / 17 ≈ 17–20 px, 56 px tall), the
 "What's in the air" and "Choose a place" text links (13–15 px text, `hitSlop`
 8 / `minHeight` 32), the sheet's clear-search button (28 + hitSlop 8), the
 Forecast rows (full width, ≥ 52 tall — fine).
@@ -1378,7 +1378,7 @@ exactly `size / 2` are listed once, as a pattern.)
 
 | File | Literals |
 | --- | --- |
-| `src/app/index.tsx:74–78` | `CHART_HEIGHT 140`, `BAR_BASE 16`, `BAR_SCALE 1.16`, `RING_WIDTH 2.5` |
+| `src/app/index.tsx` | `CHART_HEIGHT 56`, `BAR_STUB 16`, `RING_WIDTH 2.5` |
 | `src/app/map.tsx:197` | plate height 340 |
 | `src/app/forecast.tsx:171` | strip height 26 |
 | `src/app/how-it-works.tsx:40` | factor bar `14 + level × 13`, width 8 |
@@ -1412,9 +1412,6 @@ Not just recolouring:
 - **The four factors** (smoke / rain / heat / wind) in the readout stat grid,
   the HIW factor tiles, the driver names in pills and sentences
   (`HowItWorksStrings.driverWord`, `factorNames`).
-- **The hour-by-hour chart's height source** — `quality()` is an AQHI/rain/
-  temperature formula; the bar geometry (16 + score × 1.16) assumes a 6–100
-  score.
 - **The forecast strip's eight 2-hour slots** (`DAY_SLOTS` 05…19) and the
   "best contiguous run" day verdict.
 - **The brand mark** (`haze`, `hazeLarge`) and the launch overlay's copy

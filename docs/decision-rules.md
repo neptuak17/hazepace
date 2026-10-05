@@ -236,29 +236,14 @@ So when air and rain are both amber, the sentence talks about smoke. At level
 
 ## 4. Derived values
 
-### 4.1 Quality score — chart bar heights only
+### 4.1 Chart bars — Today screen
 
-Not a verdict. It gives the hourly bars shape within a level so the chart is
-not three flat bands.
+Every hour's bar is the same height; its colour is its level. An hour the
+model could not judge is a short stub in the neutral track colour.
 
-```
-quality = 100 − (aqhi − 1) × 12
-              − min(45, rain × 7)
-              − max(0, (temp − 28) × 4)
-```
-
-Clamped to **6–100**. The floor is 6 rather than 0 so a bar is always visible.
-The prototype used the effective AQHI here; with the multipliers gone it uses
-the raw reading, so the bar heights no longer change with sport or
-sensitivity — only the colours do.
-
-| Case | AQHI | Temp | Rain | Quality |
-| --- | --- | --- | --- | --- |
-| Clean | 2 | 20 | 0 | 88.0 |
-| AQHI 6 | 6 | 20 | 0 | 40.0 |
-| Heavy rain | 2 | 20 | 8 | 43.0 |
-| 32 °C | 2 | 32 | 0 | 72.0 |
-| Everything bad | 11 | 40 | 20 | 6.0 |
+The bars used to vary in height by a separate 0–100 "quality" score so the
+chart had shape within a level. Nothing on screen said what the height
+meant, so it read as a second, unexplained verdict; it was removed.
 
 ### 4.2 Day verdict — Forecast screen
 

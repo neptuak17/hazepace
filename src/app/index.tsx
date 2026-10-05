@@ -59,7 +59,6 @@ import {
   formatHour,
   formatTick,
   judge,
-  quality,
   type Activity,
   type FactorLevels,
   type HourReading,
@@ -69,10 +68,14 @@ import { useSettings } from '@/lib/settings';
 
 const ACTIVITIES: Activity[] = ['Running', 'Cycling', 'Hiking / Walking'];
 
-/** Chart geometry, from the design. */
-const CHART_HEIGHT = 140;
-const BAR_BASE = 16;
-const BAR_SCALE = 1.16;
+/**
+ * Chart geometry. Every judged hour is the same height — the colour is the
+ * reading (decision-rules.md §4.1) — so the chart is a strip read left to
+ * right, not a second scale to interpret.
+ */
+const CHART_HEIGHT = 56;
+/** An hour the model could not judge: a stub, plainly not a reading. */
+const BAR_STUB = 16;
 /** The selection ring's stroke, and how far outside the bar it sits. */
 const RING_WIDTH = 2.5;
 
@@ -369,10 +372,9 @@ export default function TodayScreen() {
               const reading = readingOf(hr);
               const level = reading ? judge(reading, prefs).level : null;
               const past = hr.hour + 1 <= now;
-              // An hour the model could not judge is drawn at the minimum
-              // height in the neutral track colour — present, but plainly
-              // not a reading.
-              const height = reading ? BAR_BASE + quality(reading) * BAR_SCALE : BAR_BASE;
+              // An hour the model could not judge is a stub in the neutral
+              // track colour — present, but plainly not a reading.
+              const height = reading ? CHART_HEIGHT : BAR_STUB;
               const colour = level === null ? Neutral[300] : Verdict.ink[level];
               const isSelected = hr.hour === selectedHour;
               return (

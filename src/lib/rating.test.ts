@@ -27,7 +27,6 @@ import {
   judge,
   judgeDay,
   longestRun,
-  quality,
   windowLabel,
   type Activity,
   type Level,
@@ -233,37 +232,6 @@ describe('judge', () => {
     const f = factorLevels(r, prefs());
     assert.deepEqual(f, { air: 2, rain: 1, heat: 1, wind: 1 });
     assert.equal(judge(r, prefs()).level, Math.max(f.air, f.rain, f.heat, f.wind));
-  });
-});
-
-describe('quality', () => {
-  test('floors at 6 rather than 0 so a bar stays visible', () => {
-    assert.equal(quality(calm({ aqhi: 11, tempC: 40, rainMmH: 20 })), 6);
-  });
-
-  test('caps at 100', () => {
-    assert.equal(quality(calm({ aqhi: 0 })), 100);
-  });
-
-  test('falls as the air worsens', () => {
-    const clean = quality(calm({ aqhi: 2 }));
-    const dirty = quality(calm({ aqhi: 6 }));
-    assert.ok(dirty < clean, `${dirty} should be below ${clean}`);
-  });
-
-  test('matches the worked values in decision-rules.md §4.1', () => {
-    assert.equal(quality({ aqhi: 2, tempC: 20, rainMmH: 0, windKmh: 10 }), 88);
-    assert.equal(quality({ aqhi: 6, tempC: 20, rainMmH: 0, windKmh: 10 }), 40);
-    assert.equal(quality({ aqhi: 2, tempC: 20, rainMmH: 8, windKmh: 10 }), 43);
-    assert.equal(quality({ aqhi: 2, tempC: 32, rainMmH: 0, windKmh: 10 }), 72);
-    assert.equal(quality({ aqhi: 11, tempC: 40, rainMmH: 20, windKmh: 10 }), 6);
-  });
-
-  test('rain contributes at most 45 points', () => {
-    // Beyond ~6.4 mm/h the rain term is pinned, so more rain changes nothing.
-    const a = quality(calm({ aqhi: 3, rainMmH: 7 }));
-    const b = quality(calm({ aqhi: 3, rainMmH: 30 }));
-    assert.equal(a, b);
   });
 });
 

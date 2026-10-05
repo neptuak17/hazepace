@@ -176,20 +176,6 @@ export function judge(r: Reading, prefs: Prefs): Judgement {
   return { level, driver };
 }
 
-/**
- * A separate 0–100 score, used only for the height of the hourly bars. It is
- * deliberately not the same thing as the level — it varies within a level so
- * the chart has shape.
- *
- * Floors at 6 rather than 0 so a bar is always visible. Uses the raw AQHI, so
- * it does not vary with sport or sensitivity — only the colours do.
- */
-export function quality(r: Reading): number {
-  const q =
-    100 - (r.aqhi - 1) * 12 - Math.min(45, r.rainMmH * 7) - Math.max(0, (r.tempC - 28) * 4);
-  return Math.max(6, Math.min(100, q));
-}
-
 /** A contiguous run of slots, as inclusive indices. */
 export interface Run {
   start: number;
