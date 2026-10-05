@@ -53,7 +53,9 @@ export function AppHeader() {
   } else if (place?.source === 'override' && place.label) {
     meta = `${DataStrings.overridePlace(place.label)} · ${clock}`;
   } else if (community && km !== null && !far) {
-    meta = `${DataStrings.communityLine(community, km)} · ${clock}`;
+    // The headline already names the community; repeating it here pushed
+    // the clock off the end of the line.
+    meta = `${DataStrings.distanceAway(km)} · ${clock}`;
   } else {
     meta = `${formatDate(now)} · ${clock}`;
   }

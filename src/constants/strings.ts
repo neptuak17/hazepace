@@ -55,6 +55,8 @@ export const DataStrings = {
   /** The distance on its own, for a line beneath the community's name. */
   distance: (km: number) => `${km < 1 ? '<1' : Math.round(km)} km`,
   distanceFar: (km: number) => `${Math.round(km)} km away`,
+  /** The header's grey line, under a community name: "3 km away". */
+  distanceAway: (km: number) => `${km < 1 ? '<1' : Math.round(km)} km away`,
   /** In the distance's place for the model, which is for the coordinate itself. */
   thisLocation: 'this location',
   observedAge: (age: string) => `observed ${age}`,

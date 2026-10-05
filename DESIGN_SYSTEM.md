@@ -703,7 +703,8 @@ is unused.
   `Neutral[600]` (`:133`), one line. Chevron `chevronDown` 15 `Neutral[600]`.
 - Icon buttons: 44 × 44, glyphs at 20 in `Accent.base` (`:86–100,134`).
 - States: none visual (no pressed style). Headline/meta content changes with
-  place source; see `app-header.tsx:37–58`.
+  place source; see `app-header.tsx`. Under a community headline the meta is
+  "3 km away · 3:45 pm" — the name is not repeated.
 
 ```tsx
 <Pressable style={styles.place} accessibilityRole="button"
