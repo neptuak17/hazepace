@@ -17,6 +17,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/app-header';
+import { FactorLine, type FactorItem } from '@/components/factor-line';
 import {
   Card,
   Neutral,
@@ -27,9 +28,9 @@ import {
   Verdict,
   tracking,
 } from '@/constants/design-tokens';
-import { DataStrings, ForecastStrings } from '@/constants/strings';
+import { DataStrings, FactorStrings, ForecastStrings } from '@/constants/strings';
 import { useConditions } from '@/lib/conditions';
-import { DAY_SLOTS, formatDayName, formatShortDate, liveDays } from '@/lib/live';
+import { DAY_SLOTS, formatDayName, formatShortDate, liveDays, type LiveDay } from '@/lib/live';
 import { formatHour } from '@/lib/rating';
 import { useSettings } from '@/lib/settings';
 
@@ -115,18 +116,11 @@ export default function ForecastScreen() {
                       </View>
                       <Text style={styles.window}>{window}</Text>
                     </View>
-                    <Text style={styles.meta}>
-                      {day.aqhiFirst === null || day.aqhiLast === null
-                        ? `AQHI ${DataStrings.unavailable}`
-                        : ForecastStrings.meta(
-                            Math.round(day.aqhiFirst),
-                            Math.round(day.aqhiLast),
-                            day.rainMm !== null && day.rainMm >= 0.5 ? Math.round(day.rainMm) : null,
-                            day.windDir,
-                            day.windMaxKmh === null ? null : Math.round(day.windMaxKmh),
-                            day.aqhiEstimated,
-                          )}
-                    </Text>
+                    <FactorLine
+                      items={dayFactors(day)}
+                      color={Palette.text}
+                      style={styles.factors}
+                    />
                   </View>
                 )}
               </Pressable>
@@ -136,6 +130,40 @@ export default function ForecastScreen() {
       </ScrollView>
     </View>
   );
+}
+
+/**
+ * The day's factor line: its AQHI range, high, strongest wind and total rain,
+ * each marked if it ran amber or red in any judged slot (decision-rules.md
+ * §4.4). The same line as Today's hero, at the scale of a day.
+ */
+function dayFactors(day: LiveDay): FactorItem[] {
+  return [
+    {
+      key: 'air',
+      text: FactorStrings.dayAqhi(day.aqhiMin, day.aqhiMax, day.aqhiEstimated),
+      spoken: FactorStrings.dayAqhiSpoken(day.aqhiMin, day.aqhiMax, day.aqhiEstimated),
+      level: day.factors?.air ?? null,
+    },
+    {
+      key: 'heat',
+      text: FactorStrings.temp(day.hiC),
+      spoken: FactorStrings.dayHighSpoken(day.hiC),
+      level: day.factors?.heat ?? null,
+    },
+    {
+      key: 'wind',
+      text: FactorStrings.wind(day.windDir, day.windMaxKmh),
+      spoken: FactorStrings.dayWindSpoken(day.windDir, day.windMaxKmh),
+      level: day.factors?.wind ?? null,
+    },
+    {
+      key: 'rain',
+      text: FactorStrings.rain(day.rainMm),
+      spoken: FactorStrings.rainSpoken(day.rainMm),
+      level: day.factors?.rain ?? null,
+    },
+  ];
 }
 
 const styles = StyleSheet.create({
@@ -184,6 +212,6 @@ const styles = StyleSheet.create({
     letterSpacing: tracking(12, 0.04),
   },
   window: { ...Type.pillLabel, color: Palette.text },
-  meta: { ...Type.caption, color: Neutral[600] },
+  factors: { ...Type.bodySmall, lineHeight: 13 * 1.45 },
 
 });

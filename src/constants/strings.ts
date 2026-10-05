@@ -157,17 +157,6 @@ export const TodayStrings = {
     }
   },
 
-  /** The hero's factor line. Missing values are "—", never zero. */
-  factorWind: (direction: string | null, kmh: number | null) =>
-    kmh === null ? '— km/h' : `${direction ? `${direction} ` : ''}${Math.round(kmh)} km/h`,
-  factorWindSpoken: (direction: string | null, kmh: number | null) =>
-    kmh === null
-      ? 'wind unavailable'
-      : `wind ${direction ? `${direction} ` : ''}${Math.round(kmh)} km/h`,
-  factorRain: (mm: number | null) => (mm === null ? '— mm' : mm === 0 ? 'dry' : `${mm.toFixed(1)} mm`),
-  factorRainSpoken: (mm: number | null) =>
-    mm === null ? 'rain unavailable' : mm === 0 ? 'dry' : `rain ${mm.toFixed(1)} mm`,
-
   /** The pill under the activity chips: decision-rules.md §4.3. */
   greenUntil: (end: string) => `Green until ${end}`,
   greenRestOfDay: 'Green for the rest of the day',
@@ -226,23 +215,48 @@ export const ForecastStrings = {
   noWindow: 'No usable window',
   temp: (hi: number, lo: number) => `${hi}° / ${lo}°`,
   rainTotal: (mm: number) => `${mm} mm`,
-  /**
-   * The rain clause is dropped entirely on a dry day rather than reading
-   * "0 mm", and never states timing.
-   */
-  meta: (
-    from: number,
-    to: number,
-    rainMm: number | null,
-    dir: string | null,
-    windKmh: number | null,
-    estimated = false,
-  ) => {
-    const aqhi = `AQHI ${from} → ${to}${estimated ? ` ${DataStrings.estimateMark}` : ''}`;
-    const rain = rainMm === null ? '' : ` · rain ${rainMm} mm`;
-    const wind =
-      windKmh === null ? ' · wind —' : ` · wind ${dir ? dir + ' ' : ''}${windKmh} km/h`;
-    return `${aqhi}${rain}${wind}`;
+} as const;
+
+/* ── Factor line (Today's hero, Forecast's day detail) ───────────────────── */
+
+/** An AQHI as published: whole number, "10+" above ten. */
+const shownAqhi = (v: number) => (Math.round(v) > 10 ? '10+' : String(Math.round(v)));
+
+/**
+ * The pieces of the factor line. Missing values are "—", never zero; rain
+ * of exactly 0 reads "dry". `*Spoken` is what VoiceOver says for each.
+ */
+export const FactorStrings = {
+  temp: (c: number | null) => (c === null ? '— °C' : `${Math.round(c)} °C`),
+  tempSpoken: (c: number | null) => (c === null ? 'temperature unavailable' : `${Math.round(c)} °C`),
+  dayHighSpoken: (c: number | null) => (c === null ? 'high unavailable' : `high ${Math.round(c)} °C`),
+  wind: (direction: string | null, kmh: number | null) =>
+    kmh === null ? '— km/h' : `${direction ? `${direction} ` : ''}${Math.round(kmh)} km/h`,
+  windSpoken: (direction: string | null, kmh: number | null) =>
+    kmh === null
+      ? 'wind unavailable'
+      : `wind ${direction ? `${direction} ` : ''}${Math.round(kmh)} km/h`,
+  dayWindSpoken: (direction: string | null, kmh: number | null) =>
+    kmh === null
+      ? 'wind unavailable'
+      : `wind up to ${direction ? `${direction} ` : ''}${Math.round(kmh)} km/h`,
+  rain: (mm: number | null) => (mm === null ? '— mm' : mm === 0 ? 'dry' : `${mm.toFixed(1)} mm`),
+  rainSpoken: (mm: number | null) =>
+    mm === null ? 'rain unavailable' : mm === 0 ? 'dry' : `rain ${mm.toFixed(1)} mm`,
+  /** A day's AQHI: "AQHI 2–4", or "AQHI 3" when it holds steady. */
+  dayAqhi: (lo: number | null, hi: number | null, estimated: boolean) => {
+    if (lo === null || hi === null) return 'AQHI —';
+    const range =
+      shownAqhi(lo) === shownAqhi(hi) ? shownAqhi(hi) : `${shownAqhi(lo)}–${shownAqhi(hi)}`;
+    return `AQHI ${range}${estimated ? ` ${DataStrings.estimateMark}` : ''}`;
+  },
+  dayAqhiSpoken: (lo: number | null, hi: number | null, estimated: boolean) => {
+    if (lo === null || hi === null) return 'AQHI unavailable';
+    const range =
+      shownAqhi(lo) === shownAqhi(hi)
+        ? shownAqhi(hi)
+        : `${shownAqhi(lo)} to ${shownAqhi(hi)}`;
+    return `AQHI ${range}${estimated ? ', estimated' : ''}`;
   },
 } as const;
 

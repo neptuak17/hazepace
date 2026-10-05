@@ -163,6 +163,34 @@ describe('judgeLiveDay — missing slots', () => {
   });
 });
 
+describe('judgeLiveDay — factor marks', () => {
+  const at = (over: Partial<HourlyConditions>, aqhi = 2) => hour(weather(over), aqhiReading(aqhi));
+
+  test('each factor takes its worst level over the judged slots', () => {
+    // Heat amber in one slot (31 °C with the 32 limit), wind red in another.
+    const v = judgeLiveDay(
+      [at({}), at({ temperatureC: 31 }), at({ windSpeedKmh: 40 }), null, null, null, null, null],
+      PREFS,
+    );
+    assert.deepEqual(v.factors, { air: 0, rain: 0, heat: 1, wind: 2 });
+  });
+
+  test('a green day can still mark a factor that ran amber once', () => {
+    const v = judgeLiveDay(
+      [at({}), at({}), at({}), at({ temperatureC: 31 }), at({}), at({}), at({}), at({})],
+      PREFS,
+    );
+    assert.equal(v.level, 0);
+    assert.equal(v.factors?.heat, 1);
+  });
+
+  test('a missing slot marks nothing, and no judged slot means no marks', () => {
+    assert.equal(judgeLiveDay([null, null, null, null, null, null, null, null], PREFS).factors, null);
+    const v = judgeLiveDay([at({}), null, null, null, null, null, null, null], PREFS);
+    assert.deepEqual(v.factors, { air: 0, rain: 0, heat: 0, wind: 0 });
+  });
+});
+
 describe('joinLive', () => {
   const snapshotW = (times: string[]): ConditionsSnapshot => ({
     latitude: 50.27,

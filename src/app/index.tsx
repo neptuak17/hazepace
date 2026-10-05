@@ -10,10 +10,11 @@
  * them shows "—" and takes no colour: the screen never invents a judgment to
  * fill a gap, and a gap never reads as clean air.
  */
-import { Fragment, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/app-header';
+import { FactorLine, type FactorItem } from '@/components/factor-line';
 import { Icon } from '@/components/icon';
 import { usePlacesSheet } from '@/components/places-sheet';
 import { Sheet } from '@/components/sheet';
@@ -32,6 +33,7 @@ import {
 import {
   Common,
   DataStrings,
+  FactorStrings,
   HowItWorksStrings,
   SheetStrings,
   TodayStrings,
@@ -124,7 +126,11 @@ export default function TodayScreen() {
   // always has its reason on the card. Values render on their own even when
   // one is missing and the model could not run; then nothing is marked.
   const nowFactors: FactorLevels | null = nowReading ? factorLevels(nowReading, prefs) : null;
-  const factorItems: { key: string; text: string; spoken: string; level: Level | null }[] = [
+  const nowDir = compass(nowWeather?.windDirectionDeg ?? null);
+  const nowKmh = nowWeather?.windSpeedKmh ?? null;
+  const nowTemp = nowWeather?.temperatureC ?? null;
+  const nowRain = nowWeather?.precipitationMm ?? null;
+  const factorItems: FactorItem[] = [
     {
       key: 'air',
       text: `${Common.aqhi} ${formatAqhi(heroReading)}`,
@@ -133,34 +139,23 @@ export default function TodayScreen() {
     },
     {
       key: 'heat',
-      text: formatValue(nowWeather?.temperatureC ?? null, 0, ' °C'),
-      spoken: formatValue(nowWeather?.temperatureC ?? null, 0, ' °C'),
+      text: FactorStrings.temp(nowTemp),
+      spoken: FactorStrings.tempSpoken(nowTemp),
       level: nowFactors?.heat ?? null,
     },
     {
       key: 'wind',
-      text: TodayStrings.factorWind(
-        compass(nowWeather?.windDirectionDeg ?? null),
-        nowWeather?.windSpeedKmh ?? null,
-      ),
-      spoken: TodayStrings.factorWindSpoken(
-        compass(nowWeather?.windDirectionDeg ?? null),
-        nowWeather?.windSpeedKmh ?? null,
-      ),
+      text: FactorStrings.wind(nowDir, nowKmh),
+      spoken: FactorStrings.windSpoken(nowDir, nowKmh),
       level: nowFactors?.wind ?? null,
     },
     {
       key: 'rain',
-      text: TodayStrings.factorRain(nowWeather?.precipitationMm ?? null),
-      spoken: TodayStrings.factorRainSpoken(nowWeather?.precipitationMm ?? null),
+      text: FactorStrings.rain(nowRain),
+      spoken: FactorStrings.rainSpoken(nowRain),
       level: nowFactors?.rain ?? null,
     },
   ];
-  const factorLabel = factorItems
-    .map((f) =>
-      f.level !== null && f.level > 0 ? `${f.spoken}, ${Verdict.word[f.level]}` : f.spoken,
-    )
-    .join('; ');
 
   const tint = verdict ? Verdict.tint[verdict.level] : Palette.surface;
   const ink = verdict ? Verdict.deepInk[verdict.level] : Palette.text;
@@ -312,22 +307,7 @@ export default function TodayScreen() {
               {heroCaption}
             </Text>
           )}
-          <Text
-            style={[styles.factorLine, { color: ink }]}
-            accessibilityLabel={factorLabel}>
-            {factorItems.map((f, i) => {
-              const flagged = f.level !== null && f.level > 0;
-              return (
-                <Fragment key={f.key}>
-                  {i > 0 ? '  ·  ' : ''}
-                  <Text style={flagged ? styles.factorFlagged : undefined}>
-                    {flagged ? '● ' : ''}
-                    {f.text}
-                  </Text>
-                </Fragment>
-              );
-            })}
-          </Text>
+          <FactorLine items={factorItems} color={ink} style={styles.factorLine} />
           <Text style={[styles.verdictSentence, { color: ink }]}>{sentence}</Text>
         </View>
 
@@ -560,8 +540,7 @@ const styles = StyleSheet.create({
     color: Neutral[100],
     letterSpacing: tracking(17, 0.04),
   },
-  factorLine: { ...Type.body, lineHeight: 15 * 1.4, marginTop: Space.three },
-  factorFlagged: { fontFamily: Type.rowLabel.fontFamily },
+  factorLine: { marginTop: Space.three },
   verdictSentence: {
     fontFamily: Type.body.fontFamily,
     fontSize: 16,

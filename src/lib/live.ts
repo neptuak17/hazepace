@@ -25,8 +25,10 @@ import type { AqhiReading, AqhiSnapshot } from '@/lib/aqhi';
 import type { ConditionsSnapshot, HourlyConditions } from '@/lib/open-meteo';
 import { estimateAqhiSeries, type AqhiEstimate } from './aqhi-estimate.ts';
 import {
+  factorLevels,
   judge,
   longestRun,
+  type FactorLevels,
   type HourReading,
   type Level,
   type Prefs,
@@ -330,10 +332,15 @@ export interface LiveDay {
   rainMm: number | null;
   windMaxKmh: number | null;
   windDir: string | null;
-  /** First and last AQHI of the day, or null. */
-  aqhiFirst: number | null;
-  aqhiLast: number | null;
-  /** True if either end is an estimate rather than an ECCC reading. */
+  /**
+   * Each factor's worst level over the day's judged slots — what marks it in
+   * the factor line (decision-rules.md §4.4). Null when no slot was judged.
+   */
+  factors: FactorLevels | null;
+  /** Lowest and highest AQHI of the day, or null. */
+  aqhiMin: number | null;
+  aqhiMax: number | null;
+  /** True if any of the day's AQHI values is an estimate, not an ECCC reading. */
   aqhiEstimated: boolean;
 }
 
@@ -348,13 +355,21 @@ export interface LiveDay {
 export function judgeLiveDay(
   slots: (LiveHour | null)[],
   prefs: Prefs,
-): Pick<LiveDay, 'blocks' | 'level' | 'run'> {
-  const blocks: (Level | null)[] = slots.map((s) => {
-    const r = s ? readingOf(s) : null;
-    return r ? judge(r, prefs).level : null;
-  });
+): Pick<LiveDay, 'blocks' | 'level' | 'run' | 'factors'> {
+  const readings = slots.map((s) => (s ? readingOf(s) : null));
+  const blocks: (Level | null)[] = readings.map((r) => (r ? judge(r, prefs).level : null));
 
-  if (blocks.every((b) => b === null)) return { blocks, level: null, run: null };
+  if (blocks.every((b) => b === null)) return { blocks, level: null, run: null, factors: null };
+
+  const factors: FactorLevels = { air: 0, rain: 0, heat: 0, wind: 0 };
+  for (const r of readings) {
+    if (!r) continue;
+    const f = factorLevels(r, prefs);
+    factors.air = Math.max(factors.air, f.air) as Level;
+    factors.rain = Math.max(factors.rain, f.rain) as Level;
+    factors.heat = Math.max(factors.heat, f.heat) as Level;
+    factors.wind = Math.max(factors.wind, f.wind) as Level;
+  }
 
   // Unknown slots are mapped above any cap so they end a run without ever
   // qualifying for one.
@@ -362,7 +377,7 @@ export function judgeLiveDay(
   const green = longestRun(forRuns, 0);
   const amber = green ? null : longestRun(forRuns, 1);
   const run = green ?? amber;
-  return { blocks, level: green ? 0 : amber ? 1 : 2, run };
+  return { blocks, level: green ? 0 : amber ? 1 : 2, run, factors };
 }
 
 const max = (xs: number[]) => (xs.length ? Math.max(...xs) : null);
@@ -417,11 +432,9 @@ export function liveDays(live: LiveHour[], nowMs: number, prefs: Prefs, count = 
       rainMm: rains.length ? rains.reduce((a, b) => a + b, 0) : null,
       windMaxKmh: windMax,
       windDir: compass(peak?.weather?.windDirectionDeg ?? null),
-      aqhiFirst: aqhis.length ? aqhis[0].value : null,
-      aqhiLast: aqhis.length ? aqhis[aqhis.length - 1].value : null,
-      aqhiEstimated: aqhis.length
-        ? aqhis[0].source === 'estimate' || aqhis[aqhis.length - 1].source === 'estimate'
-        : false,
+      aqhiMin: min(aqhis.map((a) => a.value)),
+      aqhiMax: max(aqhis.map((a) => a.value)),
+      aqhiEstimated: aqhis.some((a) => a.source === 'estimate'),
     });
   }
   return days;

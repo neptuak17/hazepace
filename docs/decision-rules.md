@@ -295,6 +295,22 @@ This replaces "best window today", the longest green run ahead. The longest
 run answered a weaker question: it could already be under way, or be hours
 off while a shorter one was starting now.
 
+### 4.4 Factor marks — Today and Forecast
+
+The factor line lists the four factors the verdict weighs — air,
+temperature, wind, rain — and marks each one (bold, with a "●") whose own
+level (§3.2) is amber or red. It does not change any level; it says which
+factors are behind one.
+
+- **Today, the hero:** the current hour's values; a factor is marked when
+  its level for that hour is 1 or 2.
+- **Forecast, a day:** the day's AQHI range, high temperature, strongest
+  wind with its direction, and total rain ("dry" at 0). A factor is marked
+  when its level is 1 or 2 in **any** judged slot of the day (§4.2) — so a
+  green day can still show "● 31 °C" if one afternoon slot runs hot.
+
+A factor the model could not judge — no complete reading — is never marked.
+
 ---
 
 ## 5. Worked examples
@@ -400,7 +416,7 @@ the sentence states a reading and a limit, never what the reader should do.
 1. Edit the sections above. Be explicit about `>` versus `≥`.
 2. Add worked examples for every new boundary — at the threshold and just
    below it.
-3. Say whether sections 4.1, 4.2 and 4.3 change. They are easy to forget
+3. Say whether sections 4.1 to 4.4 change. They are easy to forget
    because they are not "the verdict", but each is a decision.
 4. If a rule uses a reading from the unused column of 1.1, note it there.
 

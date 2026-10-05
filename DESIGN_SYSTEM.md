@@ -945,7 +945,8 @@ verdict, `Neutral[200]` / `Neutral[700]` with none) → chart card
   already names ("observed 3 pm · 25 min ago"), or the model's name and hour
   for the estimate; then the factor line (Figtree 15 / 21, `marginTop: 14`) —
   "AQHI 2 · 18 °C · NW 12 km/h · dry" — where any factor at amber or red is
-  set in Figtree 700 with a leading "●"; then the sentence in Figtree 16 /
+  set in Figtree 700 with a leading "●" (`FactorLine`, shared with the
+  Forecast day detail); then the sentence in Figtree 16 /
   23.2, built from the driver's reading and limit (decision-rules.md §6).
 - Pull-to-refresh via `RefreshControl` tinted `Accent.base`.
 - Density: one number dominates; everything else is 12–14 px.
@@ -994,10 +995,13 @@ region are drawn (`inView`), so panning fills in as it goes.
 
 ### 7.3 Forecast (`src/app/forecast.tsx`) — "accordion list"
 
-Order: title → one card containing five day rows → attribution. One row open
-at a time; the open row grows an inset detail panel (`Neutral[200]`,
-`Radius.md`, padding 13, gap 7) with a small verdict pill, the window string
-and a meta line.
+Order: title → one card containing five day rows. One row open at a time;
+the open row grows an inset detail panel (`Neutral[200]`, `Radius.md`,
+padding 13, gap 7) with a small verdict pill, the window string and the
+day's factor line — the same `FactorLine` as Today's hero
+(`src/components/factor-line.tsx`), in Figtree 13 / 18.9 `Palette.text`:
+"AQHI 2–4 · 24 °C · NW 18 km/h · 3.0 mm", each factor that ran amber or
+red in any slot in bold with a "●" (decision-rules.md §4.4).
 
 - Row: 58 px day column · 26 px strip of eight pill blocks (gap 2, opacity
   0.9) · 66 px right-aligned temp column.
