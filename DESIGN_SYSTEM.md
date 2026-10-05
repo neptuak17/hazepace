@@ -963,6 +963,15 @@ region are drawn (`inView`), so panning fills in as it goes.
   same treatment as the zone circle's null state. Tap opens the native
   callout: community name, then "observed 14:00 · 12 min ago" or "No current
   reading".
+- **Group pin:** pins whose centres would sit under 40 px apart at the
+  settled zoom (`groupPins`, `GROUP_RADIUS_PX`) draw as one: the face of the
+  member with the highest current reading, drawn at that member's
+  position, plus a count badge on its top-right — 18 px `Neutral[800]`
+  circle, 1.5 px `Palette.bg` ring, count in Figtree 800 10 `Palette.bg`.
+  The marker's view is padded 8 px all round so the badge is not clipped
+  and the face stays centred. No callout; a tap animates to
+  `regionFitting(members)` (350 ms). VoiceOver: "6 AQHI communities,
+  highest AQHI 4. Zoom in."
 - **Place dot:** 16 px `Accent.base` with a 3 px `Palette.bg` ring and
   `Shadow.sm`, drawn above the pins; callout is the place name.
 - **Area unavailable:** a veil pill at the top of the plate, same style as

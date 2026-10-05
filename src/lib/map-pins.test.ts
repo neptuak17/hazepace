@@ -2,7 +2,18 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
 import type { AqhiCommunity, AqhiReading, AreaReading } from './aqhi.ts';
-import { PIN_MAX_AGE_HOURS, inView, isCurrent, mapPins, nearPins, regionFor } from './map-pins.ts';
+import {
+  PIN_MAX_AGE_HOURS,
+  groupPins,
+  inView,
+  isCurrent,
+  mapPins,
+  nearPins,
+  regionFitting,
+  regionFor,
+  toScreen,
+  type MapPin,
+} from './map-pins.ts';
 import type { Prefs } from './rating.ts';
 
 const NOW = Date.parse('2026-10-04T20:30:00Z');
@@ -162,5 +173,113 @@ describe('inView', () => {
   test('a point well outside the view is not', () => {
     assert.equal(inView({ latitude: 51.6, longitude: -119 }, view), false);
     assert.equal(inView({ latitude: 50, longitude: -123 }, view), false);
+  });
+});
+
+describe('toScreen', () => {
+  const view = { latitude: 50, longitude: -119, latitudeDelta: 2, longitudeDelta: 3 };
+  const size = { width: 300, height: 300 };
+
+  test('the centre of the region is the centre of the map', () => {
+    const { x, y } = toScreen({ latitude: 50, longitude: -119 }, view, size);
+    assert.ok(Math.abs(x - 150) < 0.001);
+    // Mercator: the middle latitude sits a little below the middle pixel.
+    assert.ok(Math.abs(y - 150) < 3);
+  });
+
+  test('the corners of the region are the corners of the map', () => {
+    const topLeft = toScreen({ latitude: 51, longitude: -120.5 }, view, size);
+    const bottomRight = toScreen({ latitude: 49, longitude: -117.5 }, view, size);
+    assert.ok(Math.abs(topLeft.x) < 0.001 && Math.abs(topLeft.y) < 0.001);
+    assert.ok(Math.abs(bottomRight.x - 300) < 0.001 && Math.abs(bottomRight.y - 300) < 0.001);
+  });
+});
+
+describe('groupPins', () => {
+  /** A pin with a current reading of `value`, or none when null. */
+  function pin(id: string, latitude: number, longitude: number, value: number | null): MapPin {
+    const community = { locationId: id, name: id, latitude, longitude, zone: null };
+    const observation = value === null ? null : obs(community, value, 0);
+    return {
+      id,
+      name: id,
+      latitude,
+      longitude,
+      distanceKm: 0,
+      value: value === null ? '—' : String(value),
+      level: value === null ? null : 0,
+      observation,
+    };
+  }
+  // 3° wide on 300 px: one pixel is 0.01° of longitude.
+  const view = { latitude: 50, longitude: -119, latitudeDelta: 2, longitudeDelta: 3 };
+  const size = { width: 300, height: 300 };
+
+  test('pins far apart stay separate', () => {
+    const groups = groupPins([pin('A', 50, -120, 2), pin('B', 50, -118, 3)], view, size);
+    assert.equal(groups.length, 2);
+    assert.ok(groups.every((g) => g.members.length === 1));
+  });
+
+  test('pins that would overlap become one group led by the highest reading', () => {
+    // 0.2° apart is 20 px: inside the 40 px radius.
+    const groups = groupPins(
+      [pin('A', 50, -119, 2), pin('B', 50, -118.8, 6), pin('C', 50.05, -119.1, 4)],
+      view,
+      size,
+    );
+    assert.equal(groups.length, 1);
+    assert.equal(groups[0].lead.id, 'B');
+    assert.equal(groups[0].members.length, 3);
+  });
+
+  test('a pin with no reading never leads a group that has one', () => {
+    const groups = groupPins([pin('A', 50, -119, null), pin('B', 50, -118.9, 1)], view, size);
+    assert.equal(groups.length, 1);
+    assert.equal(groups[0].lead.id, 'B');
+  });
+
+  test('the same pins group the same way whatever order they arrive in', () => {
+    const pins = [pin('A', 50, -119, 3), pin('B', 50, -118.9, 3), pin('C', 50, -118.8, 3)];
+    const forward = groupPins(pins, view, size).map((g) => g.key);
+    const backward = groupPins([...pins].reverse(), view, size).map((g) => g.key);
+    assert.deepEqual(forward, backward);
+  });
+
+  test('before the map has a size, nothing is grouped', () => {
+    const groups = groupPins(
+      [pin('A', 50, -119, 2), pin('B', 50, -119.01, 3)],
+      view,
+      { width: 0, height: 0 },
+    );
+    assert.equal(groups.length, 2);
+  });
+
+  test('zooming in far enough separates a group', () => {
+    const pins = [pin('A', 50, -119, 2), pin('B', 50, -118.8, 6)];
+    assert.equal(groupPins(pins, view, size).length, 1);
+    const zoomed = regionFitting(pins);
+    assert.equal(groupPins(pins, zoomed, size).length, 2);
+  });
+});
+
+describe('regionFitting', () => {
+  test('is centred on the points and wider than their spread', () => {
+    const r = regionFitting([
+      { latitude: 49, longitude: -123 },
+      { latitude: 49.4, longitude: -122.4 },
+    ]);
+    assert.ok(Math.abs(r.latitude - 49.2) < 1e-9);
+    assert.ok(Math.abs(r.longitude - -122.7) < 1e-9);
+    assert.ok(r.latitudeDelta > 0.4);
+    assert.ok(r.longitudeDelta > 0.6);
+  });
+
+  test('never zooms in past the minimum', () => {
+    const r = regionFitting([
+      { latitude: 49.2, longitude: -123.1 },
+      { latitude: 49.21, longitude: -123.11 },
+    ]);
+    assert.ok(r.latitudeDelta >= 0.15);
   });
 });

@@ -175,6 +175,11 @@ export const MapStrings = {
 
   /** A pin's callout when its community has no current observation. */
   pinNoReading: 'No current reading',
+  /** A group pin, for VoiceOver: how many, the highest reading, what a tap does. */
+  groupLabel: (count: number, value: string) =>
+    value === '—'
+      ? `${count} AQHI communities, no current readings. Zoom in.`
+      : `${count} AQHI communities, highest AQHI ${value}. Zoom in.`,
   /** Over the plate when the area request failed; the list still loads. */
   areaUnavailable: 'Community readings unavailable',
   mapLabel: (place: string, communities: number) =>

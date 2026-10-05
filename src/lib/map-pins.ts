@@ -144,3 +144,130 @@ export function inView(point: { latitude: number; longitude: number }, region: R
     Math.abs(point.longitude - region.longitude) <= halfLon
   );
 }
+
+/* ── Grouping ────────────────────────────────────────────────────────────── */
+
+/**
+ * Two pins closer than this on screen become one group. A pin is 32 px
+ * across, so at 40 px apart two pins have a few pixels between them.
+ */
+export const GROUP_RADIUS_PX = 40;
+
+/** Pins that would overlap at the current zoom, drawn as one. */
+export interface PinGroup<T extends MapPin> {
+  /** Stable while the membership is: the lone id, or every member's id. */
+  key: string;
+  /**
+   * The member with the highest current reading — the one the group pin
+   * shows, by the same rule as the verdict: the worst reading wins. A group
+   * where none has a current reading leads with its first member and
+   * shows "—".
+   */
+  lead: T;
+  members: T[];
+}
+
+/** Web Mercator's y, which is what MapKit draws latitude on. */
+function mercatorY(latitude: number): number {
+  const rad = (latitude * Math.PI) / 180;
+  return Math.log(Math.tan(Math.PI / 4 + rad / 2));
+}
+
+/**
+ * Where a point falls on a map of `size` points showing `region`, from the
+ * top-left corner. Longitude is linear; latitude is not — at the zoom
+ * where grouping matters, a flat projection would misplace pins by tens of
+ * pixels between the top and bottom of the plate.
+ */
+export function toScreen(
+  point: { latitude: number; longitude: number },
+  region: Region,
+  size: { width: number; height: number },
+): { x: number; y: number } {
+  const top = mercatorY(region.latitude + region.latitudeDelta / 2);
+  const bottom = mercatorY(region.latitude - region.latitudeDelta / 2);
+  const left = region.longitude - region.longitudeDelta / 2;
+  return {
+    x: ((point.longitude - left) / region.longitudeDelta) * size.width,
+    y: ((top - mercatorY(point.latitude)) / (top - bottom)) * size.height,
+  };
+}
+
+/** Higher first. A pin with no current reading ranks below every reading. */
+function severity(p: MapPin): number {
+  return p.observation?.value ?? -1;
+}
+
+/**
+ * Groups pins that would overlap at this zoom.
+ *
+ * Greedy, highest reading first: the highest pin not yet grouped takes
+ * every ungrouped pin within GROUP_RADIUS_PX of it. Starting from the
+ * highest means a group is always drawn at, and shows, its highest member,
+ * so zooming out can hide a low reading behind a high one but never the
+ * other way round. Ties fall back to the id, so the same view groups the
+ * same way every time.
+ *
+ * Before the map has a size, nothing is grouped.
+ */
+export function groupPins<T extends MapPin>(
+  pins: T[],
+  region: Region,
+  size: { width: number; height: number },
+  radiusPx: number = GROUP_RADIUS_PX,
+): PinGroup<T>[] {
+  if (size.width <= 0 || size.height <= 0) {
+    return pins.map((p) => ({ key: p.id, lead: p, members: [p] }));
+  }
+  const placed = pins
+    .map((pin) => ({ pin, ...toScreen(pin, region, size) }))
+    .sort((a, b) => severity(b.pin) - severity(a.pin) || a.pin.id.localeCompare(b.pin.id));
+
+  const taken = new Set<string>();
+  const groups: PinGroup<T>[] = [];
+  for (const seed of placed) {
+    if (taken.has(seed.pin.id)) continue;
+    const members = placed.filter(
+      (o) => !taken.has(o.pin.id) && Math.hypot(o.x - seed.x, o.y - seed.y) < radiusPx,
+    );
+    for (const m of members) taken.add(m.pin.id);
+    groups.push({
+      key:
+        members.length === 1
+          ? seed.pin.id
+          : `group:${members
+              .map((m) => m.pin.id)
+              .sort()
+              .join(',')}`,
+      lead: seed.pin,
+      members: members.map((m) => m.pin),
+    });
+  }
+  return groups;
+}
+
+/** The narrowest view a group zooms to, in degrees: about 15 km. */
+const MIN_FIT_SPAN_DEG = 0.15;
+/** Room around a zoomed-to group, so its members land well inside the plate. */
+const FIT_PADDING = 1.8;
+
+/**
+ * The view that spreads a group's members apart: centred on their bounds,
+ * with room around them. Tapping a group zooms here.
+ */
+export function regionFitting(points: { latitude: number; longitude: number }[]): Region {
+  const lats = points.map((p) => p.latitude);
+  const lons = points.map((p) => p.longitude);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLon = Math.min(...lons);
+  const maxLon = Math.max(...lons);
+  const latitude = (minLat + maxLat) / 2;
+  const lonScale = Math.cos((latitude * Math.PI) / 180);
+  return {
+    latitude,
+    longitude: (minLon + maxLon) / 2,
+    latitudeDelta: Math.max(MIN_FIT_SPAN_DEG, (maxLat - minLat) * FIT_PADDING),
+    longitudeDelta: Math.max(MIN_FIT_SPAN_DEG / lonScale, (maxLon - minLon) * FIT_PADDING),
+  };
+}
