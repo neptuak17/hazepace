@@ -187,9 +187,9 @@ export const TodayStrings = {
     temp: 'Temp',
     wind: 'Wind',
     rain: 'Rain',
-    humidity: 'Humidity',
-    category: 'Category',
   },
+  /** The readout's AQHI cell: "2 · Low". */
+  aqhiWithCategory: (aqhi: string, category: string) => `${aqhi} · ${category}`,
 
   airLink: "What's in the air →",
 } as const;
@@ -404,6 +404,7 @@ export const SheetStrings = {
   airOtherKeys: {
     feelsLike: 'Feels like',
     gusts: 'Wind gusts',
+    humidity: 'Humidity',
     rainChance: 'Chance of rain',
     uv: 'UV index',
   },

@@ -210,7 +210,7 @@ produced by `judge()` in `src/lib/rating.ts` and specified in
 - Hour level = worst factor. Day level = best contiguous run.
 
 The four ECCC category names are shown as *text only* (`Common.aqhi` tiles,
-"Category" stat); they have no colour of their own. **The colour scale is the
+the readout's "2 · Low"); they have no colour of their own. **The colour scale is the
 three verdict levels, never the four AQHI categories.**
 
 **Anything without a level** (an hour the model could not judge) takes
@@ -576,8 +576,10 @@ Row minimum height where set: 44 (`map.tsx:244`). Circle-to-text gap in rows:
 - Activity chips: equal-flex row, gap 7 (`index.tsx:503`).
 - Settings chips (About): equal-flex row, gap 7, `marginTop: 10`
   (`about.tsx:184`); sport chips wrap with gap 8 (`about.tsx:175`).
-- Stat grid (Today readout): wrapping row, `rowGap: 6`, `columnGap: 10`, each
-  cell `minWidth: 62` (`index.tsx:581–583`).
+- Stat grid (Today readout): four cells, two to a row — AQHI with its
+  category ("2 · Low"), temperature, wind, rain — `flexBasis: '40%'`,
+  `flexGrow: 1`, `rowGap: 6`, `columnGap: 10`. Humidity is not judged and is
+  in the "What's in the air" sheet instead.
 - Four-up tile rows (pollutants, factors, vent): equal-flex, gap 6–9.
 - Forecast row: fixed `dayCol` 58 · flexible strip · fixed `tempCol` 66,
   gap 10 (`forecast.tsx:166–174`).
@@ -1407,7 +1409,7 @@ Not just recolouring:
   the *thresholds* come from `src/lib/rating.ts` and `docs/decision-rules.md`,
   which are entirely about AQHI, rain, wind and heat.
 - **"AQHI" as the hero unit** — the caps label beside the 76 px number, the
-  "of 10+" caption, the circle-stat caps, the "Category" stat and the ECCC
+  "of 10+" caption, the circle-stat caps, the readout's "2 · Low" and the ECCC
   category names (`Common.aqhi`, `TodayStrings.ofTen`, `categoryFor`).
 - **The four factors** (smoke / rain / heat / wind) in the readout stat grid,
   the HIW factor tiles, the driver names in pills and sentences

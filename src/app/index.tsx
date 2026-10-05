@@ -219,13 +219,18 @@ export default function TodayScreen() {
   const w = selected.weather;
   const selectedAqhi = aqhiOf(selected);
 
-  // A stat's `level` is its factor's level when the model judged it; stats
-  // the model does not read (humidity, the category) have none. Only amber
-  // and red draw a chip — a clean stat says nothing, on purpose.
+  // The four factors the model weighs, each with its own level; only amber
+  // and red draw a chip — a clean stat says nothing, on purpose. Humidity is
+  // not judged, so it lives in "What's in the air" rather than here, and the
+  // ECCC category rides with the AQHI instead of taking a cell of its own.
+  const selectedAqhiText = formatAqhi(
+    selectedAqhi?.source === 'estimate' ? selected.aqhiEstimate : selected.aqhi,
+  );
+  const selectedCategory = categoryFor(selectedAqhi?.value ?? null);
   const stats: { k: string; v: string; level: Level | null }[] = [
     {
       k: TodayStrings.statKeys.aqhi,
-      v: formatAqhi(selectedAqhi?.source === 'estimate' ? selected.aqhiEstimate : selected.aqhi),
+      v: selectedCategory ? TodayStrings.aqhiWithCategory(selectedAqhiText, selectedCategory) : selectedAqhiText,
       level: selectedFactors?.air ?? null,
     },
     {
@@ -245,16 +250,6 @@ export default function TodayScreen() {
       k: TodayStrings.statKeys.rain,
       v: formatValue(w?.precipitationMm ?? null, 1, ' mm'),
       level: selectedFactors?.rain ?? null,
-    },
-    {
-      k: TodayStrings.statKeys.humidity,
-      v: formatValue(w?.relativeHumidityPct ?? null, 0, '%'),
-      level: null,
-    },
-    {
-      k: TodayStrings.statKeys.category,
-      v: categoryFor(selectedAqhi?.value ?? null) ?? DataStrings.unavailable,
-      level: null,
     },
   ];
 
@@ -630,8 +625,15 @@ const styles = StyleSheet.create({
   readoutProvenance: { ...Type.caption, color: Neutral[600], marginTop: 10 },
 
   statGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 6, columnGap: 10, marginTop: 10 },
-  // Padded and rounded whether or not it is tinted, so the grid never moves.
-  stat: { minWidth: 62, paddingHorizontal: 8, paddingVertical: 4, borderRadius: Radius.sm },
+  // Two to a row. Padded and rounded whether or not it is tinted, so a chip
+  // appearing changes only its colour, never the grid's layout.
+  stat: {
+    flexBasis: '40%',
+    flexGrow: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: Radius.sm,
+  },
   statKey: { ...Type.capsLabel, letterSpacing: tracking(11, 0.06), color: Neutral[600] },
   statValue: { ...Type.cardTitle, color: Palette.text },
 

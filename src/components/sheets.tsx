@@ -252,6 +252,7 @@ export function AirSheetBody({
   const other = [
     { k: SheetStrings.airOtherKeys.feelsLike, v: formatValue(w?.apparentTemperatureC ?? null, 0, ' °C') },
     { k: SheetStrings.airOtherKeys.gusts, v: formatValue(w?.windGustsKmh ?? null, 0, ' km/h') },
+    { k: SheetStrings.airOtherKeys.humidity, v: formatValue(w?.relativeHumidityPct ?? null, 0, '%') },
     { k: SheetStrings.airOtherKeys.rainChance, v: formatValue(w?.precipitationProbabilityPct ?? null, 0, '%') },
     { k: SheetStrings.airOtherKeys.uv, v: formatValue(w?.uvIndex ?? null, 0) },
   ];
