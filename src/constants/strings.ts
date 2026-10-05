@@ -17,7 +17,17 @@
  * Strings that interpolate live values are functions, so the sentence stays
  * here in one piece rather than being assembled at the call site.
  */
-import type { Activity, Driver, Level, Sensitivity } from '@/lib/rating';
+import { categoryFor, isAboveTen, publishedValue } from '@/lib/aqhi';
+import {
+  RAIN_TOL,
+  type Activity,
+  type Driver,
+  type Judgement,
+  type Level,
+  type Prefs,
+  type Reading,
+  type Sensitivity,
+} from '@/lib/rating';
 import type { AppearanceChoice } from '@/lib/settings';
 
 /* ── Shared ──────────────────────────────────────────────────────────────── */
@@ -108,6 +118,14 @@ export const HeaderStrings = {
 
 /* ── Today ───────────────────────────────────────────────────────────────── */
 
+/** How a rain limit reads in a sentence, by RAIN_TOL index. */
+const RAIN_LIMIT_NAMES: Record<number, string> = Object.fromEntries(
+  RAIN_TOL.map((t, i) => [
+    i,
+    { None: 'dry-only', Light: 'light-rain', Moderate: 'moderate-rain', Heavy: 'heavy-rain' }[t.name],
+  ]),
+);
+
 export const TodayStrings = {
   kicker: (time: string, activity: Activity) => `Conditions at ${time} · ${activity}`,
   ofTen: 'of 10+',
@@ -115,30 +133,27 @@ export const TodayStrings = {
   heroCaption: (community: string, age: string) => `${community} · ${age}`,
 
   /**
-   * The line under the verdict, naming what is limiting the session.
-   *
-   * These describe conditions against the reader's own thresholds. They do not
-   * make a claim about anyone's health, and must not start doing so.
+   * The line under the verdict: the factor setting it, its reading, and the
+   * reader's own limit. Built only from those values (decision-rules.md §6),
+   * so it can never describe weather the data does not show, and it states
+   * a reading and a limit rather than telling anyone what to do.
    */
-  sentences: {
-    smoke: {
-      2: "Heavy smoke. Past the level ECCC's guidance sets for strenuous activity.",
-      1: 'Thin smoke. Steady work is fine; save the intervals.',
-    },
-    rainfall: {
-      2: 'Thunderstorm over the valley — heavy rain and gusts.',
-      1: 'Steady rain, but the air behind it is the cleanest today.',
-    },
-    heat: {
-      2: 'Heat is the limit now, not the air.',
-      1: 'Hot enough to cost you. Shorten it or move it later.',
-    },
-    wind: {
-      1: 'Gusty. The air is fine; the handling is not.',
-    },
-  } as Partial<Record<Exclude<Driver, null>, Partial<Record<Level, string>>>>,
-  clearSentence: 'Clear enough for a full session at your usual intensity.',
-  fallbackSentence: 'Conditions are against you right now.',
+  verdictSentence: (j: Judgement, r: Reading, prefs: Prefs): string => {
+    if (j.level === 0 || j.driver === null) return 'All four within your limits.';
+    const where = j.level === 2 ? 'past' : 'near';
+    switch (j.driver) {
+      case 'smoke': {
+        const shown = isAboveTen(r.aqhi) ? '10+' : String(publishedValue(r.aqhi));
+        return `AQHI ${shown}, ${categoryFor(r.aqhi)} — rated under ECCC's guidance for your sensitivity and sport.`;
+      }
+      case 'rainfall':
+        return `Rain ${r.rainMmH.toFixed(1)} mm/h, ${where} your ${RAIN_LIMIT_NAMES[prefs.rainTol]} limit.`;
+      case 'heat':
+        return `Heat ${Math.round(r.tempC)} °C, ${where} your ${prefs.heatTol} °C limit.`;
+      case 'wind':
+        return `Wind ${Math.round(r.windKmh)} km/h, ${where} your ${prefs.windTol} km/h limit.`;
+    }
+  },
 
   bestWindow: (window: string) => `Best window today · ${window}`,
   noWindow: 'nothing clean today',

@@ -119,12 +119,10 @@ export default function TodayScreen() {
   const tint = verdict ? Verdict.tint[verdict.level] : Palette.surface;
   const ink = verdict ? Verdict.deepInk[verdict.level] : Palette.text;
 
-  const sentence = !verdict
-    ? DataStrings.hourIncomplete
-    : verdict.level === 0
-      ? TodayStrings.clearSentence
-      : ((verdict.driver && TodayStrings.sentences[verdict.driver]?.[verdict.level]) ??
-        TodayStrings.fallbackSentence);
+  const sentence =
+    verdict && nowReading
+      ? TodayStrings.verdictSentence(verdict, nowReading, prefs)
+      : DataStrings.hourIncomplete;
 
   let heroCaption: string | null = null;
   if (heroReading === observation && observation) {

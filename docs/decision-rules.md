@@ -358,21 +358,34 @@ Slot levels in order 05 … 19. `·` is a slot the sources did not cover.
 
 ## 6. Copy that depends on the rules
 
-The verdict sentence on Today is chosen by driver and level. These strings
-live in `src/constants/strings.ts` (`TodayStrings.sentences`) and are listed
-here because a new driver or level needs a sentence to go with it.
+The verdict sentence on Today names the driver (§3.4), its reading, and —
+for the weather — the user's own limit. It is built from those values and
+nothing else, so it can never describe weather the data does not show. The
+templates live in `src/constants/strings.ts` (`TodayStrings.verdictSentence`).
 
-| Driver | Level 2 | Level 1 |
+| Driver | Level 1 | Level 2 |
 | --- | --- | --- |
-| smoke | Heavy smoke. Past the level ECCC's guidance sets for strenuous activity. | Thin smoke. Steady work is fine; save the intervals. |
-| rainfall | Thunderstorm over the valley — heavy rain and gusts. | Steady rain, but the air behind it is the cleanest today. |
-| heat | Heat is the limit now, not the air. | Hot enough to cost you. Shorten it or move it later. |
-| wind | *(none — falls back)* | Gusty. The air is fine; the handling is not. |
+| smoke | AQHI 5, Moderate — rated under ECCC's guidance for your sensitivity and sport. | *(same)* |
+| rainfall | Rain 1.2 mm/h, near your light-rain limit. | Rain 3.0 mm/h, past your light-rain limit. |
+| heat | Heat 31 °C, near your 32 °C limit. | Heat 34 °C, past your 32 °C limit. |
+| wind | Wind 30 km/h, near your 32 km/h limit. | Wind 40 km/h, past your 32 km/h limit. |
 
-Level 0: "Clear enough for a full session at your usual intensity."
-Fallback when no sentence matches: "Conditions are against you right now."
+- **Near** is level 1: inside the amber band, which is centred on the limit,
+  so a reading a little above the limit is still "near" it.
+- **Past** is level 2: beyond the band.
+- Values as shown elsewhere: AQHI as published ("10+" above ten) with its
+  ECCC category; temperature and wind to the whole number; rain to one
+  decimal place.
+- Rain limits are named by setting: None → "dry-only", Light → "light-rain",
+  Moderate → "moderate-rain", Heavy → "heavy-rain".
+- The air sentence is the same at both levels: the level comes from ECCC's
+  table, and the card's colour and pill already say which.
 
-The same language rule applies to these as to everything else in the app.
+Level 0: "All four within your limits."
+No verdict (a reading missing): the existing "incomplete" line.
+
+The same language rule applies to these as to everything else in the app:
+the sentence states a reading and a limit, never what the reader should do.
 
 ---
 
