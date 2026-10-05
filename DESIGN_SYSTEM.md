@@ -206,7 +206,7 @@ produced by `judge()` in `src/lib/rating.ts` and specified in
   7–10, Very High 10+) looked up against the user's sensitivity and whether
   the sport is strenuous (`rating.ts:AIR_LEVEL`). Very High is 2 for everyone.
 - Rain / heat / wind: the user's limit with an amber band centred on it —
-  ±2 °C, ±6 km/h, ÷/×1.6 for rain (`rating.ts:factorLevels`).
+  ±2 °C, ±2 km/h, ÷/×1.6 for rain (`rating.ts:factorLevels`).
 - Hour level = worst factor. Day level = best contiguous run.
 
 The four ECCC category names are shown as *text only* (`Common.aqhi` tiles,

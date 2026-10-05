@@ -56,8 +56,11 @@ export interface Prefs {
 
 /** Half-width of the amber band either side of the heat limit. */
 export const HEAT_MARGIN_C = 2;
-/** Half-width of the amber band either side of the wind limit. */
-export const WIND_MARGIN_KMH = 6;
+/**
+ * Half-width of the amber band either side of the wind limit. Was 6 until
+ * 2026-10-05, which at the 8 km/h limit made 2 km/h amber.
+ */
+export const WIND_MARGIN_KMH = 2;
 /** The wind slider's top position: no limit, wind is always level 0. */
 export const WIND_NO_LIMIT = 40;
 

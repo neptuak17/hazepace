@@ -198,7 +198,7 @@ green                amber                 red
 | **Air** | — | lookup in 3.1 gives 2 | lookup in 3.1 gives 1 | 0 |
 | **Rain** | ÷ / × 1.6 | rain **≥** red-from (table in 1.2) | rain **≥** amber-from | 0 |
 | **Heat** | 2 °C | temp **≥** limit + 2 | temp **≥** limit − 2 | 0 |
-| **Wind** | 6 km/h | wind **≥** limit + 6 | wind **≥** limit − 6 | 0 |
+| **Wind** | 2 km/h | wind **≥** limit + 2 | wind **≥** limit − 2 | 0 |
 
 Notes:
 
@@ -211,8 +211,12 @@ Notes:
   than a difference because the four rain limits span 0.2 to 8 mm/h.
 - Wind at *no limit* (the slider's top position) is always level 0.
 - The heat default of 32 °C with ± 2 reproduces the prototype's fixed 30 / 34
-  lines exactly. The wind default of 32 with ± 6 gives amber from 26 and red
-  from 38, where the prototype had amber from 32 and red from 46.
+  lines exactly. The wind default of 32 with ± 2 gives amber from 30 and red
+  from 34, where the prototype had amber from 32 and red from 46.
+- Wind was ± 6 until 2026-10-05. At the lowest limit, 8 km/h, that made
+  2 km/h amber — a still day read as windy. ± 2 keeps the band tight around
+  the limit at every slider position; the slider's 4 km/h steps mean two
+  neighbouring limits' bands never overlap.
 
 ### 3.3 Worst factor wins
 
@@ -331,10 +335,10 @@ Base readings are AQHI 2, 20 °C, 10 km/h, 0 mm/h. The "Limits" column reads
 | 23 | Heat: 33 °C — top of the band | 2 | 33 | 10 | 0 | Cycling | Normal | Light · 32 · 32 | Low | **1** | heat |
 | 24 | Heat: 34 °C — on the red edge (limit + 2) | 2 | 34 | 10 | 0 | Cycling | Normal | Light · 32 · 32 | Low | **2** | heat |
 | 25 | Heat: 34 °C with limit 38 | 2 | 34 | 10 | 0 | Cycling | Normal | Light · 32 · 38 | Low | **0** | — |
-| 26 | Wind: 25 km/h, limit 32 (below the band) | 2 | 20 | 25 | 0 | Cycling | Normal | Light · 32 · 32 | Low | **0** | — |
-| 27 | Wind: 26 km/h — on the amber edge (limit − 6) | 2 | 20 | 26 | 0 | Cycling | Normal | Light · 32 · 32 | Low | **1** | wind |
-| 28 | Wind: 37 km/h — top of the band | 2 | 20 | 37 | 0 | Cycling | Normal | Light · 32 · 32 | Low | **1** | wind |
-| 29 | Wind: 38 km/h — on the red edge (limit + 6) | 2 | 20 | 38 | 0 | Cycling | Normal | Light · 32 · 32 | Low | **2** | wind |
+| 26 | Wind: 29 km/h, limit 32 (below the band) | 2 | 20 | 29 | 0 | Cycling | Normal | Light · 32 · 32 | Low | **0** | — |
+| 27 | Wind: 30 km/h — on the amber edge (limit − 2) | 2 | 20 | 30 | 0 | Cycling | Normal | Light · 32 · 32 | Low | **1** | wind |
+| 28 | Wind: 33 km/h — top of the band | 2 | 20 | 33 | 0 | Cycling | Normal | Light · 32 · 32 | Low | **1** | wind |
+| 29 | Wind: 34 km/h — on the red edge (limit + 2) | 2 | 20 | 34 | 0 | Cycling | Normal | Light · 32 · 32 | Low | **2** | wind |
 | 30 | Wind: 90 km/h with no limit | 2 | 20 | 90 | 0 | Cycling | Normal | Light · no limit · 32 | Low | **0** | — |
 | 31 | Worst wins: heat 1, wind 2 | 2 | 30 | 38 | 0 | Cycling | Normal | Light · 32 · 32 | Low | **2** | wind |
 | 32 | Tie at 1: all four amber — air named first | 7 | 30 | 32 | 1.5 | Cycling | Normal | Light · 32 · 32 | High | **1** | smoke |

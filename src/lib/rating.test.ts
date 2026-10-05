@@ -184,15 +184,17 @@ describe('judge', () => {
     assert.equal(HEAT_MARGIN_C, 2);
   });
 
-  test('wind: amber from limit − 6, red from limit + 6', () => {
-    assert.equal(judge(calm({ windKmh: 25 }), prefs()).level, 0);
-    assert.equal(judge(calm({ windKmh: 26 }), prefs()).level, 1);
-    assert.equal(judge(calm({ windKmh: 37 }), prefs()).level, 1);
-    assert.equal(judge(calm({ windKmh: 38 }), prefs()).level, 2);
-    assert.equal(judge(calm({ windKmh: 38 }), prefs({ windTol: 8 })).level, 2);
-    assert.equal(judge(calm({ windKmh: 1 }), prefs({ windTol: 8 })).level, 0);
-    assert.equal(judge(calm({ windKmh: 2 }), prefs({ windTol: 8 })).level, 1);
-    assert.equal(WIND_MARGIN_KMH, 6);
+  test('wind: amber from limit − 2, red from limit + 2', () => {
+    assert.equal(judge(calm({ windKmh: 29 }), prefs()).level, 0);
+    assert.equal(judge(calm({ windKmh: 30 }), prefs()).level, 1);
+    assert.equal(judge(calm({ windKmh: 33 }), prefs()).level, 1);
+    assert.equal(judge(calm({ windKmh: 34 }), prefs()).level, 2);
+    // The lowest limit: a still day stays green.
+    assert.equal(judge(calm({ windKmh: 2 }), prefs({ windTol: 8 })).level, 0);
+    assert.equal(judge(calm({ windKmh: 5 }), prefs({ windTol: 8 })).level, 0);
+    assert.equal(judge(calm({ windKmh: 6 }), prefs({ windTol: 8 })).level, 1);
+    assert.equal(judge(calm({ windKmh: 10 }), prefs({ windTol: 8 })).level, 2);
+    assert.equal(WIND_MARGIN_KMH, 2);
   });
 
   test('wind: the top of the slider is no limit and never raises the level', () => {
