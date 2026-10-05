@@ -288,19 +288,18 @@ export default function TodayScreen() {
         )}
 
         <View style={[styles.verdictCard, { backgroundColor: tint }]}>
-          <View style={styles.verdictTop}>
-            <View style={styles.verdictLeft}>
-              <Text style={[styles.kicker, { color: ink }]}>
-                {TodayStrings.kicker(formatClock(nowMs, settings.timeFmt), activity)}
-              </Text>
-              <View style={styles.heroRow}>
-                <Text style={[styles.hero, { color: ink }]}>
-                  {formatAqhi(heroReading)}
-                </Text>
-                <View style={styles.heroCaption}>
-                  <Text style={[styles.heroCapsLabel, { color: ink }]}>{Common.aqhi}</Text>
-                  <Text style={[styles.heroOf, { color: ink }]}>{TodayStrings.ofTen}</Text>
-                </View>
+          <Text style={[styles.kicker, { color: ink }]}>
+            {TodayStrings.kicker(formatClock(nowMs, settings.timeFmt), activity)}
+          </Text>
+          {/* The pill sits beside the number rather than in the top corner:
+              there it narrowed every line above and below into a column, and
+              left the space beside the number empty. */}
+          <View style={styles.heroRow}>
+            <View style={styles.heroFigure}>
+              <Text style={[styles.hero, { color: ink }]}>{formatAqhi(heroReading)}</Text>
+              <View style={styles.heroCaption}>
+                <Text style={[styles.heroCapsLabel, { color: ink }]}>{Common.aqhi}</Text>
+                <Text style={[styles.heroOf, { color: ink }]}>{TodayStrings.ofTen}</Text>
               </View>
             </View>
             <View style={[styles.verdictPill, { backgroundColor: ink }]}>
@@ -309,8 +308,6 @@ export default function TodayScreen() {
               </Text>
             </View>
           </View>
-          {/* Full width, below the pill's row: in the left column beside the
-              pill it wrapped after a few words. */}
           {heroCaption && (
             <Text style={[styles.heroProvenance, { color: ink }]} numberOfLines={2}>
               {heroCaption}
@@ -528,10 +525,15 @@ const styles = StyleSheet.create({
   },
 
   verdictCard: { borderRadius: Radius.lg, padding: Space.four },
-  verdictTop: { flexDirection: 'row', alignItems: 'flex-start', gap: Space.three },
-  verdictLeft: { flex: 1, minWidth: 0 },
   kicker: Type.kicker,
-  heroRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 2 },
+  heroRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Space.three,
+    marginTop: 2,
+  },
+  heroFigure: { flexDirection: 'row', alignItems: 'baseline', gap: 8, flexShrink: 1 },
   hero: Type.heroNumber,
   heroCaption: { gap: 1, paddingBottom: 10 },
   heroCapsLabel: { ...Type.capsLabel, textTransform: 'none' },

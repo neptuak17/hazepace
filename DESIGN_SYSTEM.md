@@ -934,9 +934,10 @@ Order: optional location card (fallback only) → verdict card → activity chip
 (bars, ticks, readout, link) → "updated" line.
 
 - Verdict card: `Radius.lg`, padding 18, fill `Verdict.tint[level]` (or
-  `Palette.surface` with no verdict), all text `deepInk[level]`. Left column:
-  kicker → hero number 76 with "AQHI / of 10+" caption beside it on the
-  baseline. Right: the large pill. Below, full width: provenance (2 lines
+  `Palette.surface` with no verdict), all text `deepInk[level]`. Every line
+  runs the card's full width, top to bottom: kicker → a row with the hero
+  number 76 and its "AQHI / of 10+" caption on the baseline at the left and
+  the large pill at the right, centred on the number → provenance (2 lines
   max) — the time only for an ECCC reading, whose community the header
   already names ("observed 3 pm · 25 min ago"), or the model's name and hour
   for the estimate; then the factor line (Figtree 15 / 21, `marginTop: 14`) —
