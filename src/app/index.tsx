@@ -302,11 +302,6 @@ export default function TodayScreen() {
                   <Text style={[styles.heroOf, { color: ink }]}>{TodayStrings.ofTen}</Text>
                 </View>
               </View>
-              {heroCaption && (
-                <Text style={[styles.heroProvenance, { color: ink }]} numberOfLines={2}>
-                  {heroCaption}
-                </Text>
-              )}
             </View>
             <View style={[styles.verdictPill, { backgroundColor: ink }]}>
               <Text style={styles.verdictPillText}>
@@ -314,6 +309,13 @@ export default function TodayScreen() {
               </Text>
             </View>
           </View>
+          {/* Full width, below the pill's row: in the left column beside the
+              pill it wrapped after a few words. */}
+          {heroCaption && (
+            <Text style={[styles.heroProvenance, { color: ink }]} numberOfLines={2}>
+              {heroCaption}
+            </Text>
+          )}
           <Text
             style={[styles.factorLine, { color: ink }]}
             accessibilityLabel={factorLabel}>
