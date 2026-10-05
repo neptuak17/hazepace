@@ -171,20 +171,17 @@ export default function TodayScreen() {
       ? TodayStrings.verdictSentence(verdict, nowReading, prefs)
       : DataStrings.hourIncomplete;
 
+  // Under the number: how it was produced and when. An ECCC reading comes
+  // from the community the header already names, so only the time is
+  // repeated here; the model has no community, so it is named.
   let heroCaption: string | null = null;
   if (heroReading === observation && observation) {
-    heroCaption = TodayStrings.heroCaption(
-      observation.community,
-      DataStrings.observedAt(
-        formatClock(Date.parse(observation.timestamp), settings.timeFmt),
-        formatAge(Date.parse(observation.timestamp), nowMs),
-      ),
+    heroCaption = DataStrings.observedAt(
+      formatClock(Date.parse(observation.timestamp), settings.timeFmt),
+      formatAge(Date.parse(observation.timestamp), nowMs),
     );
   } else if (heroReading === nowEccc && nowEccc && nowHour) {
-    heroCaption = TodayStrings.heroCaption(
-      nowEccc.community,
-      DataStrings.forecastFor(formatClock(nowHour.epoch, settings.timeFmt)),
-    );
+    heroCaption = DataStrings.forecastFor(formatClock(nowHour.epoch, settings.timeFmt));
   } else if (heroReading === nowEstimate && nowEstimate && nowHour) {
     heroCaption = TodayStrings.heroCaption(
       DataStrings.modelSource,

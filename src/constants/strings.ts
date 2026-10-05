@@ -129,8 +129,8 @@ const RAIN_LIMIT_NAMES: Record<number, string> = Object.fromEntries(
 export const TodayStrings = {
   kicker: (time: string, activity: Activity) => `Conditions at ${time} · ${activity}`,
   ofTen: 'of 10+',
-  /** Under the hero number: where it came from and how old it is. */
-  heroCaption: (community: string, age: string) => `${community} · ${age}`,
+  /** Under the hero number when it is the model's: its name and the hour. */
+  heroCaption: (source: string, age: string) => `${source} · ${age}`,
 
   /**
    * The line under the verdict: the factor setting it, its reading, and the
