@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en-CA">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy policy — Hazepace</title>
+  <meta name="description" content="What the Hazepace app sends, to whom, what they keep, and what stays on your phone.">
+  <meta name="theme-color" content="#f5ead8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#181613" media="(prefers-color-scheme: dark)">
+  <link rel="icon" type="image/png" href="../icon.png">
+  <link rel="apple-touch-icon" href="../icon.png">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <!--
+    The privacy policy App Store Connect and the app link to. This page is
+    the policy; docs/privacy.md in the repository is the earlier copy and
+    points here once the site is live.
+  -->
+  <main class="page">
+    <a class="back" href="../"><img src="../icon.png" alt="" width="36" height="36">Hazepace</a>
+
+    <h1>Privacy policy</h1>
+    <p class="effective">Effective 10 October 2026</p>
+
+    <p>Hazepace shows weather and air quality conditions so you can decide when to
+    train outdoors. It has no accounts, no server of its own, no analytics, no
+    advertising, no crash reporting and no tracking. This page sets out what
+    leaves your phone, who receives it, and what stays on the phone.</p>
+
+    <h2>What leaves your phone</h2>
+    <p>Hazepace asks two public data services for conditions. Nothing is sent to
+    the developer.</p>
+
+    <p><strong>Open-Meteo</strong> (open-meteo.com) supplies the weather, the air quality model
+    and the place search. It receives:</p>
+    <ul>
+      <li><strong>An approximate location:</strong> a latitude and longitude rounded to two
+      decimal places, which is about one kilometre. The phone's exact position
+      never leaves the device; it is rounded on the phone before anything is sent.</li>
+      <li><strong>The text you type into the place search</strong>, if you use it, so a town
+      name can be turned into a location.</li>
+    </ul>
+
+    <p><strong>Environment and Climate Change Canada</strong> (api.weather.gc.ca) supplies air
+    quality readings and forecasts. It does not receive your location. Hazepace
+    downloads ECCC's public list of reporting communities and the latest reading
+    for every one of them across Canada, picks the ones near you on the phone,
+    and then asks for the nearest community's reading and forecast by its
+    identifier.</p>
+
+    <p>Like any web request, each one also carries your phone's IP address and a
+    short line naming the app (<code>Hazepace/1.0</code>), which lets the services see that
+    the request came from Hazepace.</p>
+
+    <h2>What those services keep</h2>
+    <p>Hazepace keeps nothing off your phone. The two services run their own
+    servers and keep their own logs:</p>
+    <ul>
+      <li>Open-Meteo's terms say its free service keeps web server logs that may
+      include coordinates, and deletes them after 90 days. See
+      <a href="https://open-meteo.com/en/terms">open-meteo.com/en/terms</a>.</li>
+      <li>ECCC's servers are covered by the Government of Canada's privacy notice.
+      See <a href="https://www.canada.ca/en/transparency/privacy.html">canada.ca/en/transparency/privacy</a>.</li>
+    </ul>
+    <p>Neither service receives an account, a name, a device identifier or anything
+    that links a request to you, and Hazepace does not share data with anyone
+    for advertising or tracking.</p>
+
+    <h2>Your location</h2>
+    <p>Hazepace asks for location access <strong>only while the app is in use</strong>, never in
+    the background. It reads a low-accuracy position, rounds it to about one
+    kilometre, and uses it only to fetch conditions.</p>
+    <p>You can decline, or later turn location off in iOS Settings → Hazepace →
+    Location. The app still works: you can choose a place by name instead, and
+    without either it shows conditions for a default town until you do.</p>
+
+    <h2>What stays on your phone</h2>
+    <p>Your settings are saved on the phone so they are there next time you open
+    the app:</p>
+    <ul>
+      <li>the activities you do and your air quality sensitivity setting</li>
+      <li>your rain, wind and heat limits</li>
+      <li>your time format and appearance choice</li>
+      <li>a place you chose by name, if any (its name, region and rounded
+      coordinate)</li>
+    </ul>
+    <p>Forecasts are held in memory for a short time to avoid repeat requests and
+    are gone when the app closes. None of this is sent anywhere. Choosing
+    <strong>Use my location</strong> clears a saved place; deleting the app removes
+    everything.</p>
+
+    <h2>This website</h2>
+    <p>hazepace.com is a static page hosted by GitHub Pages. It sets no cookies,
+    runs no scripts and has no analytics. GitHub logs the IP address of visits
+    to the sites it hosts, for security, under
+    <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub's privacy statement</a>.</p>
+    <p>Mail to support@hazepace.com is forwarded by Cloudflare to the developer's
+    own mailbox, under <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare's privacy policy</a>.
+    It is read only to answer you and is not shared.</p>
+
+    <h2>Children</h2>
+    <p>Hazepace is not directed at children and does not knowingly collect
+    information from anyone.</p>
+
+    <h2>Changes</h2>
+    <p>If what the app sends or keeps changes, this page will be updated and the
+    date at the top will change. The history of this page is public in the
+    <a href="https://github.com/neptuak17/hazepace/commits/main/site/privacy/index.html">repository</a>.</p>
+
+    <h2>Contact</h2>
+    <p><a href="mailto:support@hazepace.com">support@hazepace.com</a></p>
+  </main>
+
+  <footer>
+    <a href="../">Home</a>
+    <a href="mailto:support@hazepace.com">support@hazepace.com</a>
+  </footer>
+</body>
+</html>

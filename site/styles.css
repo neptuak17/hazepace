@@ -1,0 +1,170 @@
+/*
+ * hazepace.com — one stylesheet for every page.
+ *
+ * The colours are the app's own tokens (src/constants/design-tokens.ts),
+ * light and dark, and the fonts are the app's, served from this site so a
+ * visit makes no request to anyone else. No scripts anywhere on the site.
+ */
+
+@font-face { font-family: "Caprasimo"; src: url("fonts/Caprasimo-Regular.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Figtree"; src: url("fonts/Figtree-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Figtree"; src: url("fonts/Figtree-Bold.ttf") format("truetype"); font-weight: 700; font-display: swap; }
+
+:root {
+  --bg: #f5ead8;
+  --text: #201e1d;
+  --muted: #645c50;
+  --faint: #82796a;
+  --link: #8c491a;
+  --pill: #ebddc5;
+  --rule: rgba(32, 30, 29, 0.16);
+  --green-tint: #e1eecc; --green-ink: #3d472b;
+  --amber-tint: #ffe1d0; --amber-ink: #8c491a;
+  --red-tint: #ffc6a5;   --red-ink: #643312;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #181613;
+    --text: #f5ead8;
+    --muted: #dcd3c4;
+    --faint: #c0b6a5;
+    --link: #ffc6a5;
+    --pill: #24211c;
+    --rule: rgba(245, 234, 216, 0.14);
+    --green-tint: #3d472b; --green-ink: #e1eecc;
+    --amber-tint: #643312; --amber-ink: #ffe1d0;
+    --red-tint: #402310;   --red-ink: #fff2eb;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Figtree", system-ui, -apple-system, sans-serif;
+  font-size: 17px;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+a { color: var(--link); text-underline-offset: 3px; }
+
+/* ── Home: one centred column ─────────────────────────────────────────── */
+
+.home {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 16px 32px;
+}
+.icon {
+  width: 104px;
+  height: 104px;
+  border-radius: 23px;
+  box-shadow: 0 6px 24px rgba(46, 43, 37, 0.18);
+}
+.home h1 {
+  font-family: "Caprasimo", Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(44px, 11vw, 64px);
+  line-height: 1;
+  margin: 28px 0 14px;
+}
+.tagline {
+  max-width: 26em;
+  margin: 0;
+  font-size: 19px;
+  color: var(--muted);
+}
+.verdicts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 32px 0 10px;
+  padding: 0;
+  list-style: none;
+}
+.verdicts li {
+  font-family: "Caprasimo", Georgia, serif;
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  padding: 7px 16px;
+  border-radius: 999px;
+}
+.green { background: var(--green-tint); color: var(--green-ink); }
+.amber { background: var(--amber-tint); color: var(--amber-ink); }
+.red   { background: var(--red-tint);   color: var(--red-ink); }
+.how {
+  max-width: 24em;
+  margin: 0;
+  font-size: 15px;
+  color: var(--faint);
+}
+.soon {
+  margin: 36px 0 0;
+  padding: 10px 22px;
+  border-radius: 999px;
+  background: var(--pill);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+/* ── Text pages: privacy, not found ───────────────────────────────────── */
+
+.page {
+  flex: 1;
+  width: 100%;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 28px 16px 40px;
+}
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  text-decoration: none;
+  font-family: "Caprasimo", Georgia, serif;
+  font-size: 22px;
+}
+.back img { width: 36px; height: 36px; border-radius: 8px; }
+.page h1 {
+  font-family: "Caprasimo", Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(32px, 8vw, 42px);
+  line-height: 1.1;
+  margin: 36px 0 6px;
+}
+.page h2 {
+  font-size: 19px;
+  font-weight: 700;
+  margin: 32px 0 6px;
+  padding-top: 18px;
+  border-top: 1.5px solid var(--rule);
+}
+.page p, .page li { color: var(--muted); }
+.page strong { color: var(--text); }
+.page ul { padding-left: 1.2em; }
+.page li { margin: 4px 0; }
+.page code { font-size: 0.92em; }
+.effective { color: var(--faint); font-size: 15px; margin-top: 0; }
+
+/* ── Footer ───────────────────────────────────────────────────────────── */
+
+footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 18px;
+  padding: 20px 16px 28px;
+  font-size: 14px;
+  color: var(--faint);
+}

@@ -28,6 +28,16 @@ decide when to train outdoors. Solo hobby project. iOS first.
   platform variants are inert on iOS and the web target may be used later
   for the marketing site.
 
+## Website
+
+`site/` is hazepace.com: plain static HTML and one stylesheet, no build step,
+published to GitHub Pages by `.github/workflows/site.yml` whenever `site/`
+changes on main. The React Native rules above (no CSS files, primitives
+only) are for the app and do not apply to `site/`. The site's own rules: no
+scripts, no analytics, no cookies, no third-party requests — fonts and
+images are served from the site itself. `site/privacy/` is the privacy
+policy the app and App Store Connect link to.
+
 ## Data
 
 Forecast sources: to be determined — likely ECCC for weather and

@@ -63,4 +63,5 @@ for the sample sites.
 - `src/lib/` — data layer, place resolution, the rating model
 - `src/constants/` — design tokens and every user-facing string
 - `docs/decision-rules.md` — the rules the model implements
+- `site/` — hazepace.com, a static page published by `.github/workflows/site.yml`
 - `scripts/check-conditions.mjs` — live check of the data layer
